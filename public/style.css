@@ -290,6 +290,28 @@ body.view-is-locked #main-header {
     font-weight: 800;
     color: var(--text-primary);
 }
+.header-logo-img {
+    height: 48px;
+    max-width: 160px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
+.header-title-group {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+.brand-name {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+.brand-sub {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
 /* Colour just for the brand word (e.g. <span class="brand-name">Péribus</span>) */
 .brand-name {
     color: #2563eb; /* var(--primary) */
