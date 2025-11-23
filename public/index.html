@@ -31,21 +31,44 @@
     <!-- Preloader removed: instant load requested by user -->
 
     <header id="main-header">
-    <div class="header-content">
-        <div class="logo">
-            <img src="https://i.ibb.co/0jJhLPp8/Peribus.webp" alt="Logo Péribus" class="header-logo-img">
-            <div class="header-title-group">
-                <span class="brand-name">Péribus</span>
-                <span class="brand-sub">Le réseau du Grand Périgueux</span>
+        <div class="header-content">
+            <div class="header-brand">
+                <img src="https://i.ibb.co/0jJhLPp8/Peribus.webp" alt="Logo Péribus" class="header-logo-img">
+                <div class="header-title-group">
+                    <span class="brand-name">Péribus</span>
+                    <span class="brand-sub">Le réseau du Grand Périgueux</span>
+                </div>
+            </div>
+            <div class="header-meta">
+                <span class="header-pill live">Temps réel</span>
+                <div class="header-kpis">
+                    <div class="kpi-item">
+                        <strong>36</strong>
+                        <span>Lignes actives</span>
+                    </div>
+                    <div class="kpi-item">
+                        <strong>222&nbsp;km</strong>
+                        <span>de réseau</span>
+                    </div>
+                    <div class="kpi-item">
+                        <strong>2.1&nbsp;M</strong>
+                        <span>voyageurs/an</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="theme-toggle-btn" class="btn-icon-round" aria-label="Basculer thème sombre" title="Thème sombre" aria-pressed="false">
+                    <span id="theme-toggle-icon">🌙</span>
+                </button>
+                <a href="/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf" target="_blank" rel="noopener noreferrer" class="header-cta" title="Télécharger le plan du réseau">
+                    Plan réseau
+                </a>
+                <button class="header-cta primary" type="button" id="header-btn-show-map">
+                    Ouvrir la carte
+                </button>
             </div>
         </div>
-        <nav class="header-nav">
-            <button id="theme-toggle-btn" class="btn-icon-round" aria-label="Basculer thème sombre" title="Thème sombre" aria-pressed="false">
-                <span id="theme-toggle-icon">🌙</span>
-            </button>
-            </nav>
-    </div>
-</header>
+    </header>
 
     <div id="alert-banner" class="hidden">
         <div id="alert-banner-content"></div>
