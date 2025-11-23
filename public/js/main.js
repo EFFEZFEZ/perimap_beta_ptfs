@@ -2,7 +2,7 @@
  * main.js - V58 (Partie 1/2 : Optimisation GPS & Debounce)
  *
  * *** MODIFICATION V58 (Optimisation GPS) ***
- * 1. Ajout de `lastGeocodeTime` et `lastGeocodePos` dans l'état global.
+ * 1. Ajout de `lastGeocodeTime` et `lastGeocodePos` (gérés dans geolocationManager).
  * 2. Ajout de la fonction `getDistanceFromLatLonInM` pour calculer la distance en mètres.
  * 3. Réécriture de la logique de géolocalisation (gérée par geolocationManager) pour :
  * - Ignorer les mouvements < 10m (jitter GPS).
