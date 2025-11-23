@@ -4,22 +4,21 @@
  * *** MODIFICATION V58 (Optimisation GPS) ***
  * 1. Ajout de `lastGeocodeTime` et `lastGeocodePos` dans l'état global.
  * 2. Ajout de la fonction `getDistanceFromLatLonInM` pour calculer la distance en mètres.
- * 3. Réécriture de `onGeolocationSuccess` pour :
+ * 3. Réécriture de la logique de géolocalisation (gérée par geolocationManager) pour :
  * - Ignorer les mouvements < 10m (jitter GPS).
  * - Ne lancer le Reverse Geocoding (API payante) que si :
  * a) C'est la première fois.
  * b) On a bougé de > 200m.
- * c) Cela fait > 60 secondes depuis le dernier appel.
  */
-
 import { DataManager } from './dataManager.js';
 import { TimeManager } from './timeManager.js';
 import { TripScheduler } from './tripScheduler.js';
 import { BusPositionCalculator } from './busPositionCalculator.js';
 import { MapRenderer } from './mapRenderer.js';
 import { ApiManager } from './apiManager.js';
+import { createRouterContext, encodePolyline, decodePolyline } from './router.js';
+import { createGeolocationManager } from './geolocationManager.js';
 
-// *** ACTION REQUISE ***
 // Remplacez cette chaîne par votre clé d'API Google Cloud restreinte par HTTP Referrer
 const GOOGLE_API_KEY = "AIzaSyBYDN_8hSHSx_irp_fxLw--XyxuLiixaW4";
 
@@ -33,6 +32,10 @@ let detailMapRenderer; // Carte détail mobile
 let resultsMapRenderer; // Carte résultats PC
 let visibleRoutes = new Set();
 let apiManager; 
+let routerContext = null;
+
+// Feature flags
+let gtfsAvailable = true; // set to false if GTFS loading fails -> degraded API-only mode
 
 // État global
 let lineStatuses = {}; 
@@ -42,14 +45,7 @@ let currentDetailMarkerLayer = null; // ✅ NOUVEAU V46.1
 let currentResultsMarkerLayer = null; // ✅ NOUVEAU V46.1
 let allFetchedItineraries = []; // Stocke tous les itinéraires (bus/vélo/marche)
 
-// ✅ V57: État de la géolocalisation
-let userLocation = null; // Va stocker { lat, lng }
-let userPlaceId = null;  // Va stocker le place_id de la position
-let isGeocoding = false; // Verrou pour éviter les appels multiples
-
-// ✅ V58: État pour le Debounce GPS
-let lastGeocodeTime = 0; // Timestamp du dernier appel API
-let lastGeocodePos = null; // Position du dernier appel API
+let geolocationManager = null;
 
 // ICÔNES SVG
 const ICONS = {
@@ -65,23 +61,16 @@ const ICONS = {
     WALK: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.7 0-1.3.4-1.7 1L8 8.3C7.2 9.5 5.8 10 4 10v2c1.1 0 2.1-.4 2.8-1.1l1-1.6 1.4 6.3L8 17v6h2l1-9.6L13.5 15v-3.4l-3.7-3.7z"/></svg>`,
     BUS: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2l.64 2.54c.24.95-.54 1.96-1.54 1.96H4c-1 0-1.78-1.01-1.54-1.96L3 17h2"/><path d="M19 17V5c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v12h14z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>`,
     BICYCLE: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>`,
-    
-    /* ✅ V52: Icône "étoile" pour "Suggéré" */
     ALL: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z"/></svg>`,
-    
-    LEAF_ICON: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-4-4 1.41-1.41L10 16.17l6.59-6.59L18 11l-8 8z" opacity=".3"/><path d="M17.8 7.29c-.39-.39-1.02-.39-1.41 0L10 13.17l-1.88-1.88c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l2.59 2.59c.39.39 1.02.39 1.41 0L17.8 8.7c.39-.39.39-1.02 0-1.41z" transform="translate(0, 0)" opacity=".1"/><path d="M12 4.14c-4.33 0-7.86 3.53-7.86 7.86s3.53 7.86 7.86 7.86 7.86-3.53 7.86-7.86S16.33 4.14 12 4.14zm5.8 4.57c0 .28-.11.53-.29.71L12 15.01l-2.59-2.59c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l3.29 3.29c.39.39 1.02.39 1.41 0l6.29-6.29c.18-.18.29-.43.29-.71 0-1.04-1.2-1.57-2-1.57-.42 0-.8.13-1.1.33-.29.2-.6.4-.9.6z" fill="#1e8e3e"/></svg>`,
-    
-    /* ✅ V57: NOUVELLES ICÔNES DE GÉOLOCALISATION */
-    GEOLOCATE: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 21s-8-3.5-8-9V7l8-5 8 5v5c0 5.5-8 9-8 9z"/></svg>`,
+    LEAF_ICON: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-4-4 1.41-1.41L10 16.17l6.59-6.59L18 11l-8 8z" opacity=".3"/><path d="M17.8 7.29c-.39-.39-1.02-.39-1.41 0L10 13.17l-1.88-1.88c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l2.59 2.59c.39.39 1.02.39 1.41 0L17.8 8.7c.39-.39.39-1.02 0-1.41z" transform="translate(0, 0)" opacity=".1"/><path d="M12 4.14c-4.33 0-7.86 3.53-7.86 7.86s3.53 7.86 7.86 7.86 7.86-3.53 7.86-7.86S16.33 4.14 12 4.14zm5.8 4.57 c0 .28-.11.53-.29.71L12 15.01l-2.59-2.59c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l3.29 3.29c.39.39 1.02.39 1.41 0l6.29-6.29c.18-.18.29-.43.29-.71 0-1.04-1.2-1.57-2-1.57-.42 0-.8.13-1.1.33-.29.2-.6.4-.9.6z" fill="#1e8e3e"/></svg>`,
+    GEOLOCATE: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/></svg>`,
     GEOLOCATE_SPINNER: `<div class="spinner"></div>`,
     MAP_LOCATE: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L7 12l10 0L12 2z"/><circle cx="12" cy="12" r="10"/></svg>`,
-    
     MARKERS: {
         START: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#22c55e" stroke="#ffffff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8m-4-4h8" stroke="#ffffff" stroke-width="2"/></svg>`,
         END: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8" stroke="#ffffff" stroke-width="2"/></svg>`,
         CORRESPONDENCE: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#3b82f6" stroke="#ffffff" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>`
     },
-
     MANEUVER: {
         STRAIGHT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>`,
         TURN_LEFT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>`,
@@ -93,6 +82,75 @@ const ICONS = {
         DEFAULT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="m12 16 4-4-4-4"></path><path d="M8 12h8"></path></svg>`
     }
 };
+
+/* ======================
+ * UI Theme (Dark Mode)
+ * - Persists user choice in localStorage ('ui-theme')
+ * - Respects prefers-color-scheme when no saved choice
+ * - Toggle button in header with id `theme-toggle-btn`
+ * ======================
+ */
+function applyThemeState(useDarkParam) {
+    const useDark = !!useDarkParam;
+    document.body.classList.toggle('dark-theme', useDark);
+    const btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+        btn.setAttribute('aria-pressed', useDark ? 'true' : 'false');
+        btn.title = useDark ? 'Thème clair' : 'Thème sombre';
+    }
+    const icon = document.getElementById('theme-toggle-icon');
+    if (icon) {
+        icon.textContent = useDark ? '☀️' : '🌙';
+    }
+
+    try {
+        ['map', 'detail-map', 'results-map'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('dark-theme', useDark);
+        });
+    } catch (e) { /* ignore */ }
+
+    const themedRenderers = [
+        typeof mapRenderer !== 'undefined' ? mapRenderer : null,
+        typeof detailMapRenderer !== 'undefined' ? detailMapRenderer : null,
+        typeof resultsMapRenderer !== 'undefined' ? resultsMapRenderer : null
+    ].filter(Boolean);
+
+    themedRenderers.forEach(renderer => {
+        if (typeof renderer.applyTheme === 'function') {
+            renderer.applyTheme(useDark);
+            if (renderer.map) {
+                renderer.map.invalidateSize();
+            }
+        }
+    });
+}
+
+function initTheme() {
+    try {
+        const saved = localStorage.getItem('ui-theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const useDark = saved ? (saved === 'dark') : prefersDark;
+        applyThemeState(useDark);
+    } catch (e) {
+        console.warn('initTheme error', e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Wire theme toggle
+    const tbtn = document.getElementById('theme-toggle-btn');
+    if (tbtn) {
+        tbtn.addEventListener('click', () => {
+            const nextIsDark = !document.body.classList.contains('dark-theme');
+            applyThemeState(nextIsDark);
+            try { localStorage.setItem('ui-theme', nextIsDark ? 'dark' : 'light'); } catch (e) { /* ignore */ }
+        }, { passive: true });
+    }
+
+    // Initialize UI theme immediately (no preloader)
+    initTheme();
+});
 
 // Mappage des noms de fichiers PDF
 const PDF_FILENAME_MAP = {
@@ -143,34 +201,6 @@ const ROUTE_LONG_NAME_MAP = {
     'N': 'Tourny <> PEM',
     'N1': 'Gare SNCF <> 8 mai <> Tourny <> Gare SNCF',
 };
-
-function decodePolyline(encoded) {
-    if (!encoded) return [];
-    const poly = [];
-    let index = 0, len = encoded.length;
-    let lat = 0, lng = 0;
-    while (index < len) {
-        let b, shift = 0, result = 0;
-        do {
-            b = encoded.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
-        } while (b >= 0x20);
-        const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
-        lat += dlat;
-        shift = 0;
-        result = 0;
-        do {
-            b = encoded.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
-        } while (b >= 0x20);
-        const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
-        lng += dlng;
-        poly.push([lat / 1e5, lng / 1e5]);
-    }
-    return poly;
-}
 
 function getManeuverIcon(maneuver) {
     switch(maneuver) {
@@ -279,27 +309,51 @@ async function initializeApp() {
 
     apiManager = new ApiManager(GOOGLE_API_KEY);
     dataManager = new DataManager();
+    routerContext = createRouterContext({ dataManager, apiManager, icons: ICONS });
+
+    geolocationManager = createGeolocationManager({
+        apiManager,
+        icons: ICONS,
+        onUserLocationUpdate: (coords) => {
+            if (mapRenderer) mapRenderer.updateUserLocation(coords);
+            if (resultsMapRenderer) resultsMapRenderer.updateUserLocation(coords);
+            if (detailMapRenderer) detailMapRenderer.updateUserLocation(coords);
+        },
+        onUserLocationError: () => {
+            if (mapRenderer) mapRenderer.onLocateError();
+            if (resultsMapRenderer) resultsMapRenderer.onLocateError();
+            if (detailMapRenderer) detailMapRenderer.onLocateError();
+        }
+    });
 
     setupStaticEventListeners();
-    setupGeolocation();
+    if (geolocationManager) {
+        geolocationManager.startWatching({
+            hallButton: hallGeolocateBtn,
+            resultsButton: resultsGeolocateBtn
+        });
+    }
+    updateDataStatus('Chargement des données...', 'loading');
 
     try {
-        await dataManager.loadAllData();
+        await dataManager.loadAllData((message) => updateDataStatus(message, 'loading'));
         timeManager = new TimeManager();
         
         mapRenderer = new MapRenderer('map', dataManager, timeManager);
         mapRenderer.initializeMap();
-        mapRenderer.addLocateControl(onGeolocationSuccess, onGeolocationError);
+        const locateSuccess = geolocationManager?.handleGeolocationSuccess || (() => {});
+        const locateError = geolocationManager?.handleGeolocationError || (() => {});
+        mapRenderer.addLocateControl(locateSuccess, locateError);
 
         detailMapRenderer = new MapRenderer('detail-map', dataManager, timeManager);
         detailMapRenderer.initializeMap(false);
         currentDetailMarkerLayer = L.layerGroup().addTo(detailMapRenderer.map);
-        detailMapRenderer.addLocateControl(onGeolocationSuccess, onGeolocationError);
+        detailMapRenderer.addLocateControl(locateSuccess, locateError);
         
         resultsMapRenderer = new MapRenderer('results-map', dataManager, timeManager);
         resultsMapRenderer.initializeMap(false);
         currentResultsMarkerLayer = L.layerGroup().addTo(resultsMapRenderer.map);
-        resultsMapRenderer.addLocateControl(onGeolocationSuccess, onGeolocationError);
+        resultsMapRenderer.addLocateControl(locateSuccess, locateError);
         
         tripScheduler = new TripScheduler(dataManager);
         busPositionCalculator = new BusPositionCalculator(dataManager);
@@ -324,8 +378,78 @@ async function initializeApp() {
         
     } catch (error) {
         console.error('Erreur lors de l\'initialisation GTFS:', error);
-        updateDataStatus('Erreur de chargement GTFS', 'error');
+        gtfsAvailable = false;
+        updateDataStatus('GTFS indisponible. Mode dégradé (API seule).', 'warning');
     }
+
+    // Attach robust handlers for back buttons and condensed nav (extra safety)
+    try {
+        attachRobustBackHandlers();
+    } catch (e) { console.debug('attachRobustBackHandlers failed', e); }
+}
+
+function attachRobustBackHandlers() {
+    const backIds = ['btn-back-to-hall', 'btn-back-to-dashboard-from-map', 'btn-back-to-dashboard-from-results'];
+    backIds.forEach(id => {
+        // fix duplicate ids: if multiple elements share the same id, rename extras
+        const duplicates = Array.from(document.querySelectorAll(`#${id}`));
+        if (duplicates.length > 1) {
+            console.warn('attachRobustBackHandlers: duplicate id detected', id, duplicates.length);
+            duplicates.forEach((el, idx) => {
+                if (idx === 0) return; // keep first
+                const newId = `${id}-dup-${idx}`;
+                el.id = newId;
+                console.warn('attachRobustBackHandlers: renamed duplicate id', id, '->', newId, el);
+            });
+        }
+
+        const el = document.getElementById(id);
+        if (!el) {
+            console.debug('attachRobustBackHandlers: missing element', id);
+            return;
+        }
+        // remove duplicate handlers if any
+        try { el.removeEventListener('click', showDashboardHall); } catch (e) {}
+        el.disabled = false;
+        el.style.pointerEvents = 'auto';
+        el.style.zIndex = el.style.zIndex || 2000;
+        el.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            console.debug('robust-back-click:', id);
+            showDashboardHall();
+        });
+    });
+
+    // Ensure condensed nav buttons are clickable
+    document.querySelectorAll('.main-nav-buttons-condensed .nav-button-condensed[data-view]').forEach(btn => {
+        btn.style.pointerEvents = 'auto';
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const view = btn.dataset.view;
+            console.debug('robust-nav-click', view);
+            if (view) showDashboardView(view);
+        });
+    });
+
+    // Temporary pointer diagnostics to help debug covered/blocked buttons.
+    // Active for 25 seconds after initialization; logs element at pointer location.
+    try {
+        const DEBUG_DURATION_MS = 25000;
+        const start = Date.now();
+        const pd = (ev) => {
+            try {
+                if ((Date.now() - start) > DEBUG_DURATION_MS) {
+                    document.removeEventListener('pointerdown', pd, true);
+                    return;
+                }
+                const x = ev.clientX, y = ev.clientY;
+                const elAt = document.elementFromPoint(x, y);
+                console.debug('pointerdown-debug', { x, y, target: ev.target && ev.target.id, elementAtPoint: elAt && (elAt.id || elAt.className || elAt.tagName) });
+            } catch (err) { /* ignore */ }
+        };
+        document.addEventListener('pointerdown', pd, true);
+        console.info('Back-button pointer diagnostics active for 25s. Click the problematic area and check console for `pointerdown-debug`.');
+    } catch (e) { /* ignore */ }
 }
 
 function setupDashboardContent() {
@@ -375,23 +499,28 @@ function populateTimeSelects() {
         selectedMinute = 0;
         selectedHour = (currentHour + 1) % 24; 
     }
-    const today = now.toISOString().split('T')[0];
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowDate = tomorrow.toISOString().split('T')[0];
+
+    const MAX_DAY_OFFSET = 7; // toujours proposer une semaine complète
+    const formatDateLabel = (dateObj, offset) => {
+        if (offset === 0) return "Aujourd'hui";
+        if (offset === 1) return "Demain";
+        return dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    };
 
     const populate = (dateEl, hourEl, minEl) => {
         if (!dateEl || !hourEl || !minEl) return;
         dateEl.innerHTML = '';
-        const todayOption = document.createElement('option');
-        todayOption.value = today;
-        todayOption.textContent = "Aujourd'hui";
-        todayOption.selected = true;
-        dateEl.appendChild(todayOption);
-        const tomorrowOption = document.createElement('option');
-        tomorrowOption.value = tomorrowDate;
-        tomorrowOption.textContent = "Demain";
-        dateEl.appendChild(tomorrowOption);
+        for (let offset = 0; offset <= MAX_DAY_OFFSET; offset++) {
+            const dateObj = new Date(now);
+            dateObj.setDate(now.getDate() + offset);
+            const isoValue = dateObj.toISOString().split('T')[0];
+            const option = document.createElement('option');
+            option.value = isoValue;
+            option.textContent = formatDateLabel(dateObj, offset);
+            if (offset === 0) option.selected = true;
+            dateEl.appendChild(option);
+        }
+
         hourEl.innerHTML = '';
         for (let h = 0; h < 24; h++) {
             const option = document.createElement('option');
@@ -400,6 +529,7 @@ function populateTimeSelects() {
             if (h === selectedHour) option.selected = true;
             hourEl.appendChild(option);
         }
+
         minEl.innerHTML = '';
         for (let m = 0; m < 60; m += 5) {
             const option = document.createElement('option');
@@ -409,154 +539,9 @@ function populateTimeSelects() {
             minEl.appendChild(option);
         }
     };
+
     populate(hallDate, hallHour, hallMinute);
     populate(resultsDate, resultsHour, resultsMinute);
-}
-
-// ✅ V58: Helper pour calculer la distance en mètres
-function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
-  const R = 6371e3; // Rayon de la terre en mètres
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function setupGeolocation() {
-    hallGeolocateBtn.innerHTML = ICONS.GEOLOCATE;
-    resultsGeolocateBtn.innerHTML = ICONS.GEOLOCATE;
-    if (!navigator.geolocation) {
-        console.warn("La géolocalisation n'est pas supportée par ce navigateur.");
-        return;
-    }
-    navigator.geolocation.watchPosition(onGeolocationSuccess, onGeolocationError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-}
-
-/**
- * ✅ V58: Version optimisée avec Debounce et Throttling
- */
-function onGeolocationSuccess(position) {
-    const newLat = position.coords.latitude;
-    const newLng = position.coords.longitude;
-
-    // 1. Debounce VISUEL : Si on a bougé de moins de 10 mètres, on ignore
-    if (userLocation) {
-        const dist = getDistanceFromLatLonInM(userLocation.lat, userLocation.lng, newLat, newLng);
-        if (dist < 10) return; 
-    }
-
-    // Mise à jour de la position stockée
-    userLocation = { lat: newLat, lng: newLng };
-
-    // Mise à jour des marqueurs "point bleu"
-    if (mapRenderer) mapRenderer.updateUserLocation(userLocation);
-    if (resultsMapRenderer) resultsMapRenderer.updateUserLocation(userLocation);
-    if (detailMapRenderer) detailMapRenderer.updateUserLocation(userLocation);
-
-    // Activer les boutons du formulaire
-    hallGeolocateBtn.disabled = false;
-    resultsGeolocateBtn.disabled = false;
-
-    // 2. Throttling API : Appel Reverse Geocode intelligent
-    const now = Date.now();
-    const MIN_TIME_BETWEEN_CALLS = 60000; // 60 secondes
-    const MIN_DIST_BETWEEN_CALLS = 200;   // 200 mètres
-
-    let shouldCallApi = false;
-
-    if (!lastGeocodeTime) {
-        // Premier appel : Oui
-        shouldCallApi = true;
-    } else if (userPlaceId === null && !isGeocoding) {
-        // On a raté le dernier appel ou pas d'adresse : Oui
-        shouldCallApi = true;
-    } else {
-        // Vérifier le temps
-        const timeElapsed = now - lastGeocodeTime;
-        // Vérifier la distance depuis le dernier appel API
-        let distFromLastCall = 0;
-        if (lastGeocodePos) {
-            distFromLastCall = getDistanceFromLatLonInM(lastGeocodePos.lat, lastGeocodePos.lng, newLat, newLng);
-        }
-
-        if (timeElapsed > MIN_TIME_BETWEEN_CALLS || distFromLastCall > MIN_DIST_BETWEEN_CALLS) {
-            shouldCallApi = true;
-        }
-    }
-
-    if (shouldCallApi && !isGeocoding) {
-        reverseGeocodeUserLocation(newLat, newLng);
-        lastGeocodeTime = now;
-        lastGeocodePos = { lat: newLat, lng: newLng };
-    }
-}
-
-function onGeolocationError(error) {
-    console.warn(`Erreur de géolocalisation (code ${error.code}): ${error.message}`);
-    hallGeolocateBtn.disabled = true;
-    resultsGeolocateBtn.disabled = true;
-    if (mapRenderer) mapRenderer.onLocateError();
-    if (resultsMapRenderer) resultsMapRenderer.onLocateError();
-    if (detailMapRenderer) detailMapRenderer.onLocateError();
-}
-
-async function reverseGeocodeUserLocation(lat, lng) {
-    if (isGeocoding) return; 
-    isGeocoding = true;
-    try {
-        const placeId = await apiManager.reverseGeocode(lat, lng);
-        if (placeId) {
-            userPlaceId = placeId;
-            console.log("Géolocalisation inversée réussie, place_id:", userPlaceId);
-        } else {
-            userPlaceId = null;
-        }
-    } catch (error) {
-        console.error("Erreur lors de la géolocalisation inversée:", error);
-        userPlaceId = null;
-    } finally {
-        isGeocoding = false;
-    }
-}
-
-async function useCurrentLocationAsDeparture(source, elements) {
-    const { fromInput, toInput, geolocateBtn } = elements;
-
-    if (!userLocation) {
-        alert("Impossible de récupérer votre position. Avez-vous autorisé la géolocalisation ?");
-        return;
-    }
-
-    geolocateBtn.innerHTML = ICONS.GEOLOCATE_SPINNER;
-    geolocateBtn.disabled = true;
-
-    if (!userPlaceId || isGeocoding) {
-        console.log("Attente du reverse geocoding...");
-        await new Promise(resolve => {
-            const checkGeocoding = setInterval(() => {
-                if (!isGeocoding) {
-                    clearInterval(checkGeocoding);
-                    resolve();
-                }
-            }, 100);
-        });
-    }
-    
-    if (!userPlaceId) {
-        alert("Impossible de convertir votre position en adresse pour le planificateur. Veuillez réessayer.");
-        geolocateBtn.innerHTML = ICONS.GEOLOCATE;
-        geolocateBtn.disabled = false;
-        return;
-    }
-
-    fromPlaceId = userPlaceId;
-    fromInput.value = "Ma Position";
-    toInput.focus();
-    geolocateBtn.innerHTML = ICONS.GEOLOCATE;
-    geolocateBtn.disabled = false;
 }
 
 function setupStaticEventListeners() {
@@ -728,7 +713,18 @@ function setupDataDependentEventListeners() {
 
 function setupPlannerListeners(source, elements) {
     const { submitBtn, fromInput, toInput, fromSuggestions, toSuggestions, swapBtn, whenBtn, popover, dateSelect, hourSelect, minuteSelect, popoverSubmitBtn, geolocateBtn } = elements;
+    
+    // Drapeau pour savoir si l'utilisateur a manuellement modifié la date/heure
+    let userAdjustedTime = false;
 
+    // Si l'utilisateur change un select, on marque qu'il a ajusté le temps
+    try {
+        if (dateSelect) dateSelect.addEventListener('change', () => { userAdjustedTime = true; });
+        if (hourSelect) hourSelect.addEventListener('change', () => { userAdjustedTime = true; });
+        if (minuteSelect) minuteSelect.addEventListener('change', () => { userAdjustedTime = true; });
+    } catch (e) {
+        // Certains éléments peuvent être undefined dans certains contextes; on ignore
+    }
     submitBtn.addEventListener('click', async (e) => {
         e.preventDefault(); 
         if (popover && !popover.classList.contains('hidden')) {
@@ -755,6 +751,8 @@ function setupPlannerListeners(source, elements) {
             e.stopPropagation(); 
             popover.classList.toggle('hidden');
             whenBtn.classList.toggle('popover-active');
+            // Réinitialiser le drapeau à l'ouverture du popover
+            userAdjustedTime = false;
         });
         popover.querySelectorAll('.popover-tab').forEach(tab => { 
             tab.addEventListener('click', (e) => {
@@ -766,9 +764,28 @@ function setupPlannerListeners(source, elements) {
         });
         popoverSubmitBtn.addEventListener('click', () => { 
              const dateText = dateSelect.options[dateSelect.selectedIndex].text;
+             const tab = popover.querySelector('.popover-tab.active').dataset.tab;
+
+             // Si l'utilisateur choisit "partir" ET n'a PAS modifié manuellement la date/heure,
+             // forcer la sélection de la date et de l'heure courantes.
+             if (tab === 'partir' && !userAdjustedTime) {
+                 const now = new Date();
+                 const todayValue = now.toISOString().split('T')[0];
+                 let currentHour = now.getHours();
+                 let currentMinute = Math.round(now.getMinutes() / 5) * 5;
+                 if (currentMinute === 60) {
+                     currentMinute = 0;
+                     currentHour = (currentHour + 1) % 24;
+                 }
+                 try {
+                     dateSelect.value = todayValue;
+                     hourSelect.value = currentHour;
+                     minuteSelect.value = currentMinute;
+                 } catch (e) {}
+             }
+
              const hourText = String(hourSelect.value).padStart(2, '0');
              const minuteText = String(minuteSelect.value).padStart(2, '0');
-             const tab = popover.querySelector('.popover-tab.active').dataset.tab;
              const mainBtnSpan = whenBtn.querySelector('span');
              let prefix = (tab === 'arriver') ? "Arrivée" : "Départ";
              if (dateText === "Aujourd'hui") {
@@ -797,7 +814,18 @@ function setupPlannerListeners(source, elements) {
     if (geolocateBtn) {
         geolocateBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            useCurrentLocationAsDeparture(source, elements);
+            if (!geolocationManager) {
+                console.warn('Geolocation manager non initialisé');
+                return;
+            }
+            geolocationManager.useCurrentLocationAsDeparture({
+                fromInput,
+                toInput,
+                geolocateBtn,
+                onPlaceResolved: (placeId) => {
+                    fromPlaceId = placeId;
+                }
+            });
         });
     }
 }
@@ -824,8 +852,46 @@ async function executeItinerarySearch(source, sourceElements) {
     resultsModeTabs.classList.add('hidden');
     allFetchedItineraries = [];
     try {
-        const intelligentResults = await apiManager.fetchItinerary(fromPlaceId, toPlaceId, searchTime); 
-        allFetchedItineraries = processIntelligentResults(intelligentResults, searchTime);
+        let fromCoords = null;
+        let toCoords = null;
+        try {
+            fromCoords = await apiManager.getPlaceCoords(fromPlaceId);
+        } catch (e) {
+            console.warn('Impossible de récupérer les coordonnées départ (place_id):', e);
+        }
+        try {
+            toCoords = await apiManager.getPlaceCoords(toPlaceId);
+        } catch (e) {
+            console.warn('Impossible de récupérer les coordonnées arrivée (place_id):', e);
+        }
+
+        const fromLabel = sourceElements.fromInput?.value || '';
+        const toLabel = sourceElements.toInput?.value || '';
+
+        let hybridItins = [];
+        const canUseHybridRouting = dataManager && dataManager.isLoaded && gtfsAvailable && routerContext;
+        if (canUseHybridRouting) {
+            try {
+                hybridItins = await routerContext.computeHybridItinerary(fromCoords, toCoords, searchTime, { fromLabel, toLabel });
+            } catch (e) {
+                console.warn('Erreur lors de la construction hybride :', e);
+            }
+        }
+
+        if (hybridItins && hybridItins.length) {
+            allFetchedItineraries = hybridItins;
+        } else {
+            console.log('🆘 Aucun trajet GTFS local, fallback Google Transit en cours...');
+            const intelligentResults = await apiManager.fetchItinerary(fromPlaceId, toPlaceId, searchTime); 
+            allFetchedItineraries = processIntelligentResults(intelligentResults, searchTime);
+        }
+        // Ensure every BUS step has a polyline (GTFS constructed or fallback)
+        try {
+            await ensureItineraryPolylines(allFetchedItineraries);
+        } catch (e) {
+            console.warn('Erreur lors de l\'assurance des polylines:', e);
+        }
+
         setupResultTabs(allFetchedItineraries);
         renderItineraryResults('ALL');
         if (allFetchedItineraries.length > 0) {
@@ -1039,9 +1105,11 @@ function processGoogleRoutesResponse(data) {
 }
 
 function processIntelligentResults(intelligentResults, searchTime) {
+    console.log("=== DÉBUT PROCESS INTELLIGENT RESULTS ===");
     const itineraries = [];
     const sortedRecommendations = [...intelligentResults.recommendations].sort((a, b) => b.score - a.score);
-    
+
+    // 1. Extraction des résultats Google
     sortedRecommendations.forEach(rec => {
         let modeData = null;
         let modeInfo = null;
@@ -1055,7 +1123,7 @@ function processIntelligentResults(intelligentResults, searchTime) {
             modeData = intelligentResults.walk.data;
             modeInfo = intelligentResults.walk;
         }
-        
+
         if (modeData && modeInfo) {
             if (rec.mode === 'bus') {
                 const busItineraries = processGoogleRoutesResponse(modeData);
@@ -1070,30 +1138,514 @@ function processIntelligentResults(intelligentResults, searchTime) {
                 const simpleItinerary = processSimpleRoute(modeData, rec.mode, modeInfo, searchTime);
                 if (simpleItinerary) {
                     simpleItinerary.score = rec.score;
-                    if (rec.mode === 'bike' && simpleItinerary.type !== 'BIKE') {
-                        simpleItinerary.type = 'BIKE';
-                    }
-                    if (rec.mode === 'walk' && simpleItinerary.type !== 'WALK') {
-                        simpleItinerary.type = 'WALK';
-                    }
+                    if (rec.mode === 'bike' && simpleItinerary.type !== 'BIKE') simpleItinerary.type = 'BIKE';
+                    if (rec.mode === 'walk' && simpleItinerary.type !== 'WALK') simpleItinerary.type = 'WALK';
                     itineraries.push(simpleItinerary);
                 }
             }
         }
     });
-    
-    return itineraries.sort((a, b) => {
-        const scoreA = a.score || 0;
-        const scoreB = b.score || 0;
-        if (scoreA !== scoreB) {
-            return scoreB - scoreA;
+
+    // 2. LOGIQUE DE FENÊTRE TEMPORELLE (Horaire Arrivée)
+    try {
+        if (searchTime && searchTime.type === 'arriver') {
+            // A. Définir la cible
+            let reqDate = null;
+            if (!searchTime.date || searchTime.date === 'today' || searchTime.date === "Aujourd'hui") {
+                reqDate = new Date();
+            } else {
+                reqDate = new Date(searchTime.date);
+            }
+            const reqHour = parseInt(searchTime.hour) || 0;
+            const reqMinute = parseInt(searchTime.minute) || 0;
+            reqDate.setHours(reqHour, reqMinute, 0, 0);
+            const reqMs = reqDate.getTime();
+
+            // B. Définir la Marge ASYMÉTRIQUE : 45 minutes AVANT, 30 minutes APRÈS (config demandée)
+            const BEFORE_MINUTES = 45; // avant l'heure demandée
+            const AFTER_MINUTES = 30;  // après l'heure demandée
+            const windowStart = reqMs - BEFORE_MINUTES * 60 * 1000;
+            const windowEnd = reqMs + AFTER_MINUTES * 60 * 1000;
+
+            console.log(`🕒 Cible: ${reqDate.toLocaleTimeString()} | Fenêtre: ${new Date(windowStart).toLocaleTimeString()} → ${new Date(windowEnd).toLocaleTimeString()} ( -${BEFORE_MINUTES}min / +${AFTER_MINUTES}min )`);
+
+            const busItins = itineraries.filter(i => i.type === 'BUS' && i.arrivalTime && i.arrivalTime !== '~' && i.arrivalTime !== '--:--');
+            const otherItins = itineraries.filter(i => i.type !== 'BUS');
+
+            // Parser l'heure d'arrivée (HH:MM) en Timestamp
+            const parseArrivalMs = (arrivalStr) => {
+                if (!arrivalStr || typeof arrivalStr !== 'string') return NaN;
+                const m = arrivalStr.match(/(\d{1,2}):(\d{2})/);
+                if (!m) return NaN;
+                const hh = parseInt(m[1], 10);
+                const mm = parseInt(m[2], 10);
+                const d = new Date(reqDate);
+                d.setHours(hh, mm, 0, 0);
+                return d.getTime();
+            };
+
+            const busWithMs = busItins.map(i => ({ itin: i, arrivalMs: parseArrivalMs(i.arrivalTime) })).filter(x => !isNaN(x.arrivalMs));
+
+            // C. Filtrer les bus Google qui sont DANS la fenêtre
+            let filteredBus = busWithMs
+                .filter(x => x.arrivalMs >= windowStart && x.arrivalMs <= windowEnd)
+                .map(x => x.itin);
+
+            console.log(`🚌 Bus Google trouvés dans la fenêtre : ${filteredBus.length}`);
+
+            // D. INJECTION GTFS (Data locale) pour compléter
+            // ON SUPPRIME LA LIMITE "TARGET_BUS_COUNT" pour prendre TOUT ce qui existe.
+            
+            let gtfsAdded = [];
+            let candidateStopIds = new Set();
+            if (dataManager && dataManager.isLoaded) {
+                console.log("📂 Recherche dans les données GTFS locales...");
+                
+                const normalize = (name) => {
+                    if (!name) return "";
+                    return name.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]/g, '').trim();
+                };
+
+                // Récupérer les noms d'arrêts d'arrivée depuis Google pour savoir où chercher
+                const candidateNames = new Set();
+                busItins.forEach(it => {
+                    if (!it.steps) return;
+                    const lastBusStep = [...it.steps].reverse().find(s => s.type === 'BUS');
+                    if (lastBusStep && lastBusStep.arrivalStop) candidateNames.add(lastBusStep.arrivalStop);
+                });
+
+                candidateStopIds = new Set();
+                candidateNames.forEach(n => {
+                    const key = normalize(n);
+                    if (dataManager.stopsByName && dataManager.stopsByName[key]) {
+                        dataManager.stopsByName[key].forEach(s => candidateStopIds.add(s.stop_id));
+                    } else {
+                        // Fallback recherche large
+                        dataManager.stops.forEach(s => {
+                            if (normalize(s.stop_name || '').includes(key)) candidateStopIds.add(s.stop_id);
+                        });
+                    }
+                });
+                
+                // Si Google n'a rien donné, on cherche "Tourny" ou "Gare" par défaut (optionnel)
+                if (candidateStopIds.size === 0) {
+                     console.warn("⚠️ Aucun arrêt candidat trouvé via Google, recherche GTFS impossible.");
+                } else {
+                    console.log(`📍 Arrêts candidats GTFS (IDs):`, Array.from(candidateStopIds));
+                }
+
+                const serviceIdSet = dataManager.getServiceIds(new Date(reqDate));
+                const seenKeys = new Set(); // Pour éviter les doublons exacts
+
+                // Ajouter les clés des bus Google déjà trouvés pour ne pas les dupliquer
+                filteredBus.forEach(b => {
+                    seenKeys.add(`${b.summarySegments[0]?.name}_${b.arrivalTime}`);
+                });
+
+                // PARCOURS GTFS
+                for (const stopId of candidateStopIds) {
+                    const stopTimes = dataManager.stopTimesByStop[stopId] || [];
+                    
+                    for (const st of stopTimes) {
+                        const trip = dataManager.tripsByTripId[st.trip_id];
+                        if (!trip) continue;
+
+                        // Vérif Service (Jour de la semaine)
+                        const isServiceActive = Array.from(serviceIdSet).some(sid => dataManager.serviceIdsMatch(trip.service_id, sid));
+                        if (!isServiceActive) continue;
+
+                        const arrTimeStr = st.arrival_time || st.departure_time;
+                        const seconds = dataManager.timeToSeconds(arrTimeStr);
+                        
+                        // Calcul du Timestamp Arrivée GTFS
+                        const d = new Date(reqDate);
+                        const hours = Math.floor(seconds / 3600);
+                        const mins = Math.floor((seconds % 3600) / 60);
+                        d.setHours(hours, mins, 0, 0);
+                        const arrMs = d.getTime();
+
+                        // === TEST CRITIQUE DE LA FENÊTRE ===
+                        if (arrMs >= windowStart && arrMs <= windowEnd) {
+                            
+                            const route = dataManager.getRoute(trip.route_id) || {};
+                            const routeName = route.route_short_name || trip.route_id;
+                            const key = `${routeName}_${dataManager.formatTime(seconds)}`;
+
+                            if (!seenKeys.has(key)) {
+                                seenKeys.add(key); // Marquer comme vu
+
+                                // Création de l'itinéraire GTFS enrichi (noms lisibles, horaires, polylines via shapes)
+                                                const stopTimesList = dataManager.getStopTimes(st.trip_id) || [];
+                                                const alightIndex = stopTimesList.findIndex(s => s.stop_id === st.stop_id);
+
+                                                // Determine boardingIndex robustly:
+                                                // 1) Prefer a stop that matches any origin candidate stop IDs (if available)
+                                                // 2) Otherwise, pick the nearest predecessor before alightIndex (within a small window)
+                                                let boardingIndex = null;
+                                                try {
+                                                    // Build origin candidate IDs from the current Google results (departure stops)
+                                                    const originCandidateNames = new Set();
+                                                    busItins.forEach(bi => {
+                                                        if (!bi.steps) return;
+                                                        const firstBusStep = [...bi.steps].find(s => s.type === 'BUS');
+                                                        if (firstBusStep && firstBusStep.departureStop) originCandidateNames.add(firstBusStep.departureStop);
+                                                    });
+                                                    const originCandidateIds = new Set();
+                                                    originCandidateNames.forEach(n => {
+                                                        const key = (n || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]/g, '').trim();
+                                                        if (dataManager.stopsByName && dataManager.stopsByName[key]) {
+                                                            dataManager.stopsByName[key].forEach(s => originCandidateIds.add(s.stop_id));
+                                                        } else {
+                                                            dataManager.stops.forEach(s => { if ((s.stop_name||'').toLowerCase().includes((n||'').toLowerCase())) originCandidateIds.add(s.stop_id); });
+                                                        }
+                                                    });
+                                                        // Expand candidates via groupedStopMap (include station complexes)
+                                                        if (dataManager.groupedStopMap) {
+                                                            const toAdd = new Set();
+                                                            originCandidateIds.forEach(id => {
+                                                                if (dataManager.groupedStopMap[id]) dataManager.groupedStopMap[id].forEach(x => toAdd.add(x));
+                                                                // also check parent station mapping
+                                                                const stObj = dataManager.getStop(id);
+                                                                if (stObj && stObj.parent_station && dataManager.groupedStopMap[stObj.parent_station]) {
+                                                                    dataManager.groupedStopMap[stObj.parent_station].forEach(x => toAdd.add(x));
+                                                                }
+                                                            });
+                                                            toAdd.forEach(x => originCandidateIds.add(x));
+                                                        }
+
+                                                    if (alightIndex > -1) {
+                                                        // search backwards for any origin candidate stop id
+                                                        for (let i = Math.min(alightIndex - 1, stopTimesList.length - 1); i >= 0; i--) {
+                                                            if (originCandidateIds.size > 0 && originCandidateIds.has(stopTimesList[i].stop_id)) { boardingIndex = i; break; }
+                                                        }
+
+                                                        // if none found, pick a reasonable predecessor (up to 3 stops before the alight)
+                                                        if (boardingIndex === null) {
+                                                            boardingIndex = Math.max(0, alightIndex - 2);
+                                                        }
+                                                    } else {
+                                                        // alightIndex not found: default to first stop or 0
+                                                        boardingIndex = 0;
+                                                    }
+                                                } catch (err) {
+                                                    console.warn('Erreur détermination boardingIndex GTFS, fallback utilisé', err);
+                                                    boardingIndex = 0;
+                                                }
+
+                                                const boardingST = stopTimesList[boardingIndex] || stopTimesList[0] || st;
+                                                const alightingST = stopTimesList[alightIndex] || st;
+
+                                                // If we have origin candidate IDs from Google, ensure the chosen boarding stop
+                                                // actually matches one of them or is geographically close enough.
+                                                // This avoids proposing trips that merely pass the destination stop
+                                                // but do not start near the requested origin.
+                                                const DIST_THRESHOLD_METERS = 500; // max acceptable walking distance to boarding
+                                                if (originCandidateIds && originCandidateIds.size > 0) {
+                                                    if (!originCandidateIds.has(boardingST.stop_id)) {
+                                                        // Not exact match by ID — compute nearest origin candidate distance
+                                                        let minDist = Infinity;
+                                                        originCandidateIds.forEach(cid => {
+                                                            const cand = dataManager.getStop(cid);
+                                                            if (cand && cand.stop_lat && cand.stop_lon && boardingStopObj && boardingStopObj.stop_lat) {
+                                                                const d = dataManager.calculateDistance(parseFloat(cand.stop_lat), parseFloat(cand.stop_lon), parseFloat(boardingStopObj.stop_lat), parseFloat(boardingStopObj.stop_lon));
+                                                                if (!Number.isNaN(d) && d < minDist) minDist = d;
+                                                            }
+                                                        });
+                                                        if (minDist === Infinity) {
+                                                            console.debug('GTFS injection: no origin candidate coordinates to compare, rejecting trip', { tripId: st.trip_id, boarding: boardingST.stop_id });
+                                                            continue;
+                                                        }
+                                                        if (minDist > DIST_THRESHOLD_METERS) {
+                                                            console.debug('GTFS injection: boarding stop too far from origin candidates, skip', { tripId: st.trip_id, boarding: boardingST.stop_id, minDist });
+                                                            continue;
+                                                        }
+                                                        // Otherwise accept (within distance threshold)
+                                                        console.debug('GTFS injection: boarding stop accepted by proximity', { tripId: st.trip_id, boarding: boardingST.stop_id, minDist });
+                                                    } else {
+                                                        // Exact match by ID
+                                                        console.debug('GTFS injection: boarding stop accepted by exact match', { tripId: st.trip_id, boarding: boardingST.stop_id });
+                                                    }
+                                                }
+
+                                const depSeconds = dataManager.timeToSeconds(boardingST.departure_time || boardingST.arrival_time || '00:00:00');
+                                const arrSeconds = dataManager.timeToSeconds(alightingST.arrival_time || alightingST.departure_time || '00:00:00');
+
+                                const boardingStopObj = dataManager.getStop(boardingST.stop_id) || { stop_name: boardingST.stop_id, stop_lat: 0, stop_lon: 0 };
+                                const alightingStopObj = dataManager.getStop(alightingST.stop_id) || { stop_name: alightingST.stop_id, stop_lat: 0, stop_lon: 0 };
+
+                                // Diagnostic: report when readable names are missing or when boarding is far from alight
+                                if (!boardingStopObj || !boardingStopObj.stop_name || boardingStopObj.stop_name === boardingST.stop_id) {
+                                    console.debug('GTFS injection: boarding stop has no readable name', { tripId: st.trip_id, boardingST });
+                                }
+                                if (!alightingStopObj || !alightingStopObj.stop_name || alightingStopObj.stop_name === alightingST.stop_id) {
+                                    console.debug('GTFS injection: alighting stop has no readable name', { tripId: st.trip_id, alightingST });
+                                }
+
+                                // Récupérer géométrie shape/route
+                                let geometry = null;
+                                if (trip.shape_id) geometry = dataManager.getShapeGeoJSON(trip.shape_id, trip.route_id);
+                                if (!geometry) geometry = dataManager.getRouteGeometry(trip.route_id);
+
+                                // Convertir geometry en tableau de [lon, lat] points (comme dans geojson)
+                                const extractRouteCoords = (geom) => {
+                                    if (!geom) return null;
+                                    if (Array.isArray(geom)) return geom; // assume already coords
+                                    if (geom.type === 'LineString') return geom.coordinates;
+                                    if (geom.type === 'MultiLineString') return geom.coordinates.flat();
+                                    return null;
+                                };
+
+                                const routeCoords = extractRouteCoords(geometry);
+                                let busPolylineEncoded = null;
+                                if (routeCoords && routeCoords.length > 0) {
+                                    // dataManager.findNearestPointOnRoute expects [lon, lat] pairs
+                                    const startIdx = dataManager.findNearestPointOnRoute(routeCoords, parseFloat(boardingStopObj.stop_lat), parseFloat(boardingStopObj.stop_lon));
+                                    const endIdx = dataManager.findNearestPointOnRoute(routeCoords, parseFloat(alightingStopObj.stop_lat), parseFloat(alightingStopObj.stop_lon));
+                                    let slice = null;
+                                    if (startIdx != null && endIdx != null) {
+                                        if (startIdx <= endIdx) slice = routeCoords.slice(startIdx, endIdx + 1);
+                                        else slice = [...routeCoords].slice(endIdx, startIdx + 1).reverse();
+                                    }
+                                    if (!slice || slice.length < 2) {
+                                        slice = [[parseFloat(boardingStopObj.stop_lon), parseFloat(boardingStopObj.stop_lat)], [parseFloat(alightingStopObj.stop_lon), parseFloat(alightingStopObj.stop_lat)]];
+                                    }
+                                    // convert [lon,lat] to [lat,lon]
+                                    const latlngs = slice.map(p => [p[1], p[0]]);
+                                    busPolylineEncoded = encodePolyline(latlngs);
+                                }
+
+                                const intermediateStops = [];
+                                if (stopTimesList && stopTimesList.length > 0 && alightIndex > boardingIndex) {
+                                    const mids = stopTimesList.slice(boardingIndex + 1, alightIndex).map(s => dataManager.getStop(s.stop_id)?.stop_name || s.stop_id);
+                                    intermediateStops.push(...mids);
+                                }
+
+                                const busStep = {
+                                    type: 'BUS',
+                                    icon: ICONS.BUS,
+                                    instruction: `Prendre ${routeName} vers ${trip.trip_headsign}`,
+                                    polyline: busPolylineEncoded ? { encodedPolyline: busPolylineEncoded } : null,
+                                    routeColor: route.route_color ? `#${route.route_color}` : '#3388ff',
+                                    routeTextColor: route.route_text_color ? `#${route.route_text_color}` : '#ffffff',
+                                    routeShortName: routeName,
+                                    departureStop: boardingStopObj.stop_name || boardingST.stop_id,
+                                    arrivalStop: alightingStopObj.stop_name || alightingST.stop_id,
+                                    departureTime: dataManager.formatTime(depSeconds),
+                                    arrivalTime: dataManager.formatTime(arrSeconds),
+                                    duration: dataManager.formatDuration(Math.max(0, arrSeconds - depSeconds)) || 'Horaires théoriques',
+                                    intermediateStops,
+                                    numStops: Math.max(0, (alightIndex - boardingIndex)),
+                                    _durationSeconds: Math.max(0, arrSeconds - depSeconds)
+                                };
+
+                                const itin = {
+                                    type: 'BUS',
+                                    tripId: st.trip_id,
+                                    trip: trip,
+                                    route: route,
+                                    departureTime: busStep.departureTime || '~',
+                                    arrivalTime: busStep.arrivalTime || dataManager.formatTime(seconds),
+                                    summarySegments: [{ type: 'BUS', name: routeName, color: route.route_color ? `#${route.route_color}` : '#3388ff', textColor: route.route_text_color ? `#${route.route_text_color}` : '#ffffff' }],
+                                    durationRaw: busStep._durationSeconds || 0,
+                                    duration: busStep.duration || 'Horaires théoriques',
+                                    steps: [busStep]
+                                };
+                                    // Verify trip headsign/direction loosely matches candidate arrival names to avoid cloning reverse trips
+                                    if (trip.trip_headsign) {
+                                        const th = (trip.trip_headsign || '').toLowerCase();
+                                        const matchesHeadsign = Array.from(candidateNames).some(n => n && th.includes((n || '').toLowerCase()));
+                                        if (!matchesHeadsign) {
+                                            console.debug('GTFS injection: trip headsign does not match candidate arrival names, skipping', { tripId: st.trip_id, trip_headsign: trip.trip_headsign });
+                                            continue;
+                                        }
+                                    }
+                                    gtfsAdded.push(itin);
+                            }
+                        }
+                    }
+                }
+                console.log(`✅ Bus GTFS ajoutés : ${gtfsAdded.length}`);
+            }
+
+            // E. INCLURE LES RÉSULTATS GTFS DANS L'AFFICHAGE (fenêtre stricte: jusqu'à l'heure demandée)
+            // On annote d'abord les bus Google confirmés par GTFS
+            let matchedCount = 0;
+            filteredBus.forEach(it => {
+                const key = `${it.summarySegments[0]?.name}_${it.arrivalTime}`;
+                const match = gtfsAdded.find(g => `${g.summarySegments[0]?.name}_${g.arrivalTime}` === key);
+                // Do not annotate Google itineraries with provenance flags — treat all sources uniformly in UI.
+            });
+
+            // Préparer la liste combinée (Google + GTFS) — sans limitation du nombre
+            const allBuses = [];
+            // Ajouter les bus Google filtrés (déjà dans la fenêtre [req-30min, req])
+            filteredBus.forEach(it => {
+                allBuses.push({ itin: it, arrivalMs: parseArrivalMs(it.arrivalTime), source: 'google' });
+            });
+            // Ajouter les bus GTFS trouvés dans la même fenêtre
+            gtfsAdded.forEach(g => {
+                const arrivalMs = parseArrivalMs(g.arrivalTime);
+                // uniquement si dans la fenêtre (sécurité)
+                if (!isNaN(arrivalMs) && arrivalMs >= windowStart && arrivalMs <= reqMs) {
+                    allBuses.push({ itin: g, arrivalMs: arrivalMs, source: 'gtfs' });
+                }
+            });
+
+            // Trier chronologiquement par heure d'arrivée
+            allBuses.sort((a, b) => a.arrivalMs - b.arrivalMs);
+
+            // Diagnostics GTFS
+            const missingGtfs = gtfsAdded.filter(g => !filteredBus.some(f => `${f.summarySegments[0]?.name}_${f.arrivalTime}` === `${g.summarySegments[0]?.name}_${g.arrivalTime}`));
+            itineraries._gtfsDiagnostics = {
+                candidateStopIds: Array.from(candidateStopIds || []),
+                gtfsFound: gtfsAdded.length,
+                googleFound: filteredBus.length,
+                matched: matchedCount,
+                missing: missingGtfs.map(g => ({ route: g.summarySegments[0]?.name, arrival: g.arrivalTime, tripId: g.tripId }))
+            };
+
+            if (missingGtfs.length > 0) {
+                console.warn(`⚠️ GTFS: ${missingGtfs.length} départ(s) trouvés dans GTFS mais non proposés par l'API Google.`);
+                console.table(itineraries._gtfsDiagnostics.missing);
+            } else {
+                console.log('✅ GTFS et Google cohérents pour cette fenêtre.');
+            }
+
+            // F. RECONSTRUIRE LA LISTE FINALE: inclure TOUS les bus (Google + GTFS) sans limite
+            itineraries.length = 0;
+            allBuses.forEach(b => itineraries.push(b.itin));
+            // Rajouter piéton/vélo à la fin
+            itineraries.push(...otherItins);
         }
-        const durationA = a.durationRaw || 0;
-        const durationB = b.durationRaw || 0;
-        return durationA - durationB;
-    });
+    } catch (e) {
+        console.warn('Erreur lors du filtrage par heure d\'arrivée:', e);
+    }
+
+    return itineraries; // On ne trie plus par score ici si on est en mode "arriver", l'ordre chrono est mieux.
 }
 
+/**
+ * Ensure every BUS step has a polyline. Attempts to reconstruct from GTFS data (shape or route geometry)
+ * and falls back to a straight encoded line between boarding and alighting stops when necessary.
+ * This is defensive: some GTFS-inserted itineraries may miss polylines and the renderer expects them.
+ */
+async function ensureItineraryPolylines(itineraries) {
+    if (!Array.isArray(itineraries) || !dataManager) return;
+
+    const normalize = (s) => (s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]/g, '').trim();
+
+    for (const itin of itineraries) {
+        if (!itin || !Array.isArray(itin.steps)) continue;
+        for (const step of itin.steps) {
+            try {
+                if (!step || step.type !== 'BUS') continue;
+                // If polyline already present, skip
+                if (step.polyline && (step.polyline.encodedPolyline || step.polyline.points)) continue;
+
+                // Try to find departure/arrival stops via stop names (fast path)
+                let depStopObj = null, arrStopObj = null;
+                try {
+                    if (step.departureStop) {
+                        const candidates = (dataManager.findStopsByName && dataManager.findStopsByName(step.departureStop, 3)) || [];
+                        if (candidates.length) depStopObj = candidates[0];
+                    }
+                    if (step.arrivalStop) {
+                        const candidates = (dataManager.findStopsByName && dataManager.findStopsByName(step.arrivalStop, 3)) || [];
+                        if (candidates.length) arrStopObj = candidates[0];
+                    }
+
+                    // If still missing, try to use itinerary-level info (trip/route) and match by times or stop_id
+                    if ((!depStopObj || !arrStopObj) && itin.tripId) {
+                        const stopTimes = dataManager.getStopTimes(itin.tripId) || [];
+                        if (stopTimes.length >= 1) {
+                            // Attempt to match by departureTime/arrivalTime strings if available
+                            if (!depStopObj && step.departureTime && step.departureTime !== '~') {
+                                const match = stopTimes.find(st => (st.departure_time || st.arrival_time) && ((st.departure_time && st.departure_time.startsWith(step.departureTime)) || (st.arrival_time && st.arrival_time.startsWith(step.departureTime))));
+                                if (match) depStopObj = dataManager.getStop(match.stop_id);
+                            }
+                            if (!arrStopObj && step.arrivalTime && step.arrivalTime !== '~') {
+                                const match = stopTimes.find(st => (st.arrival_time || st.departure_time) && ((st.arrival_time && st.arrival_time.startsWith(step.arrivalTime)) || (st.departure_time && st.departure_time.startsWith(step.arrivalTime))));
+                                if (match) arrStopObj = dataManager.getStop(match.stop_id);
+                            }
+
+                            // If still not found, try matching by raw stop_id if the UI shows one (some raw IDs include ':')
+                            if (!depStopObj && step.departureStop && step.departureStop.indexOf(':') !== -1) {
+                                depStopObj = dataManager.getStop(step.departureStop) || depStopObj;
+                            }
+                            if (!arrStopObj && step.arrivalStop && step.arrivalStop.indexOf(':') !== -1) {
+                                arrStopObj = dataManager.getStop(step.arrivalStop) || arrStopObj;
+                            }
+
+                            // Final fallback from stopTimes: choose first/last stops if one side still missing
+                            if (!depStopObj && stopTimes.length) depStopObj = dataManager.getStop(stopTimes[0].stop_id);
+                            if (!arrStopObj && stopTimes.length) arrStopObj = dataManager.getStop(stopTimes[stopTimes.length - 1].stop_id);
+                        }
+                    }
+                } catch (err) {
+                    console.warn('ensureItineraryPolylines: erreur résolution arrêts', err);
+                }
+
+                // Build encoded polyline from route geometry when possible
+                let encoded = null;
+                const routeId = (itin.route && (itin.route.route_id || itin.routeId)) || null;
+                const shapeId = (itin.trip && itin.trip.shape_id) || (itin.shapeId) || null;
+
+                let geometry = null;
+                if (shapeId) geometry = dataManager.getShapeGeoJSON(shapeId, routeId);
+                if (!geometry && routeId) geometry = dataManager.getRouteGeometry(routeId);
+
+                const geometryToLatLngs = (geom) => {
+                    if (!geom) return null;
+                    if (Array.isArray(geom)) return geom.map(p => [p[0], p[1]]);
+                    if (geom.type === 'LineString') return geom.coordinates.map(p => [p[1], p[0]]);
+                    if (geom.type === 'MultiLineString') return geom.coordinates.flat().map(p => [p[1], p[0]]);
+                    return null;
+                };
+
+                const latlngs = geometryToLatLngs(geometry);
+
+                if (latlngs && latlngs.length >= 2 && depStopObj && arrStopObj) {
+                    // find nearest indices
+                    const findNearestIdx = (points, targetLat, targetLon) => {
+                        let best = 0; let bestD = Infinity;
+                        for (let i = 0; i < points.length; i++) {
+                            const d = dataManager.calculateDistance(targetLat, targetLon, points[i][0], points[i][1]);
+                            if (d < bestD) { bestD = d; best = i; }
+                        }
+                        return best;
+                    };
+                    const startIdx = findNearestIdx(latlngs, parseFloat(depStopObj.stop_lat), parseFloat(depStopObj.stop_lon));
+                    const endIdx = findNearestIdx(latlngs, parseFloat(arrStopObj.stop_lat), parseFloat(arrStopObj.stop_lon));
+                    let slice = null;
+                    if (startIdx != null && endIdx != null && startIdx !== endIdx) {
+                        if (startIdx < endIdx) slice = latlngs.slice(startIdx, endIdx + 1);
+                        else slice = [...latlngs].slice(endIdx, startIdx + 1).reverse();
+                    }
+                    if (!slice || slice.length < 2) slice = [[parseFloat(depStopObj.stop_lat), parseFloat(depStopObj.stop_lon)], [parseFloat(arrStopObj.stop_lat), parseFloat(arrStopObj.stop_lon)]];
+                    encoded = encodePolyline(slice);
+                }
+
+                // Final fallback: direct straight line using available coordinates
+                if (!encoded) {
+                    const dep = depStopObj ? { lat: parseFloat(depStopObj.stop_lat), lon: parseFloat(depStopObj.stop_lon) } : null;
+                    const arr = arrStopObj ? { lat: parseFloat(arrStopObj.stop_lat), lon: parseFloat(arrStopObj.stop_lon) } : null;
+                    if (dep && arr && !Number.isNaN(dep.lat) && !Number.isNaN(arr.lat)) {
+                        encoded = encodePolyline([[dep.lat, dep.lon], [arr.lat, arr.lon]]);
+                    }
+                }
+
+                if (encoded) {
+                    step.polyline = { encodedPolyline: encoded };
+                    console.debug('ensureItineraryPolylines: reconstructed polyline', { itinId: itin.tripId || itin.trip?.trip_id || null });
+                } else {
+                    console.warn('ensureItineraryPolylines: impossible de reconstruire la polyline pour une étape BUS (aucune coordonnée fiable)', { itin: itin, step });
+                }
+            } catch (err) {
+                console.warn('ensureItineraryPolylines error for step', err);
+            }
+        }
+    }
+}
 function processSimpleRoute(data, mode, modeInfo, searchTime) { 
     if (!data || !data.routes || data.routes.length === 0 || !modeInfo) return null;
     const route = data.routes[0];
