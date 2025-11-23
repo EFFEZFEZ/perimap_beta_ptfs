@@ -68,11 +68,12 @@ export class RouterWorkerClient {
         });
 
         const snapshot = dataManager.createRoutingSnapshot();
+        const workerIcons = serializeWorkerIcons(this.icons);
         this.worker.postMessage({
             type: 'init',
             payload: {
                 snapshot,
-                icons: this.icons,
+                icons: workerIcons,
                 googleApiKey: this.googleApiKey
             }
         });
@@ -109,4 +110,18 @@ export class RouterWorkerClient {
         }
         this.rejectAll(new Error('Router worker terminated'));
     }
+}
+
+function serializeWorkerIcons(icons) {
+    if (!icons || typeof icons !== 'object') {
+        return null;
+    }
+    const allowedKeys = ['BUS', 'WALK', 'statusWarning'];
+    const safeIcons = {};
+    allowedKeys.forEach((key) => {
+        if (typeof icons[key] === 'string') {
+            safeIcons[key] = icons[key];
+        }
+    });
+    return safeIcons;
 }

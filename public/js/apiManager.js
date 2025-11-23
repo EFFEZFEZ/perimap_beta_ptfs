@@ -41,12 +41,19 @@ export class ApiManager {
         this.geocoder = null;
         this.autocompleteService = null;
         this.apiLoadPromise = null; // <-- CORRECTION: Ajout du verrou
+        this.googleAuthFailed = false;
+        this.googleAuthFailureMessage = '';
+        this.clientOrigin = (typeof window !== 'undefined' && window.location) ? window.location.origin : '';
     }
 
     /**
      * Initialise le chargeur de l'API Google Maps.
      */
     async loadGoogleMapsAPI() {
+        if (this.googleAuthFailed) {
+            return Promise.reject(new Error(this.buildAuthFailureMessage()));
+        }
+
         // <-- CORRECTION: Vérifie si un chargement est déjà en cours
         if (this.apiLoadPromise) {
             return this.apiLoadPromise;
@@ -61,17 +68,33 @@ export class ApiManager {
             }
         }
 
+        this.installGoogleAuthHook();
+
         // <-- CORRECTION: Stocke la promesse pour la réutiliser
         this.apiLoadPromise = new Promise((resolve, reject) => {
+            const authEventName = 'peribus-google-auth-failure';
+            const handleAuthFailure = (event) => {
+                window.removeEventListener(authEventName, handleAuthFailure);
+                this.googleAuthFailed = true;
+                this.googleAuthFailureMessage = this.buildAuthFailureMessage(event?.detail?.origin);
+                console.error(this.googleAuthFailureMessage);
+                this.apiLoadPromise = null;
+                reject(new Error(this.googleAuthFailureMessage));
+            };
+            window.addEventListener(authEventName, handleAuthFailure, { once: true });
+
+            const cleanupAuthHandler = () => window.removeEventListener(authEventName, handleAuthFailure);
             const script = document.createElement('script');
             
             // ✅ V57: Charge 'places' (pour Autocomplete) et 'geocoding' (pour Reverse Geocode)
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${this.apiKey}&libraries=places,geocoding&v=weekly`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${this.apiKey}&libraries=places,geocoding&v=weekly&loading=async`;
             
             script.async = true;
             script.defer = true;
+            script.setAttribute('data-google-maps', 'true');
             
             script.onload = () => {
+                cleanupAuthHandler();
                 console.log("✅ API Google Maps chargée avec succès.");
                 setTimeout(async () => {
                     try {
@@ -92,6 +115,7 @@ export class ApiManager {
             };
             
             script.onerror = () => {
+                cleanupAuthHandler();
                 console.error("❌ Erreur lors du chargement du script Google Maps.");
                 this.apiLoadPromise = null;
                 reject(new Error("Impossible de charger Google Maps API."));
@@ -179,7 +203,12 @@ export class ApiManager {
     async getPlaceAutocomplete(inputString) {
         if (!this.sessionToken) {
             console.warn("⚠️ Service d'autocomplétion non initialisé. Tentative de chargement...");
-            await this.loadGoogleMapsAPI();
+            try {
+                await this.loadGoogleMapsAPI();
+            } catch (error) {
+                console.error("❌ Impossible d'initialiser le service d'autocomplétion:", error.message);
+                return [];
+            }
             if (!this.sessionToken) {
                 console.error("❌ Impossible d'initialiser le service d'autocomplétion");
                 return [];
@@ -259,7 +288,12 @@ export class ApiManager {
     async reverseGeocode(lat, lng) {
         if (!this.geocoder) {
             console.warn("⚠️ Service Geocoder non initialisé. Tentative de chargement...");
-            await this.loadGoogleMapsAPI();
+            try {
+                await this.loadGoogleMapsAPI();
+            } catch (error) {
+                console.error("❌ Impossible d'initialiser le service Geocoder:", error.message);
+                return null;
+            }
             if (!this.geocoder) {
                 console.error("❌ Impossible d'initialiser le service Geocoder");
                 return null;
@@ -294,7 +328,12 @@ export class ApiManager {
     async getPlaceCoords(placeId) {
         if (!this.geocoder) {
             console.warn("⚠️ Service Geocoder non initialisé. Tentative de chargement...");
-            await this.loadGoogleMapsAPI();
+            try {
+                await this.loadGoogleMapsAPI();
+            } catch (error) {
+                console.error("❌ Impossible d'initialiser le service Geocoder:", error.message);
+                return null;
+            }
             if (!this.geocoder) {
                 console.error("❌ Impossible d'initialiser le service Geocoder");
                 return null;
@@ -685,5 +724,37 @@ export class ApiManager {
     // Compatibilité ascendante (ancienne signature)
     async fetchWalkRoute(fromPlaceId, toPlaceId) {
         return this.fetchWalkingRoute(fromPlaceId, toPlaceId);
+    }
+
+    installGoogleAuthHook() {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        if (window.__peribusGoogleAuthHookInstalled) {
+            return;
+        }
+        window.__peribusGoogleAuthHookInstalled = true;
+        const previousHandler = window.gm_authFailure;
+        window.gm_authFailure = () => {
+            try {
+                window.dispatchEvent(new CustomEvent('peribus-google-auth-failure', {
+                    detail: { origin: window.location?.origin }
+                }));
+            } catch (error) {
+                console.warn('gm_authFailure dispatch error', error);
+            }
+            if (typeof previousHandler === 'function') {
+                try {
+                    previousHandler();
+                } catch (error) {
+                    console.warn('gm_authFailure previous handler failed', error);
+                }
+            }
+        };
+    }
+
+    buildAuthFailureMessage(origin = this.clientOrigin) {
+        const target = origin || this.clientOrigin || 'ce domaine';
+        return `Google Maps API a refusé le referer ${target}. Ajoutez cette URL dans les restrictions HTTP de votre clé Google Cloud.`;
     }
 }

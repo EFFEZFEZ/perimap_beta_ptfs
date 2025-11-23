@@ -1,3 +1,23 @@
+#map .leaflet-custom-locate a,
+#detail-map .leaflet-custom-locate a,
+#results-map .leaflet-custom-locate a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.leaflet-custom-locate a.is-loading svg {
+    animation: locate-spin 0.9s linear infinite;
+}
+
+.leaflet-custom-locate a.has-error {
+    color: #ef4444;
+}
+
+@keyframes locate-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 /* =========================================
  * NOUVEAU THÈME & VARIABLES
  * ========================================= */

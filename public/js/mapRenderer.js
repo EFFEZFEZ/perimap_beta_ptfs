@@ -43,61 +43,7 @@ const DARK_TILE_CONFIG = Object.freeze({
     }
 });
 
-const LOCATE_CONTROL_SCRIPT = 'https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.81.0/dist/l.control.locate.min.js';
-const LOCATE_CONTROL_STYLES = 'https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.81.0/dist/l.control.locate.min.css';
-let locateControlLoaderPromise = null;
-
-function ensureLocateControlStyles() {
-    if (typeof document === 'undefined') {
-        return;
-    }
-    const existing = document.querySelector('link[data-locate-control="true"]');
-    if (existing) {
-        return;
-    }
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = LOCATE_CONTROL_STYLES;
-    link.setAttribute('data-locate-control', 'true');
-    document.head.appendChild(link);
-}
-
-function ensureLocateControlAssets() {
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-        return Promise.resolve();
-    }
-    if (window.L?.control?.locate) {
-        return Promise.resolve();
-    }
-
-    ensureLocateControlStyles();
-
-    if (locateControlLoaderPromise) {
-        return locateControlLoaderPromise;
-    }
-
-    locateControlLoaderPromise = new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = LOCATE_CONTROL_SCRIPT;
-        script.async = true;
-        script.onload = () => {
-            if (window.L?.control?.locate) {
-                resolve();
-            } else {
-                reject(new Error('Leaflet LocateControl chargé sans exposer L.control.locate'));
-            }
-        };
-        script.onerror = () => {
-            reject(new Error('Impossible de charger Leaflet LocateControl'));
-        };
-        document.head.appendChild(script);
-    }).catch(error => {
-        locateControlLoaderPromise = null;
-        throw error;
-    });
-
-    return locateControlLoaderPromise;
-}
+const LOCATE_BUTTON_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L7 12h10L12 2z"/><circle cx="12" cy="12" r="10"/></svg>`;
 
 export class MapRenderer {
     /**
@@ -130,6 +76,7 @@ export class MapRenderer {
         /* ✅ V57 - Géolocalisation */
         this.userLocationMarker = null; // Le "point bleu"
         this.locateControl = null; // Le contrôle Leaflet.Locate
+        this.locateButtonElement = null;
 
         this.activeTileLayer = null;
         this.currentTheme = null;
@@ -780,67 +727,78 @@ export class MapRenderer {
             console.warn('Carte non initialisée, impossible d’ajouter le contrôle de localisation.');
             return;
         }
-
-        const mountControl = () => {
-            if (!L.control?.locate) {
-                console.warn("Leaflet.locate reste indisponible après chargement.");
-                return;
-            }
-            if (this.locateControl) {
-                return;
-            }
-
-            this.locateControl = L.control.locate({
-                position: 'topright',
-                strings: {
-                    title: "Me localiser"
-                },
-                flyTo: true,
-                keepCurrentZoomLevel: true,
-                markerClass: L.Marker,
-                markerStyle: {
-                    opacity: 0,
-                    interactive: false
-                },
-                circleStyle: {
-                    opacity: 0,
-                    fillOpacity: 0
-                },
-                locateOptions: {
-                    enableHighAccuracy: true
-                },
-                createButtonCallback: (container, options) => {
-                    const link = L.DomUtil.create('a', 'leaflet-bar-part leaflet-bar-part-single leaflet-control-locate', container);
-                    link.href = '#';
-                    link.title = options.strings.title;
-                    link.setAttribute('role', 'button');
-                    link.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L7 12l10 0L12 2z"/><circle cx="12" cy="12" r="10"/></svg>`;
-                    return link;
-                }
-            }).addTo(this.map);
-
-            this.map.on('locationfound', (e) => {
-                this.locateControl.stop();
-                onSuccess({ coords: { latitude: e.latitude, longitude: e.longitude } });
-                this.panToUserLocation();
-            });
-
-            this.map.on('locationerror', (e) => {
-                onError(e);
-            });
-        };
-
-        if (L.control?.locate) {
-            mountControl();
+        if (this.locateControl) {
+            return;
+        }
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+            console.warn('API de géolocalisation indisponible dans ce navigateur.');
             return;
         }
 
-        console.warn("Leaflet.locate non détecté, chargement dynamique en cours...");
-        ensureLocateControlAssets()
-            .then(mountControl)
-            .catch(error => {
-                console.error('Impossible de charger Leaflet LocateControl:', error);
+        const renderer = this;
+        const startLocate = () => {
+            if (!renderer.map) return;
+            renderer.setLocateButtonState('loading');
+            renderer.map.locate({
+                enableHighAccuracy: true,
+                watch: false,
+                setView: false,
+                maximumAge: 0
             });
+        };
+
+        const handleLocationFound = (event) => {
+            renderer.setLocateButtonState('idle');
+            if (typeof onSuccess === 'function') {
+                onSuccess({ coords: { latitude: event.latitude, longitude: event.longitude } });
+            }
+            renderer.panToUserLocation();
+        };
+
+        const handleLocationError = (event) => {
+            renderer.setLocateButtonState('error');
+            if (typeof onError === 'function') {
+                onError(event);
+            }
+            setTimeout(() => renderer.setLocateButtonState('idle'), 1800);
+        };
+
+        const LocateControl = L.Control.extend({
+            options: { position: 'topright' },
+            onAdd() {
+                const container = L.DomUtil.create('div', 'leaflet-bar leaflet-custom-locate');
+                const link = L.DomUtil.create('a', 'leaflet-bar-part leaflet-bar-part-single', container);
+                link.href = '#';
+                link.setAttribute('role', 'button');
+                link.title = 'Me localiser';
+                link.innerHTML = LOCATE_BUTTON_ICON;
+                renderer.locateButtonElement = link;
+                renderer.setLocateButtonState('idle');
+                L.DomEvent.on(link, 'click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startLocate();
+                });
+                return container;
+            }
+        });
+
+        this.locateControl = new LocateControl();
+        this.locateControl.addTo(this.map);
+        this.map.on('locationfound', handleLocationFound);
+        this.map.on('locationerror', handleLocationError);
+    }
+
+    setLocateButtonState(state) {
+        if (!this.locateButtonElement) {
+            return;
+        }
+        this.locateButtonElement.classList.toggle('is-loading', state === 'loading');
+        this.locateButtonElement.classList.toggle('has-error', state === 'error');
+        if (state === 'idle') {
+            this.locateButtonElement.classList.remove('is-loading');
+            this.locateButtonElement.classList.remove('has-error');
+        }
     }
 
     /**
@@ -873,9 +831,8 @@ export class MapRenderer {
      * Gère les erreurs de localisation (ex: permission refusée)
      */
     onLocateError() {
-        if (this.locateControl) {
-            this.locateControl.stop(); // Arrête l'animation de chargement
-        }
+        this.setLocateButtonState('error');
+        setTimeout(() => this.setLocateButtonState('idle'), 1800);
     }
 
     /**
@@ -885,9 +842,9 @@ export class MapRenderer {
         if (this.userLocationMarker) {
             const latLng = this.userLocationMarker.getLatLng();
             this.map.flyTo(latLng, Math.max(this.map.getZoom(), 17)); // Zoome si nécessaire
-        } else if (this.locateControl) {
-            // Si le marqueur n'existe pas encore, demande à Leaflet-Locate de le faire
-            this.locateControl.start();
+        } else if (this.map) {
+            this.setLocateButtonState('loading');
+            this.map.locate({ enableHighAccuracy: true, watch: false, setView: true });
         }
     }
 }
