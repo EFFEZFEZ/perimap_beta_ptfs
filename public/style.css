@@ -1928,6 +1928,12 @@ details[open] .accordion-content {
     height: 18px;
 }
 
+@media (min-width: 901px) {
+    #itinerary-results-container .form-group.has-geolocate .btn-geolocate {
+        transform: translateY(-58%);
+    }
+}
+
 /* ✅ V57: NOUVEAU - Spinner pour le bouton géoloc */
 .btn-geolocate .spinner {
     width: 16px;
