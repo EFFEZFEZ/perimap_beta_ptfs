@@ -1448,8 +1448,19 @@ async function ensureItineraryPolylines(itineraries) {
         for (const step of itin.steps) {
             try {
                 if (!step || step.type !== 'BUS') continue;
-                // If polyline already present, skip
-                if (step.polyline && (step.polyline.encodedPolyline || step.polyline.points)) continue;
+
+                const hasLatLngs = Array.isArray(step?.polyline?.latLngs) && step.polyline.latLngs.length >= 2;
+                if (hasLatLngs) continue;
+
+                const routeId = (itin.route && (itin.route.route_id || itin.routeId)) || null;
+                const shapeId = (itin.trip && itin.trip.shape_id) || (itin.shapeId) || null;
+                const hasLocalGeometryHints = Boolean(routeId || shapeId || itin.tripId || itin.trip);
+
+                const hasExistingEncoded = step.polyline && (step.polyline.encodedPolyline || step.polyline.points);
+                if (!hasLocalGeometryHints && hasExistingEncoded) {
+                    // Probable itinéraire Google déjà complet -> garder la polyline fournie
+                    continue;
+                }
 
                 // Try to find departure/arrival stops via stop names (fast path)
                 let depStopObj = null, arrStopObj = null;
@@ -1497,9 +1508,6 @@ async function ensureItineraryPolylines(itineraries) {
                 // Build encoded polyline from route geometry when possible
                 let encoded = null;
                 let latLngPoints = null;
-                const routeId = (itin.route && (itin.route.route_id || itin.routeId)) || null;
-                const shapeId = (itin.trip && itin.trip.shape_id) || (itin.shapeId) || null;
-
                 let geometry = routeId ? dataManager.getRouteGeometry(routeId) : null;
                 if (!geometry && shapeId) geometry = dataManager.getShapeGeoJSON(shapeId, routeId);
 
