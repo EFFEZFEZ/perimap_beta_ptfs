@@ -5,6 +5,7 @@ const DEFAULT_DATASET = {
     stops: [],
     calendar: [],
     calendarDates: [],
+    shapes: [],
     geoJson: null
 };
 
@@ -32,6 +33,7 @@ export function cleanDataset(dataset = {}) {
         stops: (source.stops || []).map(cleanRecord),
         calendar: (source.calendar || []).map(cleanRecord),
         calendarDates: (source.calendarDates || []).map(cleanRecord),
+        shapes: (source.shapes || []).map(cleanRecord),
         geoJson: source.geoJson || null
     };
 }
@@ -45,11 +47,13 @@ export function buildGtfsIndexes(dataset = {}) {
     const tripsByTripId = {};
     const stopTimesByTrip = {};
     const stopTimesByStop = {};
+    const shapesById = {};
 
     const routes = dataset.routes || [];
     const trips = dataset.trips || [];
     const stopTimes = dataset.stopTimes || [];
     const stops = dataset.stops || [];
+    const shapes = dataset.shapes || [];
 
     routes.forEach((route) => {
         routesById[route.route_id] = route;
@@ -89,6 +93,25 @@ export function buildGtfsIndexes(dataset = {}) {
     const { masterStops, groupedStopMap } = groupNearbyStops(stops);
     const processedStopTimesByStop = preprocessStopTimesByStop(stopTimes);
 
+    shapes.forEach((shapePoint) => {
+        if (!shapePoint || !shapePoint.shape_id) return;
+        const shapeId = shapePoint.shape_id;
+        if (!shapesById[shapeId]) {
+            shapesById[shapeId] = [];
+        }
+        const seq = parseInt(shapePoint.shape_pt_sequence, 10) || 0;
+        const lat = parseFloat(shapePoint.shape_pt_lat);
+        const lon = parseFloat(shapePoint.shape_pt_lon);
+        if (Number.isNaN(lat) || Number.isNaN(lon)) return;
+        shapesById[shapeId].push({ seq, coord: [lon, lat] });
+    });
+
+    Object.keys(shapesById).forEach((shapeId) => {
+        shapesById[shapeId]
+            .sort((a, b) => a.seq - b.seq);
+        shapesById[shapeId] = shapesById[shapeId].map(entry => entry.coord);
+    });
+
     return {
         routesById,
         routesByShortName,
@@ -99,7 +122,8 @@ export function buildGtfsIndexes(dataset = {}) {
         stopTimesByTrip,
         stopTimesByStop: processedStopTimesByStop,
         groupedStopMap,
-        masterStops
+        masterStops,
+        shapesById
     };
 }
 

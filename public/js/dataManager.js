@@ -25,6 +25,7 @@ export class DataManager {
         
         this.calendar = [];
         this.calendarDates = [];
+        this.shapes = [];
 
         this.masterStops = []; 
         this.groupedStopMap = {}; 
@@ -32,6 +33,7 @@ export class DataManager {
         this.stopTimesByStop = {}; 
         this.tripsByTripId = {};
         this.stopTimesByTrip = {};
+        this.shapesById = {};
         
         // ✅ CORRECTIF 1 : AJOUT DE CES LIGNES
         this.routesById = {};
@@ -113,13 +115,14 @@ export class DataManager {
 
     async loadInline(onProgress) {
         this.reportProgress(onProgress, 'Chargement des fichiers GTFS...');
-        const [routes, trips, stopTimes, stops, calendar, calendarDates, geoJson] = await Promise.all([
+        const [routes, trips, stopTimes, stops, calendar, calendarDates, shapes, geoJson] = await Promise.all([
             this.loadGTFSFile('routes.txt'),
             this.loadGTFSFile('trips.txt'),
             this.loadGTFSFile('stop_times.txt'),
             this.loadGTFSFile('stops.txt'),
             this.loadGTFSFile('calendar.txt'), 
             this.loadGTFSFile('calendar_dates.txt'), 
+            this.loadGTFSFile('shapes.txt'),
             this.loadGeoJSON()
         ]);
 
@@ -131,6 +134,7 @@ export class DataManager {
             stops,
             calendar,
             calendarDates,
+            shapes,
             geoJson
         });
 
@@ -156,6 +160,7 @@ export class DataManager {
         this.calendar = dataset.calendar || [];
         this.calendarDates = dataset.calendarDates || [];
         this.geoJson = dataset.geoJson || null;
+        this.shapes = dataset.shapes || [];
 
         this.applyIndexes(indexes);
 
@@ -167,6 +172,7 @@ export class DataManager {
         console.log(`  - ${this.stops.length} stops`);
         console.log(`  - ${this.calendar.length} calendriers`);
         console.log(`  - ${this.calendarDates.length} exceptions`);
+        console.log(`  - ${this.shapes.length} points de shapes`);
     }
     
     applyIndexes(indexes = {}) {
