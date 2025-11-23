@@ -1535,7 +1535,7 @@ async function ensureItineraryPolylines(itineraries) {
                     }
                     if (!slice || slice.length < 2) slice = [[parseFloat(depStopObj.stop_lat), parseFloat(depStopObj.stop_lon)], [parseFloat(arrStopObj.stop_lat), parseFloat(arrStopObj.stop_lon)]];
                     encoded = encodePolyline(slice);
-                    console.debug('ensureItineraryPolylines: polyline reconstruite depuis la géométrie', {
+                    console.log('ensureItineraryPolylines: polyline reconstruite depuis la géométrie', {
                         itinId: itin.tripId || itin.trip?.trip_id || null,
                         stepRoute: routeId,
                         pointCount: slice.length
@@ -1548,7 +1548,7 @@ async function ensureItineraryPolylines(itineraries) {
                     const arr = arrStopObj ? { lat: parseFloat(arrStopObj.stop_lat), lon: parseFloat(arrStopObj.stop_lon) } : null;
                     if (dep && arr && !Number.isNaN(dep.lat) && !Number.isNaN(arr.lat)) {
                         encoded = encodePolyline([[dep.lat, dep.lon], [arr.lat, arr.lon]]);
-                        console.debug('ensureItineraryPolylines: fallback polyline directe utilisée', {
+                        console.log('ensureItineraryPolylines: fallback polyline directe utilisée', {
                             itinId: itin.tripId || itin.trip?.trip_id || null,
                             stepRoute: routeId
                         });
@@ -2028,7 +2028,7 @@ function addItineraryMarkers(itinerary, map, markerLayer) {
 function drawRouteOnResultsMap(itinerary) {
     if (!resultsMapRenderer || !resultsMapRenderer.map || !itinerary || !itinerary.steps) return;
 
-    console.debug('drawRouteOnResultsMap: start', {
+    console.log('drawRouteOnResultsMap: start', {
         itineraryType: itinerary.type,
         stepCount: itinerary.steps.length,
         itineraryId: itinerary.tripId || itinerary.trip?.trip_id || itinerary.id || null
@@ -2078,7 +2078,7 @@ function drawRouteOnResultsMap(itinerary) {
             }
 
             if (coordinates) {
-                console.debug('drawRouteOnResultsMap: couche ajoutée', {
+                console.log('drawRouteOnResultsMap: couche ajoutée', {
                     stepType: step.type,
                     pointCount: coordinates.coordinates.length
                 });
@@ -2226,7 +2226,7 @@ function renderItineraryDetailHTML(itinerary) {
 function renderItineraryDetail(itinerary) {
     if (!detailPanelContent || !detailMapRenderer) return;
 
-    console.debug('renderItineraryDetail: start', {
+    console.log('renderItineraryDetail: start', {
         itineraryId: itinerary.tripId || itinerary.trip?.trip_id || itinerary.id || null,
         stepCount: itinerary.steps?.length || 0
     });
@@ -2392,7 +2392,7 @@ function renderItineraryDetail(itinerary) {
                 }
 
                 if (coordinates) {
-                    console.debug('renderItineraryDetail: couche ajoutée', {
+                    console.log('renderItineraryDetail: couche ajoutée', {
                         stepType: step.type,
                         pointCount: coordinates.coordinates.length
                     });
