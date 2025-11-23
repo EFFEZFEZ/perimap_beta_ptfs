@@ -65,11 +65,6 @@ const ICONS = {
     GEOLOCATE: `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5a6.5 6.5 0 0 0-6.5 6.5c0 4.9 6.5 12.5 6.5 12.5s6.5-7.6 6.5-12.5A6.5 6.5 0 0 0 12 2.5Zm0 9.3a2.8 2.8 0 1 1 0-5.6 2.8 2.8 0 0 1 0 5.6Z"/></svg>`,
     GEOLOCATE_SPINNER: `<div class="spinner"></div>`,
     MAP_LOCATE: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L7 12l10 0L12 2z"/><circle cx="12" cy="12" r="10"/></svg>`,
-    MARKERS: {
-        START: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#22c55e" stroke="#ffffff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8m-4-4h8" stroke="#ffffff" stroke-width="2"/></svg>`,
-        END: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8" stroke="#ffffff" stroke-width="2"/></svg>`,
-        CORRESPONDENCE: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#3b82f6" stroke="#ffffff" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>`
-    },
     MANEUVER: {
         STRAIGHT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>`,
         TURN_LEFT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>`,
@@ -81,6 +76,81 @@ const ICONS = {
         DEFAULT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="m12 16 4-4-4-4"></path><path d="M8 12h8"></path></svg>`
     }
 };
+
+const stopCoordinateCache = new Map();
+
+const normalizeStopNameForLookup = (name) => {
+    if (!name) return '';
+    return name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .replace(/[^a-z0-9]/g, '')
+        .trim();
+};
+
+function resolveStopCoordinates(stopName) {
+    if (!stopName || !dataManager || !dataManager.isLoaded) return null;
+    const cacheKey = normalizeStopNameForLookup(stopName);
+    if (!cacheKey) return null;
+    if (stopCoordinateCache.has(cacheKey)) {
+        return stopCoordinateCache.get(cacheKey);
+    }
+
+    let candidate = null;
+
+    if (typeof dataManager.findStopsByName === 'function') {
+        const matches = dataManager.findStopsByName(stopName, 1);
+        if (matches && matches.length) {
+            candidate = matches[0];
+        }
+    }
+
+    if (!candidate && dataManager.stopsByName && dataManager.stopsByName[cacheKey]) {
+        candidate = dataManager.stopsByName[cacheKey][0];
+    }
+
+    if (!candidate && Array.isArray(dataManager.stops)) {
+        candidate = dataManager.stops.find((stop) => normalizeStopNameForLookup(stop.stop_name) === cacheKey);
+    }
+
+    const coords = candidate ? {
+        lat: Number.parseFloat(candidate.stop_lat),
+        lng: Number.parseFloat(candidate.stop_lon)
+    } : null;
+
+    if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) {
+        stopCoordinateCache.set(cacheKey, null);
+        return null;
+    }
+
+    stopCoordinateCache.set(cacheKey, coords);
+    return coords;
+}
+
+const STOP_ROLE_PRIORITY = {
+    boarding: 4,
+    alighting: 4,
+    transfer: 3,
+    intermediate: 1
+};
+
+function createStopDivIcon(role) {
+    if (typeof L === 'undefined' || !L.divIcon) return null;
+    const sizeMap = {
+        boarding: 22,
+        alighting: 22,
+        transfer: 16,
+        intermediate: 12
+    };
+    const size = sizeMap[role] || 12;
+    return L.divIcon({
+        className: `itinerary-stop-marker ${role}`,
+        html: '<span></span>',
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2]
+    });
+}
 
 const ALERT_BANNER_ICONS = {
     annulation: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
@@ -926,6 +996,7 @@ function processGoogleRoutesResponse(data) {
                     }
                     const nextDepTime = transit.localizedValues?.departureTime?.time?.text || formatGoogleTime(stopDetails.departureTime);
                     currentWalkStep.arrivalTime = nextDepTime;
+                    currentWalkStep.durationRaw = currentWalkStep.totalDuration;
                     itinerary.steps.push(currentWalkStep);
                     currentWalkStep = null;
                 }
@@ -963,6 +1034,7 @@ function processGoogleRoutesResponse(data) {
                         arrivalStop: arrivalStop.name || 'Arrêt d\'arrivée', arrivalTime: arrTime,
                         numStops: transit.stopCount || 0, intermediateStops: intermediateStops,
                         duration: formatGoogleDuration(step.staticDuration), polyline: step.polyline
+                        , durationRaw: rawDuration
                     });
                 }
             }
@@ -979,6 +1051,7 @@ function processGoogleRoutesResponse(data) {
             }
             const legArrivalTime = leg.localizedValues?.arrivalTime?.time?.text || "--:--";
             currentWalkStep.arrivalTime = legArrivalTime;
+            currentWalkStep.durationRaw = currentWalkStep.totalDuration;
             itinerary.steps.push(currentWalkStep);
         }
         
@@ -997,6 +1070,15 @@ function processGoogleRoutesResponse(data) {
             }
         });
         const hasBusSegment = itinerary.steps.some(step => step.type === 'BUS');
+        const computedDurationSeconds = itinerary.steps.reduce((total, step) => {
+            const value = typeof step?.durationRaw === 'number' ? step.durationRaw : 0;
+            return total + (Number.isFinite(value) ? value : 0);
+        }, 0);
+        if (computedDurationSeconds > 0) {
+            itinerary.durationRaw = computedDurationSeconds;
+            itinerary.duration = formatGoogleDuration(`${computedDurationSeconds}s`);
+        }
+
         if (!hasBusSegment) {
             const legDepartureTime = leg.localizedValues?.departureTime?.time?.text || leg.startTime?.text || "--:--";
             const legArrivalTime = leg.localizedValues?.arrivalTime?.time?.text || leg.endTime?.text || "--:--";
@@ -1782,6 +1864,15 @@ function setupResultTabs(itineraries) {
 /**
  * Affiche les itinéraires formatés dans la liste des résultats
  */
+function getItineraryType(itinerary) {
+    if (!itinerary) return 'BUS';
+    if (itinerary.type) return itinerary.type;
+    if (itinerary.summarySegments && itinerary.summarySegments.length > 0) return 'BUS';
+    if (itinerary._isBike) return 'BIKE';
+    if (itinerary._isWalk) return 'WALK';
+    return 'BUS';
+}
+
 function renderItineraryResults(modeFilter) {
     if (!resultsListContainer) return;
 
@@ -1817,6 +1908,25 @@ function renderItineraryResults(modeFilter) {
     let hasShownBikeTitle = false;
     let hasShownWalkTitle = false;
 
+    if (modeFilter === 'ALL' && itinerariesToRender.length > 1) {
+        const suggested = itinerariesToRender[0];
+        const rest = itinerariesToRender.slice(1);
+        const buckets = {
+            BUS: [],
+            BIKE: [],
+            WALK: [],
+            OTHER: []
+        };
+        rest.forEach(itin => {
+            const type = getItineraryType(itin);
+            if (type === 'BUS') buckets.BUS.push(itin);
+            else if (type === 'BIKE') buckets.BIKE.push(itin);
+            else if (type === 'WALK') buckets.WALK.push(itin);
+            else buckets.OTHER.push(itin);
+        });
+        itinerariesToRender = [suggested, ...buckets.BUS, ...buckets.BIKE, ...buckets.WALK, ...buckets.OTHER];
+    }
+
     itinerariesToRender.forEach((itinerary, index) => {
         const wrapper = document.createElement('div');
         wrapper.className = 'route-option-wrapper';
@@ -1825,12 +1935,7 @@ function renderItineraryResults(modeFilter) {
         let title = '';
         
         // 3. (V56) S'assurer que le type est valide (robustesse)
-        let itinType = itinerary.type;
-        if (!itinType) {
-             if (itinerary.summarySegments && itinerary.summarySegments.length > 0) itinType = 'BUS';
-             else if (itinerary._isBike) itinType = 'BIKE';
-             else if (itinerary._isWalk) itinType = 'WALK';
-        }
+        let itinType = getItineraryType(itinerary);
 
         if (modeFilter === 'ALL') { // Uniquement sur l'onglet "Suggéré"
             
@@ -2095,66 +2200,123 @@ const getPolylineLatLngs = (polyline) => {
  * Ajoute les marqueurs de Début, Fin et Correspondance sur une carte
  */
 function addItineraryMarkers(itinerary, map, markerLayer) {
-    if (!itinerary || !itinerary.steps || !map || !markerLayer) return;
+    if (!itinerary || !Array.isArray(itinerary.steps) || !map || !markerLayer) return;
 
     markerLayer.clearLayers();
-    const markers = [];
 
-    // 1. Marqueur de DÉPART
+    const busSteps = itinerary.steps.filter(step => step.type === 'BUS');
+    if (!busSteps.length) {
+        addFallbackItineraryMarkers(itinerary, markerLayer);
+        return;
+    }
+
+    const stopPoints = [];
+
+    busSteps.forEach((step, index) => {
+        const isFirstBus = index === 0;
+        const isLastBus = index === busSteps.length - 1;
+        const stepStops = [];
+
+        if (step.departureStop) {
+            stepStops.push({ name: step.departureStop, role: isFirstBus ? 'boarding' : 'transfer' });
+        }
+
+        if (Array.isArray(step.intermediateStops)) {
+            step.intermediateStops.forEach((stopName) => {
+                if (stopName) {
+                    stepStops.push({ name: stopName, role: 'intermediate' });
+                }
+            });
+        }
+
+        if (step.arrivalStop) {
+            stepStops.push({ name: step.arrivalStop, role: isLastBus ? 'alighting' : 'transfer' });
+        }
+
+        stepStops.forEach(stop => {
+            const coords = resolveStopCoordinates(stop.name);
+            if (!coords) return;
+
+            const key = `${coords.lat.toFixed(5)}-${coords.lng.toFixed(5)}`;
+            const existing = stopPoints.find(point => point.key === key);
+            if (existing) {
+                if (STOP_ROLE_PRIORITY[stop.role] > STOP_ROLE_PRIORITY[existing.role]) {
+                    existing.role = stop.role;
+                }
+                if (!existing.names.includes(stop.name)) {
+                    existing.names.push(stop.name);
+                }
+                return;
+            }
+
+            stopPoints.push({
+                key,
+                lat: coords.lat,
+                lng: coords.lng,
+                role: stop.role,
+                names: [stop.name]
+            });
+        });
+    });
+
+    if (!stopPoints.length) {
+        addFallbackItineraryMarkers(itinerary, markerLayer);
+        return;
+    }
+
+    stopPoints.forEach(point => {
+        const icon = createStopDivIcon(point.role);
+        if (!icon) return;
+        const marker = L.marker([point.lat, point.lng], {
+            icon,
+            zIndexOffset: (point.role === 'boarding' || point.role === 'alighting') ? 1200 : 900
+        });
+        markerLayer.addLayer(marker);
+    });
+}
+
+function addFallbackItineraryMarkers(itinerary, markerLayer) {
+    if (!itinerary || !Array.isArray(itinerary.steps) || !itinerary.steps.length) return;
+
+    const fallbackPoints = [];
     const firstStep = itinerary.steps[0];
-    const firstPolyline = (firstStep.type === 'BUS') ? firstStep.polyline : firstStep.polylines[0];
+    const firstPolyline = (firstStep.type === 'BUS') ? firstStep.polyline : firstStep.polylines?.[0];
     const firstLatLngs = getPolylineLatLngs(firstPolyline);
     if (firstLatLngs && firstLatLngs.length) {
         const [lat, lng] = firstLatLngs[0];
-        const startIcon = L.divIcon({
-            className: 'itinerary-marker-icon start',
-            html: ICONS.MARKERS.START,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
-        });
-        markers.push(L.marker([lat, lng], { icon: startIcon, zIndexOffset: 1000 }));
+        fallbackPoints.push({ lat, lng, role: 'boarding' });
     }
 
-    // 2. Marqueurs de CORRESPONDANCE
-    for (let i = 0; i < itinerary.steps.length - 1; i++) {
-        const currentStep = itinerary.steps[i];
-        
-        // On place un marqueur à la FIN de chaque étape (sauf la dernière)
-        const lastPolyline = (currentStep.type === 'BUS')
-            ? currentStep.polyline
-            : currentStep.polylines[currentStep.polylines.length - 1];
-        const correspondenceLatLngs = getPolylineLatLngs(lastPolyline);
-        if (correspondenceLatLngs && correspondenceLatLngs.length) {
-            const [lat, lng] = correspondenceLatLngs[correspondenceLatLngs.length - 1];
-            const corrIcon = L.divIcon({
-                className: 'itinerary-marker-icon correspondence',
-                html: ICONS.MARKERS.CORRESPONDENCE,
-                iconSize: [20, 20],
-                iconAnchor: [10, 10]
-            });
-            markers.push(L.marker([lat, lng], { icon: corrIcon, zIndexOffset: 900 }));
+    itinerary.steps.forEach((step, index) => {
+        if (index === itinerary.steps.length - 1) return;
+        const polyline = (step.type === 'BUS')
+            ? step.polyline
+            : (Array.isArray(step.polylines) ? step.polylines[step.polylines.length - 1] : null);
+        const latLngs = getPolylineLatLngs(polyline);
+        if (latLngs && latLngs.length) {
+            const [lat, lng] = latLngs[latLngs.length - 1];
+            fallbackPoints.push({ lat, lng, role: 'transfer' });
         }
-    }
+    });
 
-    // 3. Marqueur de FIN
     const lastStep = itinerary.steps[itinerary.steps.length - 1];
     const lastPolyline = (lastStep.type === 'BUS')
         ? lastStep.polyline
-        : lastStep.polylines[lastStep.polylines.length - 1];
+        : (Array.isArray(lastStep.polylines) ? lastStep.polylines[lastStep.polylines.length - 1] : null);
     const lastLatLngs = getPolylineLatLngs(lastPolyline);
     if (lastLatLngs && lastLatLngs.length) {
         const [lat, lng] = lastLatLngs[lastLatLngs.length - 1];
-        const endIcon = L.divIcon({
-            className: 'itinerary-marker-icon end',
-            html: ICONS.MARKERS.END,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
-        });
-        markers.push(L.marker([lat, lng], { icon: endIcon, zIndexOffset: 1000 }));
+        fallbackPoints.push({ lat, lng, role: 'alighting' });
     }
 
-    // Ajouter tous les marqueurs à la couche
-    markers.forEach(marker => markerLayer.addLayer(marker));
+    fallbackPoints.forEach(point => {
+        const icon = createStopDivIcon(point.role);
+        if (!icon) return;
+        markerLayer.addLayer(L.marker([point.lat, point.lng], {
+            icon,
+            zIndexOffset: (point.role === 'boarding' || point.role === 'alighting') ? 1200 : 900
+        }));
+    });
 }
 
 
