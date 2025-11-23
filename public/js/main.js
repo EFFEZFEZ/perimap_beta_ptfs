@@ -280,6 +280,7 @@ let itineraryDetailContainer, btnBackToResults, detailMapHeader, detailMapSummar
 let detailPanelWrapper, detailPanelContent;
 let hallPlannerSubmitBtn, hallFromInput, hallToInput, hallFromSuggestions, hallToSuggestions;
 let hallWhenBtn, hallPopover, hallDate, hallHour, hallMinute, hallPopoverSubmitBtn, hallSwapBtn, hallGeolocateBtn;
+let headerBusChip, headerDataStatusChip, headerMapButton;
 
 let fromPlaceId = null;
 let toPlaceId = null;
@@ -355,6 +356,9 @@ async function initializeApp() {
     hallMinute = document.getElementById('popover-minute');
     hallPopoverSubmitBtn = document.getElementById('popover-submit-btn');
     hallGeolocateBtn = document.getElementById('hall-geolocate-btn');
+    headerBusChip = document.getElementById('header-bus-chip');
+    headerDataStatusChip = document.getElementById('header-data-status-chip');
+    headerMapButton = document.getElementById('header-open-map');
 
     apiManager = new ApiManager(GOOGLE_API_KEY);
     dataManager = new DataManager();
@@ -582,13 +586,39 @@ function setupStaticEventListeners() {
     try { apiManager.loadGoogleMapsAPI(); } catch (error) { console.error("Impossible de charger l'API Google:", error); }
     populateTimeSelects();
 
-    document.querySelectorAll('.main-nav-buttons-condensed .nav-button-condensed[data-view]').forEach(button => {
+    const bindViewButtons = (selector) => {
+        document.querySelectorAll(selector).forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const view = button.dataset.view;
+                if (view) showDashboardView(view);
+            });
+        });
+    };
+    bindViewButtons('.main-nav-buttons-condensed .nav-button-condensed[data-view]');
+    bindViewButtons('.header-link[data-view]');
+
+    document.querySelectorAll('[data-focus-target]').forEach(button => {
         button.addEventListener('click', (e) => {
+            const targetId = button.dataset.focusTarget;
+            if (!targetId) return;
+            const field = document.getElementById(targetId);
+            if (!field) return;
             e.preventDefault();
-            const view = button.dataset.view;
-            showDashboardView(view);
+            showDashboardHall();
+            window.requestAnimationFrame(() => {
+                try { field.focus({ preventScroll: false }); } catch (err) { field.focus(); }
+                field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
         });
     });
+
+    if (headerMapButton) {
+        headerMapButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            showMapView();
+        });
+    }
 
     btnShowMap.addEventListener('click', showMapView); 
     btnBackToDashboardFromMap.addEventListener('click', showDashboardHall);
@@ -3369,6 +3399,9 @@ function updateBusCount(visible, total) {
             ${visible} bus
         `;
     }
+    if (headerBusChip) {
+        headerBusChip.textContent = `${visible} bus en ligne`;
+    }
 }
 
 function updateDataStatus(message, status = '') {
@@ -3376,6 +3409,20 @@ function updateDataStatus(message, status = '') {
     if (statusElement) {
         statusElement.className = status;
         statusElement.textContent = message;
+    }
+    if (headerDataStatusChip) {
+        const statusClasses = ['status-loading', 'status-ok', 'status-warning', 'status-error'];
+        headerDataStatusChip.classList.remove(...statusClasses);
+        const classMap = {
+            loading: 'status-loading',
+            loaded: 'status-ok',
+            warning: 'status-warning',
+            error: 'status-error'
+        };
+        if (classMap[status]) {
+            headerDataStatusChip.classList.add(classMap[status]);
+        }
+        headerDataStatusChip.textContent = message;
     }
 }
 

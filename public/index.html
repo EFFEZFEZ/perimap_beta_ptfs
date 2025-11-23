@@ -31,21 +31,36 @@
     <!-- Preloader removed: instant load requested by user -->
 
     <header id="main-header">
-    <div class="header-content">
-        <div class="logo">
-            <img src="https://i.ibb.co/0jJhLPp8/Peribus.webp" alt="Logo Péribus" class="header-logo-img">
-            <div class="header-title-group">
-                <span class="brand-name">Péribus</span>
-                <span class="brand-sub">Le réseau du Grand Périgueux</span>
+        <div class="header-content">
+            <div class="header-brand-block">
+                <div class="logo">
+                    <img src="https://i.ibb.co/0jJhLPp8/Peribus.webp" alt="Logo Péribus" class="header-logo-img">
+                    <div class="header-title-group">
+                        <span class="brand-name">Péribus</span>
+                        <span class="brand-sub">Le réseau du Grand Périgueux</span>
+                    </div>
+                </div>
+                <div class="header-meta">
+                    <span class="header-chip header-chip-live">Temps réel</span>
+                    <span class="header-chip" id="header-bus-chip">0 bus en ligne</span>
+                    <span class="header-chip" id="header-data-status-chip">Initialisation…</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="header-quick-links">
+                    <button class="header-link" data-view="horaires">Horaires</button>
+                    <button class="header-link" data-view="info-trafic">Infos trafic</button>
+                    <button class="header-link" data-focus-target="hall-planner-from">Planifier</button>
+                </div>
+                <div class="header-cta-group">
+                    <button id="header-open-map" class="btn btn-primary btn-compact" type="button">Carte en direct</button>
+                    <button id="theme-toggle-btn" class="btn-icon-round" aria-label="Basculer thème sombre" title="Thème sombre" aria-pressed="false">
+                        <span id="theme-toggle-icon">🌙</span>
+                    </button>
+                </div>
             </div>
         </div>
-        <nav class="header-nav">
-            <button id="theme-toggle-btn" class="btn-icon-round" aria-label="Basculer thème sombre" title="Thème sombre" aria-pressed="false">
-                <span id="theme-toggle-icon">🌙</span>
-            </button>
-            </nav>
-    </div>
-</header>
+    </header>
 
     <div id="alert-banner" class="hidden">
         <div id="alert-banner-content"></div>
