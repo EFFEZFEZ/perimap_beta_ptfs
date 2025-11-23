@@ -2747,7 +2747,7 @@ body.dark-theme .real-select option {
     background: var(--line-color, var(--border));
 }
 .route-details .step-detail:last-child::before {
-    display: none;
+    bottom: 0;
 }
 /* *** CORRECTION V36 : Utilise text-secondary pour le contraste *** */
 .route-details .step-detail.walk::before,
