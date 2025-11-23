@@ -1028,6 +1028,34 @@ function processGoogleRoutesResponse(data) {
     }).filter(itinerary => itinerary !== null);
 }
 
+const createItinerarySignature = (itinerary) => {
+    if (!itinerary) return 'null-itinerary';
+    const type = itinerary.type || 'BUS';
+    const dep = itinerary.departureTime || '';
+    const arr = itinerary.arrivalTime || '';
+    const duration = itinerary.duration || '';
+    const summary = (itinerary.summarySegments || [])
+        .map(seg => `${seg.type || ''}:${seg.name || ''}:${seg.duration || ''}`)
+        .join('|');
+    const steps = (itinerary.steps || [])
+        .map(step => `${step.type || ''}:${step.routeShortName || ''}:${step.distance || ''}:${step.duration || ''}`)
+        .join('|');
+    const tripId = itinerary.tripId || itinerary.trip?.trip_id || '';
+    const polylineId = itinerary.polyline?.encodedPolyline || itinerary.polyline?.points || '';
+    return `${type}|${dep}|${arr}|${duration}|${summary}|${steps}|${tripId}|${polylineId}`;
+};
+
+function deduplicateItineraries(list) {
+    if (!Array.isArray(list)) return [];
+    const seen = new Set();
+    return list.filter(itinerary => {
+        const key = createItinerarySignature(itinerary);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
 function processIntelligentResults(intelligentResults, searchTime) {
     console.log("=== DÉBUT PROCESS INTELLIGENT RESULTS ===");
     const itineraries = [];
@@ -1452,7 +1480,7 @@ function processIntelligentResults(intelligentResults, searchTime) {
         console.warn('Erreur lors du filtrage par heure d\'arrivée:', e);
     }
 
-    return itineraries; // On ne trie plus par score ici si on est en mode "arriver", l'ordre chrono est mieux.
+    return deduplicateItineraries(itineraries); // On ne trie plus par score ici si on est en mode "arriver", l'ordre chrono est mieux.
 }
 
 /**
