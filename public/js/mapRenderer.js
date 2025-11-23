@@ -551,8 +551,8 @@ export class MapRenderer {
         
         // Notice temps réel
         const noticeP = document.createElement('p');
-        noticeP.className = 'realtime-notice';
-        noticeP.innerHTML = '<em>Mise à jour en temps réel</em>';
+        noticeP.className = 'realtime-notice theoretical';
+        noticeP.innerHTML = '<strong>⚠️ Données simulées :</strong> Position estimée à partir des horaires théoriques.';
         body.appendChild(noticeP);
 
         container.appendChild(body);

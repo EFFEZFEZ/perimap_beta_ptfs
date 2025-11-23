@@ -115,25 +115,27 @@ async function getWalkingRouteInternal(context, startPoint, endPoint) {
         };
     }
 
-    try {
-        const startPid = await getCachedPlaceIdInternal(context, startPoint.lat, startPoint.lon);
-        const endPid = await getCachedPlaceIdInternal(context, endPoint.lat, endPoint.lon);
-        if (startPid && endPid) {
-            const walkData = await apiManager.fetchWalkingRoute(startPid, endPid);
-            const route = walkData.routes?.[0];
-            const encoded = route?.polyline?.encodedPolyline || route?.polyline;
-            if (encoded) {
-                const durationSec = parseInt(route?.duration?.replace('s', ''), 10);
-                return {
-                    encodedPolyline: encoded,
-                    distanceMeters: Math.round(route?.distanceMeters || distance),
-                    durationSeconds: durationSec && !Number.isNaN(durationSec) ? durationSec : computeWalkDurationSeconds(distance),
-                    source: 'api'
-                };
+    if (apiManager?.fetchWalkingRoute) {
+        try {
+            const startPid = await getCachedPlaceIdInternal(context, startPoint.lat, startPoint.lon);
+            const endPid = await getCachedPlaceIdInternal(context, endPoint.lat, endPoint.lon);
+            if (startPid && endPid) {
+                const walkData = await apiManager.fetchWalkingRoute(startPid, endPid);
+                const route = walkData?.routes?.[0];
+                const encoded = route?.polyline?.encodedPolyline || route?.polyline;
+                if (encoded) {
+                    const durationSec = parseInt(route?.duration?.replace('s', ''), 10);
+                    return {
+                        encodedPolyline: encoded,
+                        distanceMeters: Math.round(route?.distanceMeters || distance),
+                        durationSeconds: durationSec && !Number.isNaN(durationSec) ? durationSec : computeWalkDurationSeconds(distance),
+                        source: 'api'
+                    };
+                }
             }
+        } catch (err) {
+            console.warn('Erreur getWalkingRoute, fallback segment direct:', err);
         }
-    } catch (err) {
-        console.warn('Erreur getWalkingRoute, fallback segment direct:', err);
     }
 
     const fallbackEncoded = encodePolyline([[startPoint.lat, startPoint.lon], [endPoint.lat, endPoint.lon]]);
@@ -149,6 +151,9 @@ async function getCachedPlaceIdInternal(context, lat, lon) {
     const { apiManager, placeIdCache } = context;
     const key = `${lat},${lon}`;
     if (placeIdCache.has(key)) return placeIdCache.get(key);
+    if (!apiManager?.reverseGeocode) {
+        return null;
+    }
     try {
         const pid = await apiManager.reverseGeocode(lat, lon);
         if (pid) placeIdCache.set(key, pid);

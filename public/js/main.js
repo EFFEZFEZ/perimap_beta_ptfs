@@ -17,6 +17,8 @@ import { BusPositionCalculator } from './busPositionCalculator.js';
 import { MapRenderer } from './mapRenderer.js';
 import { ApiManager } from './apiManager.js';
 import { createRouterContext, encodePolyline, decodePolyline } from './router.js';
+import { RouterWorkerClient } from './routerWorkerClient.js';
+import { UIManager } from './uiManager.js';
 import { createGeolocationManager } from './geolocationManager.js';
 
 // Remplacez cette chaîne par votre clé d'API Google Cloud restreinte par HTTP Referrer
@@ -33,6 +35,8 @@ let resultsMapRenderer; // Carte résultats PC
 let visibleRoutes = new Set();
 let apiManager; 
 let routerContext = null;
+let routerWorkerClient = null;
+let uiManager = null;
 
 // Feature flags
 let gtfsAvailable = true; // set to false if GTFS loading fails -> degraded API-only mode
@@ -83,6 +87,8 @@ const ICONS = {
     }
 };
 
+uiManager = new UIManager({ icons: ICONS, geolocationManager: null });
+
 /* ======================
  * UI Theme (Dark Mode)
  * - Persists user choice in localStorage ('ui-theme')
@@ -91,50 +97,13 @@ const ICONS = {
  * ======================
  */
 function applyThemeState(useDarkParam) {
-    const useDark = !!useDarkParam;
-    document.body.classList.toggle('dark-theme', useDark);
-    const btn = document.getElementById('theme-toggle-btn');
-    if (btn) {
-        btn.setAttribute('aria-pressed', useDark ? 'true' : 'false');
-        btn.title = useDark ? 'Thème clair' : 'Thème sombre';
-    }
-    const icon = document.getElementById('theme-toggle-icon');
-    if (icon) {
-        icon.textContent = useDark ? '☀️' : '🌙';
-    }
-
-    try {
-        ['map', 'detail-map', 'results-map'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.classList.toggle('dark-theme', useDark);
-        });
-    } catch (e) { /* ignore */ }
-
-    const themedRenderers = [
-        typeof mapRenderer !== 'undefined' ? mapRenderer : null,
-        typeof detailMapRenderer !== 'undefined' ? detailMapRenderer : null,
-        typeof resultsMapRenderer !== 'undefined' ? resultsMapRenderer : null
-    ].filter(Boolean);
-
-    themedRenderers.forEach(renderer => {
-        if (typeof renderer.applyTheme === 'function') {
-            renderer.applyTheme(useDark);
-            if (renderer.map) {
-                renderer.map.invalidateSize();
-            }
-        }
-    });
+    if (!uiManager) return;
+    uiManager.applyThemeState(useDarkParam, [mapRenderer, detailMapRenderer, resultsMapRenderer]);
 }
 
 function initTheme() {
-    try {
-        const saved = localStorage.getItem('ui-theme');
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const useDark = saved ? (saved === 'dark') : prefersDark;
-        applyThemeState(useDark);
-    } catch (e) {
-        console.warn('initTheme error', e);
-    }
+    if (!uiManager) return;
+    uiManager.initTheme([mapRenderer, detailMapRenderer, resultsMapRenderer]);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -151,6 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize UI theme immediately (no preloader)
     initTheme();
 });
+
+registerServiceWorker();
 
 // Mappage des noms de fichiers PDF
 const PDF_FILENAME_MAP = {
@@ -326,6 +297,8 @@ async function initializeApp() {
         }
     });
 
+    uiManager = new UIManager({ icons: ICONS, geolocationManager });
+
     setupStaticEventListeners();
     if (geolocationManager) {
         geolocationManager.startWatching({
@@ -359,6 +332,23 @@ async function initializeApp() {
         busPositionCalculator = new BusPositionCalculator(dataManager);
         
         initializeRouteFilter();
+
+        try {
+            routerWorkerClient = new RouterWorkerClient({
+                dataManager,
+                icons: ICONS,
+                googleApiKey: GOOGLE_API_KEY
+            });
+        } catch (error) {
+            console.warn('Router worker indisponible, fallback main thread.', error);
+            routerWorkerClient = null;
+        }
+
+        try {
+            await dataManager.optimizeStopTimesStorage();
+        } catch (error) {
+            console.warn('Impossible d’optimiser le stockage des stop_times:', error);
+        }
         
         if (dataManager.geoJson) {
             mapRenderer.displayMultiColorRoutes(dataManager.geoJson, dataManager, visibleRoutes);
@@ -489,59 +479,23 @@ function animateValue(obj, start, end, duration, suffix = "") {
     window.requestAnimationFrame(step);
 }
 
-function populateTimeSelects() {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = Math.round(now.getMinutes() / 5) * 5; 
-    let selectedHour = currentHour;
-    let selectedMinute = currentMinute;
-    if (currentMinute === 60) {
-        selectedMinute = 0;
-        selectedHour = (currentHour + 1) % 24; 
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) {
+        return;
     }
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').catch((error) => {
+            console.warn('Service worker registration failed:', error);
+        });
+    });
+}
 
-    const MAX_DAY_OFFSET = 7; // toujours proposer une semaine complète
-    const formatDateLabel = (dateObj, offset) => {
-        if (offset === 0) return "Aujourd'hui";
-        if (offset === 1) return "Demain";
-        return dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-    };
-
-    const populate = (dateEl, hourEl, minEl) => {
-        if (!dateEl || !hourEl || !minEl) return;
-        dateEl.innerHTML = '';
-        for (let offset = 0; offset <= MAX_DAY_OFFSET; offset++) {
-            const dateObj = new Date(now);
-            dateObj.setDate(now.getDate() + offset);
-            const isoValue = dateObj.toISOString().split('T')[0];
-            const option = document.createElement('option');
-            option.value = isoValue;
-            option.textContent = formatDateLabel(dateObj, offset);
-            if (offset === 0) option.selected = true;
-            dateEl.appendChild(option);
-        }
-
-        hourEl.innerHTML = '';
-        for (let h = 0; h < 24; h++) {
-            const option = document.createElement('option');
-            option.value = h;
-            option.textContent = `${h} h`;
-            if (h === selectedHour) option.selected = true;
-            hourEl.appendChild(option);
-        }
-
-        minEl.innerHTML = '';
-        for (let m = 0; m < 60; m += 5) {
-            const option = document.createElement('option');
-            option.value = m;
-            option.textContent = String(m).padStart(2, '0');
-            if (m === selectedMinute) option.selected = true;
-            minEl.appendChild(option);
-        }
-    };
-
-    populate(hallDate, hallHour, hallMinute);
-    populate(resultsDate, resultsHour, resultsMinute);
+function populateTimeSelects() {
+    if (!uiManager) return;
+    uiManager.populateTimeSelects({
+        hall: { dateEl: hallDate, hourEl: hallHour, minEl: hallMinute },
+        results: { dateEl: resultsDate, hourEl: resultsHour, minEl: resultsMinute }
+    });
 }
 
 function setupStaticEventListeners() {
@@ -712,122 +666,15 @@ function setupDataDependentEventListeners() {
 }
 
 function setupPlannerListeners(source, elements) {
-    const { submitBtn, fromInput, toInput, fromSuggestions, toSuggestions, swapBtn, whenBtn, popover, dateSelect, hourSelect, minuteSelect, popoverSubmitBtn, geolocateBtn } = elements;
-    
-    // Drapeau pour savoir si l'utilisateur a manuellement modifié la date/heure
-    let userAdjustedTime = false;
-
-    // Si l'utilisateur change un select, on marque qu'il a ajusté le temps
-    try {
-        if (dateSelect) dateSelect.addEventListener('change', () => { userAdjustedTime = true; });
-        if (hourSelect) hourSelect.addEventListener('change', () => { userAdjustedTime = true; });
-        if (minuteSelect) minuteSelect.addEventListener('change', () => { userAdjustedTime = true; });
-    } catch (e) {
-        // Certains éléments peuvent être undefined dans certains contextes; on ignore
-    }
-    submitBtn.addEventListener('click', async (e) => {
-        e.preventDefault(); 
-        if (popover && !popover.classList.contains('hidden')) {
-            popover.classList.add('hidden');
-            whenBtn.classList.remove('popover-active');
-        }
-        await executeItinerarySearch(source, elements);
+    if (!uiManager) return;
+    uiManager.setupPlannerListeners(source, elements, {
+        onExecuteSearch: (ctxSource, ctxElements) => executeItinerarySearch(ctxSource, ctxElements),
+        handleAutocomplete,
+        getFromPlaceId: () => fromPlaceId,
+        setFromPlaceId: (value) => { fromPlaceId = value; },
+        getToPlaceId: () => toPlaceId,
+        setToPlaceId: (value) => { toPlaceId = value; }
     });
-
-    fromInput.addEventListener('input', (e) => {
-        handleAutocomplete(e.target.value, fromSuggestions, (placeId) => {
-            fromPlaceId = placeId; 
-        });
-    });
-
-    toInput.addEventListener('input', (e) => {
-        handleAutocomplete(e.target.value, toSuggestions, (placeId) => {
-            toPlaceId = placeId; 
-        });
-    });
-
-    if (whenBtn && popover) { 
-        whenBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); 
-            popover.classList.toggle('hidden');
-            whenBtn.classList.toggle('popover-active');
-            // Réinitialiser le drapeau à l'ouverture du popover
-            userAdjustedTime = false;
-        });
-        popover.querySelectorAll('.popover-tab').forEach(tab => { 
-            tab.addEventListener('click', (e) => {
-                popover.querySelectorAll('.popover-tab').forEach(t => t.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-                const tabType = e.currentTarget.dataset.tab;
-                popoverSubmitBtn.textContent = (tabType === 'arriver') ? "Valider l'arrivée" : 'Partir maintenant';
-            });
-        });
-        popoverSubmitBtn.addEventListener('click', () => { 
-             const dateText = dateSelect.options[dateSelect.selectedIndex].text;
-             const tab = popover.querySelector('.popover-tab.active').dataset.tab;
-
-             // Si l'utilisateur choisit "partir" ET n'a PAS modifié manuellement la date/heure,
-             // forcer la sélection de la date et de l'heure courantes.
-             if (tab === 'partir' && !userAdjustedTime) {
-                 const now = new Date();
-                 const todayValue = now.toISOString().split('T')[0];
-                 let currentHour = now.getHours();
-                 let currentMinute = Math.round(now.getMinutes() / 5) * 5;
-                 if (currentMinute === 60) {
-                     currentMinute = 0;
-                     currentHour = (currentHour + 1) % 24;
-                 }
-                 try {
-                     dateSelect.value = todayValue;
-                     hourSelect.value = currentHour;
-                     minuteSelect.value = currentMinute;
-                 } catch (e) {}
-             }
-
-             const hourText = String(hourSelect.value).padStart(2, '0');
-             const minuteText = String(minuteSelect.value).padStart(2, '0');
-             const mainBtnSpan = whenBtn.querySelector('span');
-             let prefix = (tab === 'arriver') ? "Arrivée" : "Départ";
-             if (dateText === "Aujourd'hui") {
-                 mainBtnSpan.textContent = `${prefix} à ${hourText}h${minuteText}`;
-             } else {
-                 mainBtnSpan.textContent = `${prefix} ${dateText.toLowerCase()} à ${hourText}h${minuteText}`;
-             }
-             popover.classList.add('hidden');
-             whenBtn.classList.remove('popover-active');
-        });
-        popover.addEventListener('click', (e) => e.stopPropagation()); 
-    }
-    
-    if (swapBtn) {
-        swapBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const fromVal = fromInput.value;
-            fromInput.value = toInput.value;
-            toInput.value = fromVal;
-            const tempId = fromPlaceId;
-            fromPlaceId = toPlaceId;
-            toPlaceId = tempId;
-        });
-    }
-
-    if (geolocateBtn) {
-        geolocateBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (!geolocationManager) {
-                console.warn('Geolocation manager non initialisé');
-                return;
-            }
-            geolocationManager.useCurrentLocationAsDeparture({
-                fromInput,
-                toInput,
-                geolocateBtn,
-                onPlaceResolved: (placeId) => {
-                    fromPlaceId = placeId;
-                }
-            });
-        });
-    }
 }
 
 async function executeItinerarySearch(source, sourceElements) {
@@ -869,12 +716,28 @@ async function executeItinerarySearch(source, sourceElements) {
         const toLabel = sourceElements.toInput?.value || '';
 
         let hybridItins = [];
-        const canUseHybridRouting = dataManager && dataManager.isLoaded && gtfsAvailable && routerContext;
+        const canUseHybridRouting = dataManager && dataManager.isLoaded && gtfsAvailable;
         if (canUseHybridRouting) {
-            try {
-                hybridItins = await routerContext.computeHybridItinerary(fromCoords, toCoords, searchTime, { fromLabel, toLabel });
-            } catch (e) {
-                console.warn('Erreur lors de la construction hybride :', e);
+            if (routerWorkerClient) {
+                try {
+                    hybridItins = await routerWorkerClient.computeHybridItinerary({
+                        fromCoords,
+                        toCoords,
+                        searchTime,
+                        labels: { fromLabel, toLabel }
+                    });
+                } catch (error) {
+                    console.warn('Router worker indisponible, fallback main thread.', error);
+                    routerWorkerClient = null;
+                }
+            }
+
+            if ((!hybridItins || !hybridItins.length) && routerContext) {
+                try {
+                    hybridItins = await routerContext.computeHybridItinerary(fromCoords, toCoords, searchTime, { fromLabel, toLabel });
+                } catch (e) {
+                    console.warn('Erreur lors de la construction hybride :', e);
+                }
             }
         }
 

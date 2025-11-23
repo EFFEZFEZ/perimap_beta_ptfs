@@ -1,4 +1,5 @@
 import { cleanDataset, buildGtfsIndexes } from './utils/gtfsProcessor.js';
+import { StopTimesStore } from './stopTimesStore.js';
 
 /**
  * dataManager.js - CORRECTION V39
@@ -46,6 +47,7 @@ export class DataManager {
         this.cacheTtlMs = GTFS_CACHE_TTL_MS;
         this.cacheMetaKey = GTFS_CACHE_META_KEY;
         this.cacheDbPromise = null;
+        this.stopTimesStore = null;
     }
 
     async loadAllData(onProgress) {
@@ -179,6 +181,47 @@ export class DataManager {
         this.groupedStopMap = indexes.groupedStopMap || {};
         this.masterStops = indexes.masterStops || [];
         console.log(`📍 ${this.masterStops.length} arrêts maîtres`);
+    }
+
+    createRoutingSnapshot() {
+        return {
+            dataset: {
+                routes: this.routes,
+                trips: this.trips,
+                stopTimes: this.stopTimes,
+                stops: this.stops,
+                calendar: this.calendar,
+                calendarDates: this.calendarDates,
+                geoJson: this.geoJson
+            },
+            indexes: {
+                routesById: this.routesById,
+                routesByShortName: this.routesByShortName,
+                stopsById: this.stopsById,
+                stopsByName: this.stopsByName,
+                tripsByRoute: this.tripsByRoute,
+                tripsByTripId: this.tripsByTripId,
+                stopTimesByTrip: this.stopTimesByTrip,
+                stopTimesByStop: this.stopTimesByStop,
+                groupedStopMap: this.groupedStopMap,
+                masterStops: this.masterStops
+            }
+        };
+    }
+
+    async optimizeStopTimesStorage() {
+        try {
+            if (!this.stopTimesStore) {
+                this.stopTimesStore = new StopTimesStore();
+            }
+            await this.stopTimesStore.seedFromTripMap(this.stopTimesByTrip);
+            if (Array.isArray(this.stopTimes)) {
+                this.stopTimes.length = 0;
+            }
+            console.log('💾 StopTimes stockés dans IndexedDB et relâchés de la RAM.');
+        } catch (error) {
+            console.warn('optimizeStopTimesStorage failed', error);
+        }
     }
 
     async restoreCache() {
