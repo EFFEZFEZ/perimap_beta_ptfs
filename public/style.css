@@ -416,10 +416,11 @@ body.view-is-locked #main-header {
     width: 100%; /* take full width of the planner block */
 }
 .planner-inputs {
+    --swap-col-width: 64px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) var(--swap-col-width) minmax(0, 1fr);
     flex: 1;
-    gap: 0.75rem; 
+    gap: 1rem;
     align-items: stretch;
     padding-left: 0;
     padding-right: 0;
@@ -438,6 +439,7 @@ body.view-is-locked #main-header {
 }
 
 .planner-inputs .swap-button-slot {
+    width: var(--swap-col-width);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2260,30 +2262,11 @@ body.dark-theme .real-select option {
 
 /* Bloc d'inputs pour la vue résultats */
 .results-planner-inputs {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    gap: 0.75rem;
-    align-items: stretch;
+    --swap-col-width: 56px;
     margin-bottom: 1rem;
 }
 .results-planner-inputs .form-group {
     margin-bottom: 0;
-    align-self: stretch;
-    display: flex;
-    flex-direction: column;
-}
-.results-planner-inputs .form-group .input-with-action {
-    flex: 1;
-}
-.results-planner-inputs .swap-button-slot {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-}
-.results-planner-inputs .swap-button-slot .btn-swap-direction {
-    justify-self: center;
-    align-self: center;
 }
 
 /* Bouton "Lancer la recherche" pleine largeur */
