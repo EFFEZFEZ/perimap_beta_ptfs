@@ -1896,16 +1896,13 @@ details[open] .accordion-content {
 .form-group.has-geolocate {
     position: relative;
 }
-.form-group.has-geolocate input[type="text"] {
-    min-height: 48px;
-}
 .btn-geolocate {
     position: absolute;
-    top: 0.3rem;
-    bottom: 0.3rem;
-    right: 0.6rem;
-    width: 40px;
-    height: auto;
+    top: 50%;
+    right: 0.5rem;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
     border-radius: 12px;
     background: var(--bg-secondary);
     color: var(--primary);
