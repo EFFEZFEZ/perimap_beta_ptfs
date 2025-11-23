@@ -996,7 +996,34 @@ function processGoogleRoutesResponse(data) {
                 return { type: 'BUS', name: step.routeShortName, color: step.routeColor, textColor: step.routeTextColor, duration: step.duration };
             }
         });
-        itinerary.summarySegments = allSummarySegments.filter(segment => segment.type === 'BUS');
+        const hasBusSegment = itinerary.steps.some(step => step.type === 'BUS');
+        if (!hasBusSegment) {
+            const legDepartureTime = leg.localizedValues?.departureTime?.time?.text || leg.startTime?.text || "--:--";
+            const legArrivalTime = leg.localizedValues?.arrivalTime?.time?.text || leg.endTime?.text || "--:--";
+            itinerary.type = 'WALK';
+            itinerary.summarySegments = [];
+            itinerary._isWalk = true;
+            if (legDepartureTime && legDepartureTime !== "--:--") {
+                itinerary.departureTime = legDepartureTime;
+                if (itinerary.steps.length) {
+                    const firstStep = itinerary.steps[0];
+                    if (!firstStep.departureTime || firstStep.departureTime === '--:--') {
+                        firstStep.departureTime = legDepartureTime;
+                    }
+                }
+            }
+            if (legArrivalTime && legArrivalTime !== "--:--") {
+                itinerary.arrivalTime = legArrivalTime;
+                if (itinerary.steps.length) {
+                    const lastStep = itinerary.steps[itinerary.steps.length - 1];
+                    if (!lastStep.arrivalTime || lastStep.arrivalTime === '--:--') {
+                        lastStep.arrivalTime = legArrivalTime;
+                    }
+                }
+            }
+        } else {
+            itinerary.summarySegments = allSummarySegments.filter(segment => segment.type === 'BUS');
+        }
         return itinerary;
     }).filter(itinerary => itinerary !== null);
 }
