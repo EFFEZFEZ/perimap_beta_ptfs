@@ -394,7 +394,16 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                 [alightingPoint.lat, alightingPoint.lon]
             ];
         }
-        const busPolylineEncoded = encodePolyline(slicedPolyline.map(pair => [pair[0], pair[1]]));
+        let busPolylineLatLngs = slicedPolyline
+            .map((pair) => [Number(pair[0]), Number(pair[1])])
+            .filter(([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon));
+        if (busPolylineLatLngs.length < 2) {
+            busPolylineLatLngs = [
+                [boardingPoint.lat, boardingPoint.lon],
+                [alightingPoint.lat, alightingPoint.lon]
+            ];
+        }
+        const busPolylineEncoded = encodePolyline(busPolylineLatLngs);
 
         const durationSeconds = Math.max(0, segment.arrivalSeconds - segment.departureSeconds);
         const intermediateStops = (segment.stopTimes || [])
@@ -405,7 +414,7 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
             type: 'BUS',
             icon: ICONS.BUS,
             instruction: `Prendre ${route?.route_short_name || segment.routeId}`,
-            polyline: { encodedPolyline: busPolylineEncoded },
+            polyline: { encodedPolyline: busPolylineEncoded, latLngs: busPolylineLatLngs },
             routeColor: route?.route_color ? `#${route.route_color}` : '#3388ff',
             routeTextColor: route?.route_text_color ? `#${route.route_text_color}` : '#ffffff',
             routeShortName: route?.route_short_name || segment.routeId,

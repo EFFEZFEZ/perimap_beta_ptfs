@@ -1295,6 +1295,7 @@ function processIntelligentResults(intelligentResults, searchTime) {
 
                                 const routeCoords = extractRouteCoords(geometry);
                                 let busPolylineEncoded = null;
+                                let busPolylineLatLngs = null;
                                 if (routeCoords && routeCoords.length > 0) {
                                     // dataManager.findNearestPointOnRoute expects [lon, lat] pairs
                                     const startIdx = dataManager.findNearestPointOnRoute(routeCoords, parseFloat(boardingStopObj.stop_lat), parseFloat(boardingStopObj.stop_lon));
@@ -1308,8 +1309,13 @@ function processIntelligentResults(intelligentResults, searchTime) {
                                         slice = [[parseFloat(boardingStopObj.stop_lon), parseFloat(boardingStopObj.stop_lat)], [parseFloat(alightingStopObj.stop_lon), parseFloat(alightingStopObj.stop_lat)]];
                                     }
                                     // convert [lon,lat] to [lat,lon]
-                                    const latlngs = slice.map(p => [p[1], p[0]]);
-                                    busPolylineEncoded = encodePolyline(latlngs);
+                                    const latlngs = slice
+                                        .map(p => [Number(p[1]), Number(p[0])])
+                                        .filter(([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon));
+                                    if (latlngs.length >= 2) {
+                                        busPolylineLatLngs = latlngs;
+                                        busPolylineEncoded = encodePolyline(latlngs);
+                                    }
                                 }
 
                                 const intermediateStops = [];
@@ -1322,7 +1328,7 @@ function processIntelligentResults(intelligentResults, searchTime) {
                                     type: 'BUS',
                                     icon: ICONS.BUS,
                                     instruction: `Prendre ${routeName} vers ${trip.trip_headsign}`,
-                                    polyline: busPolylineEncoded ? { encodedPolyline: busPolylineEncoded } : null,
+                                    polyline: busPolylineEncoded ? { encodedPolyline: busPolylineEncoded, latLngs: busPolylineLatLngs } : null,
                                     routeColor: route.route_color ? `#${route.route_color}` : '#3388ff',
                                     routeTextColor: route.route_text_color ? `#${route.route_text_color}` : '#ffffff',
                                     routeShortName: routeName,
@@ -1490,6 +1496,7 @@ async function ensureItineraryPolylines(itineraries) {
 
                 // Build encoded polyline from route geometry when possible
                 let encoded = null;
+                let latLngPoints = null;
                 const routeId = (itin.route && (itin.route.route_id || itin.routeId)) || null;
                 const shapeId = (itin.trip && itin.trip.shape_id) || (itin.shapeId) || null;
 
@@ -1540,12 +1547,20 @@ async function ensureItineraryPolylines(itineraries) {
                         if (startIdx < endIdx) slice = latlngs.slice(startIdx, endIdx + 1);
                         else slice = [...latlngs].slice(endIdx, startIdx + 1).reverse();
                     }
-                    if (!slice || slice.length < 2) slice = [[parseFloat(depStopObj.stop_lat), parseFloat(depStopObj.stop_lon)], [parseFloat(arrStopObj.stop_lat), parseFloat(arrStopObj.stop_lon)]];
-                    encoded = encodePolyline(slice);
+                    if (!slice || slice.length < 2) {
+                        slice = [
+                            [parseFloat(depStopObj.stop_lat), parseFloat(depStopObj.stop_lon)],
+                            [parseFloat(arrStopObj.stop_lat), parseFloat(arrStopObj.stop_lon)]
+                        ];
+                    }
+                    latLngPoints = slice
+                        .map(pair => [Number(pair[0]), Number(pair[1])])
+                        .filter(([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon));
+                    encoded = latLngPoints.length >= 2 ? encodePolyline(latLngPoints) : null;
                     console.log('ensureItineraryPolylines: polyline reconstruite depuis la géométrie', {
                         itinId: itin.tripId || itin.trip?.trip_id || null,
                         stepRoute: routeId,
-                        pointCount: slice.length
+                        pointCount: latLngPoints?.length || 0
                     });
                 }
 
@@ -1554,7 +1569,8 @@ async function ensureItineraryPolylines(itineraries) {
                     const dep = depStopObj ? { lat: parseFloat(depStopObj.stop_lat), lon: parseFloat(depStopObj.stop_lon) } : null;
                     const arr = arrStopObj ? { lat: parseFloat(arrStopObj.stop_lat), lon: parseFloat(arrStopObj.stop_lon) } : null;
                     if (dep && arr && !Number.isNaN(dep.lat) && !Number.isNaN(arr.lat)) {
-                        encoded = encodePolyline([[dep.lat, dep.lon], [arr.lat, arr.lon]]);
+                        latLngPoints = [[dep.lat, dep.lon], [arr.lat, arr.lon]];
+                        encoded = encodePolyline(latLngPoints);
                         console.log('ensureItineraryPolylines: fallback polyline directe utilisée', {
                             itinId: itin.tripId || itin.trip?.trip_id || null,
                             stepRoute: routeId
@@ -1562,8 +1578,8 @@ async function ensureItineraryPolylines(itineraries) {
                     }
                 }
 
-                if (encoded) {
-                    step.polyline = { encodedPolyline: encoded };
+                if (encoded && latLngPoints && latLngPoints.length >= 2) {
+                    step.polyline = { encodedPolyline: encoded, latLngs: latLngPoints };
                     console.debug('ensureItineraryPolylines: reconstructed polyline', { itinId: itin.tripId || itin.trip?.trip_id || null });
                 } else {
                     console.warn('ensureItineraryPolylines: impossible de reconstruire la polyline pour une étape BUS (aucune coordonnée fiable)', {
@@ -1962,6 +1978,55 @@ const getEncodedPolylineValue = (polyline) => {
     return polyline.encodedPolyline || polyline.points || null;
 };
 
+const getPolylineLatLngs = (polyline) => {
+    if (!polyline) return null;
+
+    const normalizePairs = (pairs) => {
+        if (!Array.isArray(pairs)) return null;
+        const normalized = pairs
+            .map((pair) => {
+                if (!Array.isArray(pair) || pair.length < 2) return null;
+                const lat = Number(pair[0]);
+                const lon = Number(pair[1]);
+                if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+                return [lat, lon];
+            })
+            .filter(Boolean);
+        return normalized.length ? normalized : null;
+    };
+
+    if (Array.isArray(polyline)) {
+        const direct = normalizePairs(polyline);
+        if (direct) return direct;
+    }
+
+    if (Array.isArray(polyline.latLngs)) {
+        const direct = normalizePairs(polyline.latLngs);
+        if (direct) return direct;
+    }
+
+    if (Array.isArray(polyline.points)) {
+        const maybeRaw = normalizePairs(polyline.points);
+        if (maybeRaw) return maybeRaw;
+    }
+
+    if (Array.isArray(polyline.coordinates)) {
+        const converted = normalizePairs(polyline.coordinates.map(([lng, lat]) => [lat, lng]));
+        if (converted) return converted;
+    }
+
+    const encoded = getEncodedPolylineValue(polyline);
+    if (encoded) {
+        try {
+            return decodePolyline(encoded);
+        } catch (err) {
+            console.warn('getPolylineLatLngs: decode failed', err);
+        }
+    }
+
+    return null;
+};
+
 /**
  * ✅ NOUVELLE FONCTION V46
  * Ajoute les marqueurs de Début, Fin et Correspondance sur une carte
@@ -1975,19 +2040,16 @@ function addItineraryMarkers(itinerary, map, markerLayer) {
     // 1. Marqueur de DÉPART
     const firstStep = itinerary.steps[0];
     const firstPolyline = (firstStep.type === 'BUS') ? firstStep.polyline : firstStep.polylines[0];
-    const firstEncoded = getEncodedPolylineValue(firstPolyline);
-    if (firstEncoded) {
-        const decoded = decodePolyline(firstEncoded);
-        if (decoded.length > 0) {
-            const [lat, lng] = decoded[0];
-            const startIcon = L.divIcon({
-                className: 'itinerary-marker-icon start',
-                html: ICONS.MARKERS.START,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-            });
-            markers.push(L.marker([lat, lng], { icon: startIcon, zIndexOffset: 1000 }));
-        }
+    const firstLatLngs = getPolylineLatLngs(firstPolyline);
+    if (firstLatLngs && firstLatLngs.length) {
+        const [lat, lng] = firstLatLngs[0];
+        const startIcon = L.divIcon({
+            className: 'itinerary-marker-icon start',
+            html: ICONS.MARKERS.START,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        markers.push(L.marker([lat, lng], { icon: startIcon, zIndexOffset: 1000 }));
     }
 
     // 2. Marqueurs de CORRESPONDANCE
@@ -1998,19 +2060,16 @@ function addItineraryMarkers(itinerary, map, markerLayer) {
         const lastPolyline = (currentStep.type === 'BUS')
             ? currentStep.polyline
             : currentStep.polylines[currentStep.polylines.length - 1];
-        const correspondenceEncoded = getEncodedPolylineValue(lastPolyline);
-        if (correspondenceEncoded) {
-            const decoded = decodePolyline(correspondenceEncoded);
-            if (decoded.length > 0) {
-                const [lat, lng] = decoded[decoded.length - 1];
-                const corrIcon = L.divIcon({
-                    className: 'itinerary-marker-icon correspondence',
-                    html: ICONS.MARKERS.CORRESPONDENCE,
-                    iconSize: [20, 20],
-                    iconAnchor: [10, 10]
-                });
-                markers.push(L.marker([lat, lng], { icon: corrIcon, zIndexOffset: 900 }));
-            }
+        const correspondenceLatLngs = getPolylineLatLngs(lastPolyline);
+        if (correspondenceLatLngs && correspondenceLatLngs.length) {
+            const [lat, lng] = correspondenceLatLngs[correspondenceLatLngs.length - 1];
+            const corrIcon = L.divIcon({
+                className: 'itinerary-marker-icon correspondence',
+                html: ICONS.MARKERS.CORRESPONDENCE,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            markers.push(L.marker([lat, lng], { icon: corrIcon, zIndexOffset: 900 }));
         }
     }
 
@@ -2019,19 +2078,16 @@ function addItineraryMarkers(itinerary, map, markerLayer) {
     const lastPolyline = (lastStep.type === 'BUS')
         ? lastStep.polyline
         : lastStep.polylines[lastStep.polylines.length - 1];
-    const lastEncoded = getEncodedPolylineValue(lastPolyline);
-    if (lastEncoded) {
-        const decoded = decodePolyline(lastEncoded);
-        if (decoded.length > 0) {
-            const [lat, lng] = decoded[decoded.length - 1];
-            const endIcon = L.divIcon({
-                className: 'itinerary-marker-icon end',
-                html: ICONS.MARKERS.END,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-            });
-            markers.push(L.marker([lat, lng], { icon: endIcon, zIndexOffset: 1000 }));
-        }
+    const lastLatLngs = getPolylineLatLngs(lastPolyline);
+    if (lastLatLngs && lastLatLngs.length) {
+        const [lat, lng] = lastLatLngs[lastLatLngs.length - 1];
+        const endIcon = L.divIcon({
+            className: 'itinerary-marker-icon end',
+            html: ICONS.MARKERS.END,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        markers.push(L.marker([lat, lng], { icon: endIcon, zIndexOffset: 1000 }));
     }
 
     // Ajouter tous les marqueurs à la couche
@@ -2077,28 +2133,29 @@ function drawRouteOnResultsMap(itinerary) {
         }
 
         polylinesToDraw.forEach(polyline => {
+            const latLngs = getPolylineLatLngs(polyline);
+            if (!latLngs || !latLngs.length) {
+                console.warn('drawRouteOnResultsMap: polyline sans coordonnées exploitables', { stepType: step.type, step });
+                return;
+            }
+
             const encoded = getEncodedPolylineValue(polyline);
-            if (!encoded) {
-                console.warn("Étape sans polyline:", step);
-                return;
-            }
-
-            let latLngs;
-            try {
-                latLngs = decodePolyline(encoded);
-            } catch (e) {
-                console.error("Erreur décodage polyline d'étape:", e, encoded);
-                return;
-            }
-
-            if (latLngs && latLngs.length) {
-                console.log('drawRouteOnResultsMap: couche ajoutée', {
+            if (typeof encoded === 'string') {
+                console.log('drawRouteOnResultsMap: encoded preview', {
                     stepType: step.type,
-                    pointCount: latLngs.length
+                    length: encoded.length,
+                    sample: encoded.slice(0, 120)
                 });
-                const stepLayer = L.polyline(latLngs, style);
-                stepLayers.push(stepLayer);
             }
+
+            console.log('drawRouteOnResultsMap: couche ajoutée', {
+                stepType: step.type,
+                pointCount: latLngs.length,
+                sampleStart: latLngs[0],
+                sampleEnd: latLngs[latLngs.length - 1]
+            });
+            const stepLayer = L.polyline(latLngs, style);
+            stepLayers.push(stepLayer);
         });
     });
 
@@ -2385,34 +2442,25 @@ function renderItineraryDetail(itinerary) {
             }
             
             polylinesToDraw.forEach(polyline => {
-                const encoded = getEncodedPolylineValue(polyline);
-                if (!encoded) {
-                    console.warn("Étape (détail) sans polyline:", step);
+                const latLngs = getPolylineLatLngs(polyline);
+                if (!latLngs || !latLngs.length) {
+                    console.warn('renderItineraryDetail: étape sans coordonnées', { stepType: step.type, step });
                     return;
                 }
 
-                let coordinates;
-                try {
-                    const decoded = decodePolyline(encoded);
-                    coordinates = {
-                        type: "LineString",
-                        coordinates: decoded.map(coord => [coord[1], coord[0]]) // [lng, lat]
-                    };
-                } catch (e) {
-                    console.error("Erreur décodage polyline d'étape (détail):", e, encoded);
-                    return;
-                }
+                const geoJson = {
+                    type: 'LineString',
+                    coordinates: latLngs.map(([lat, lng]) => [lng, lat])
+                };
 
-                if (coordinates) {
-                    console.log('renderItineraryDetail: couche ajoutée', {
-                        stepType: step.type,
-                        pointCount: coordinates.coordinates.length
-                    });
-                    const stepLayer = L.geoJSON(coordinates, {
-                        style: style // Utiliser le style dynamique de l'étape
-                    });
-                    stepLayers.push(stepLayer);
-                }
+                console.log('renderItineraryDetail: couche ajoutée', {
+                    stepType: step.type,
+                    pointCount: latLngs.length
+                });
+                const stepLayer = L.geoJSON(geoJson, {
+                    style: style // Utiliser le style dynamique de l'étape
+                });
+                stepLayers.push(stepLayer);
             });
         });
 
