@@ -13,6 +13,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body class="about-page">
+    <header class="about-header">
+        <a href="/" class="btn btn-secondary about-back-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            <span>Retour au menu</span>
+        </a>
+    </header>
     <main class="about-main">
         <section class="about-card">
             <p class="legal-pill">Projet indépendant</p>
@@ -25,10 +31,31 @@
                 <li>Statut : application indépendante, sans lien avec le Grand Périgueux.</li>
             </ul>
             <p>Retrouvez le code complet et la base <code>gtfs.bundle.json</code> sur <a href="https://github.com/EFFEZFEZ/p-rimap-sans-api-" target="_blank" rel="noopener">GitHub</a>.</p>
-            <a class="back-home-btn" href="/">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-                Retour au menu
-            </a>
+        </section>
+
+        <section class="about-card install-section">
+            <h2>Installer PériMap sur votre téléphone</h2>
+            <p>PériMap peut être ajoutée à votre écran d'accueil comme une vraie application, sans occuper d'espace supplémentaire. Installez-la en quelques secondes pour y accéder hors navigateur et profiter d'une expérience plein écran.</p>
+            <div class="install-steps">
+                <div>
+                    <h3>Android (Chrome, Edge, etc.)</h3>
+                    <ol>
+                        <li>Ouvrez <strong>perimap.app</strong> dans votre navigateur mobile.</li>
+                        <li>Appuyez sur le menu ⋮ puis choisissez <strong>"Installer l'application"</strong>.</li>
+                        <li>Validez : l'icône apparaîtra sur l'écran d'accueil.</li>
+                    </ol>
+                </div>
+                <div>
+                    <h3>iOS (Safari)</h3>
+                    <ol>
+                        <li>Ouvrez <strong>perimap.app</strong> dans Safari.</li>
+                        <li>Appuyez sur <strong>Partager</strong> ▸ <strong>Sur l'écran d'accueil</strong>.</li>
+                        <li>Confirmez : l'icône est ajoutée, sans occuper d'espace supplémentaire.</li>
+                    </ol>
+                </div>
+            </div>
+            <p class="install-highlight">Astuce : aucune inscription et aucun stockage volumineux – l'app PWA utilise les ressources déjà présentes sur votre téléphone.</p>
+            <button id="install-pwa-btn" class="install-btn" disabled>Installer PériMap</button>
         </section>
     </main>
 
@@ -43,5 +70,33 @@
             <a class="legal-about-btn" href="/about.html">À propos</a>
         </div>
     </footer>
+
+    <script>
+    (() => {
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('install-pwa-btn');
+
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            deferredPrompt = event;
+            if (installBtn) {
+                installBtn.disabled = false;
+                installBtn.textContent = 'Installer PériMap';
+            }
+        });
+
+        installBtn?.addEventListener('click', async () => {
+            if (!deferredPrompt) {
+                alert('Sur iOS, utilisez le menu Partager ▸ Sur l\'écran d\'accueil.');
+                return;
+            }
+            installBtn.disabled = true;
+            installBtn.textContent = 'Demande envoyée…';
+            deferredPrompt.prompt();
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+        });
+    })();
+    </script>
 </body>
 </html>

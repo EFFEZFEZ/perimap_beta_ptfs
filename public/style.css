@@ -358,12 +358,27 @@ body.about-page {
     background: var(--bg-light);
 }
 
+.about-header {
+    width: 100%;
+    max-width: 1300px;
+    margin: 1.5rem auto 0;
+    padding: 0 1.5rem;
+}
+
+.about-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
 .about-main {
     flex: 1;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
-    padding: 3rem 1.5rem;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 3rem 1.5rem 2rem;
 }
 
 .about-card {
@@ -396,18 +411,50 @@ body.about-page {
     font-weight: 600;
 }
 
-.back-home-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-top: 1.5rem;
-    padding: 0.75rem 1.25rem;
-    border-radius: var(--radius-full);
+.install-section {
+    margin-top: 2rem;
+}
+
+.install-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin: 1.25rem 0;
+}
+
+.install-section h3 {
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+}
+
+.install-section ol {
+    padding-left: 1.3rem;
+}
+
+.install-highlight {
+    font-weight: 600;
+    color: var(--text-primary);
+    background: rgba(37, 99, 235, 0.08);
+    padding: 0.6rem 0.8rem;
+    border-radius: var(--radius-md);
+}
+
+.install-btn {
+    margin-top: 1rem;
+    border: none;
     background: var(--primary);
     color: #fff;
     font-weight: 700;
-    text-decoration: none;
+    padding: 0.85rem 1.5rem;
+    border-radius: var(--radius-full);
+    cursor: pointer;
     box-shadow: var(--shadow-md);
+}
+
+.install-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
 .about-page #legal-strip {
