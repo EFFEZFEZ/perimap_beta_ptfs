@@ -2630,7 +2630,7 @@ function renderItineraryDetailHTML(itinerary) {
             const stepClass = (step.type === 'BIKE') ? 'bicycle' : 'walk';
 
             // ✅ V46: Filtrer les étapes "STRAIGHT" trop courtes
-            const filteredSubSteps = step.subSteps.filter(subStep => {
+            const filteredSubSteps = (step.subSteps || []).filter(subStep => {
                 const distanceMatch = subStep.distance.match(/(\d+)\s*m/);
                 if (subStep.maneuver === 'STRAIGHT' && distanceMatch && parseInt(distanceMatch[1]) < 100) {
                     return false; // Ne pas afficher "Continuer tout droit (80m)"
@@ -2771,7 +2771,7 @@ function renderItineraryDetail(itinerary) {
             const stepClass = (step.type === 'BIKE') ? 'bicycle' : 'walk';
 
             // ✅ V46: Filtrer les étapes "STRAIGHT" trop courtes
-            const filteredSubSteps = step.subSteps.filter(subStep => {
+            const filteredSubSteps = (step.subSteps || []).filter(subStep => {
                 // Tente d'extraire les mètres
                 const distanceMatch = subStep.distance.match(/(\d+)\s*m/);
                 // Si c'est "STRAIGHT" ET que la distance est < 100m, on cache
