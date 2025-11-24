@@ -3832,7 +3832,6 @@ function updateDataStatus(message, status = '') {
     }
 }
 
-// Initialise l'application
-initializeApp().then(() => {
-    // Le Hall est déjà visible par défaut
-});
+export async function bootstrapApp() {
+    await initializeApp();
+}
