@@ -1,7 +1,7 @@
 {
-  "name": "Peribus Itinéraires",
+  "name": "Périmap",
   "short_name": "Peribus",
-  "start_url": "/index.html",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#22c55e",
