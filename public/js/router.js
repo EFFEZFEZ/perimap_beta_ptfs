@@ -482,12 +482,14 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         itinerary.summarySegments.push(firstLeg.summary);
 
         const waitSeconds = Math.max(0, secondSegment.departureSeconds - firstSegment.arrivalSeconds);
+        const waitTimeLabel = dataManager.formatTime(firstSegment.arrivalSeconds);
         if (waitSeconds >= 60) {
             itinerary.steps.push({
                 type: 'WAIT',
                 icon: ICONS.statusWarning,
                 instruction: `Correspondance à ${transferStop.stop_name}`,
                 duration: `${Math.max(1, Math.round(waitSeconds / 60))} min`,
+                time: waitTimeLabel,
                 _durationSeconds: waitSeconds
             });
         }

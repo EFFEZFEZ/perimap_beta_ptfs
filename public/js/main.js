@@ -2669,15 +2669,17 @@ function renderItineraryDetailHTML(itinerary) {
                 </div>
             `;
         } else if (isWaitStep(step)) {
-            const waitLabel = step.duration ? `${step.duration} d'attente` : 'Attente en cours';
+            const waitDurationLabel = step.duration || 'Attente en cours';
+            const waitTimeLabel = getSafeTimeLabel(step.time || step.arrivalTime || step.departureTime);
             return `
                 <div class="step-detail wait" style="--line-color: var(--text-secondary);">
                     <div class="step-icon">
                         ${ICONS.statusWarning}
                     </div>
-                    <div class="step-info">
+                    <div class="step-info wait-info">
+                        <span class="wait-time">${waitTimeLabel}</span>
                         <span class="step-instruction">Correspondance</span>
-                        <span class="step-sub-instruction">${waitLabel}</span>
+                        <span class="wait-duration">${waitDurationLabel}</span>
                     </div>
                 </div>
             `;
@@ -2810,15 +2812,17 @@ function renderItineraryDetail(itinerary) {
                 </div>
             `;
         } else if (isWaitStep(step)) {
-            const waitLabel = step.duration ? `${step.duration} d'attente` : 'Attente en cours';
+            const waitDurationLabel = step.duration || 'Attente en cours';
+            const waitTimeLabel = getSafeTimeLabel(step.time || step.arrivalTime || step.departureTime);
             return `
                 <div class="step-detail wait" style="--line-color: var(--text-secondary);">
                     <div class="step-icon">
                         ${ICONS.statusWarning}
                     </div>
-                    <div class="step-info">
+                    <div class="step-info wait-info">
+                        <span class="wait-time">${waitTimeLabel}</span>
                         <span class="step-instruction">Correspondance</span>
-                        <span class="step-sub-instruction">${waitLabel}</span>
+                        <span class="wait-duration">${waitDurationLabel}</span>
                     </div>
                 </div>
             `;

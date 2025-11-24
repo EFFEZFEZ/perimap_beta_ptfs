@@ -3206,6 +3206,15 @@ body.dark-theme .real-select option {
     font-weight: 500;
     color: var(--text-secondary);
     margin-left: 0.25rem;
+.route-details .wait-info .wait-time {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+.route-details .wait-info .wait-duration {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
 }
 .route-details .step-sub-instruction {
     font-size: 0.875rem;
@@ -3627,6 +3636,21 @@ body.dark-theme .real-select option {
         font-weight: 600;
         color: var(--text-primary);
         line-height: 1.4;
+    }
+
+    #detail-panel-content .step-detail.wait .wait-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+    #detail-panel-content .wait-info .wait-time {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+    #detail-panel-content .wait-info .wait-duration {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
     }
     #detail-panel-content .step-duration-inline {
         font-size: 0.9rem;
