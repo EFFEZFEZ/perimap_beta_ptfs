@@ -404,6 +404,43 @@ body.about-page {
     gap: 1.5rem;
 }
 
+.about-section {
+    width: 100%;
+    max-width: 1100px;
+    margin: 2rem auto 0;
+    padding: 0 1.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.about-section-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.about-eyebrow {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+}
+
+.about-intro {
+    color: var(--text-secondary);
+    margin-top: 0.15rem;
+}
+
+.about-section-footer {
+    text-align: center;
+}
+
+.about-section-footer .hero-link {
+    justify-content: center;
+}
+
 .about-card,
 .about-tile {
     width: 100%;
@@ -650,6 +687,12 @@ body.dark-theme .install-helper {
 
     .about-back-row {
         padding: 0.75rem 1rem 0;
+    }
+
+    .about-section {
+        padding: 0 1rem 2rem;
+        gap: 1.1rem;
+        margin-top: 1.5rem;
     }
 
     .about-page .about-main {

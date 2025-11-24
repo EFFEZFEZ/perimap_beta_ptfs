@@ -231,6 +231,43 @@
                     </div>
                 </div>
 
+                <section id="about-preview" class="about-section">
+                    <div class="about-section-header">
+                        <p class="about-eyebrow">À propos</p>
+                        <h2>Pourquoi PériMap ?</h2>
+                        <p class="about-intro">Une application légère, open data, pensée pour préparer vos trajets Péribus sans friction.</p>
+                    </div>
+
+                    <div class="tile-layout about-section-tiles">
+                        <section class="about-tile tile-primary" data-animate>
+                            <div>
+                                <div class="hero-badge">Open data • PWA</div>
+                                <h3>PériMap en clair</h3>
+                                <p class="hero-lede">Une carte rapide et douce pour le réseau Péribus, sans fioritures.</p>
+                            </div>
+                            <ul class="tile-points">
+                                <li><span>Trajets fiables</span><small>Horaires officiels du Grand Périgueux + calcul Google Routes.</small></li>
+                                <li><span>Projet personnel</span><small>Fait par un passionné, pas par Péribus. Attribution ODbL respectée et base <code>gtfs.bundle.json</code> publique.</small></li>
+                                <li><span>Sans bruit</span><small>Pas de compte, pas de pub : juste l'essentiel pour partir.</small></li>
+                            </ul>
+                            <a class="hero-link" href="https://github.com/EFFEZFEZ/p-rimap-sans-api-" target="_blank" rel="noopener">Voir le code source →</a>
+                        </section>
+
+                        <section class="about-tile tile-secondary" data-animate>
+                            <div class="install-heading">
+                                <h3>Installer PériMap</h3>
+                                <p class="install-blurb">Ajoutez PériMap à votre écran d'accueil, c'est instantané et sans stockage.</p>
+                            </div>
+                            <p id="install-helper" class="install-helper"></p>
+                            <button id="install-pwa-btn" class="install-btn" disabled>Installer PériMap</button>
+                        </section>
+                    </div>
+
+                    <div class="about-section-footer">
+                        <a class="hero-link" href="/about.html">Ouvrir la page complète →</a>
+                    </div>
+                </section>
+
             </div> 
             
             <div id="dashboard-content-view">
@@ -491,6 +528,7 @@
             </div>
         </footer>
 
+        <script src="js/aboutSection.js"></script>
         <script type="module" src="js/main.js"></script>
     </body>
     </html>
