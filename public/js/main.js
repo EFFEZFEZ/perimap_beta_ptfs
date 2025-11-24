@@ -280,6 +280,7 @@ let itineraryDetailContainer, btnBackToResults, detailMapHeader, detailMapSummar
 let detailPanelWrapper, detailPanelContent;
 let hallPlannerSubmitBtn, hallFromInput, hallToInput, hallFromSuggestions, hallToSuggestions;
 let hallWhenBtn, hallPopover, hallDate, hallHour, hallMinute, hallPopoverSubmitBtn, hallSwapBtn, hallGeolocateBtn;
+let installTipContainer, installTipCloseBtn;
 
 let fromPlaceId = null;
 let toPlaceId = null;
@@ -355,6 +356,8 @@ async function initializeApp() {
     hallMinute = document.getElementById('popover-minute');
     hallPopoverSubmitBtn = document.getElementById('popover-submit-btn');
     hallGeolocateBtn = document.getElementById('hall-geolocate-btn');
+    installTipContainer = document.getElementById('install-tip');
+    installTipCloseBtn = document.getElementById('install-tip-close');
 
     apiManager = new ApiManager(GOOGLE_API_KEY);
     dataManager = new DataManager();
@@ -665,6 +668,18 @@ function setupStaticEventListeners() {
         }
     });
 
+    if (installTipCloseBtn) {
+        installTipCloseBtn.addEventListener('click', hideInstallTip);
+    }
+    if (installTipContainer) {
+        installTipContainer.addEventListener('click', (event) => {
+            if (event.target === installTipContainer) {
+                hideInstallTip();
+            }
+        });
+    }
+    document.addEventListener('keydown', handleInstallTipKeydown);
+
     document.getElementById('btn-horaires-search-focus').addEventListener('click', () => {
         const horairesCard = document.getElementById('horaires');
         if (horairesCard) {
@@ -834,6 +849,8 @@ async function executeItinerarySearch(source, sourceElements) {
         } catch (e) {
             console.warn('Erreur lors de l\'assurance des polylines:', e);
         }
+
+        allFetchedItineraries = filterExpiredItineraries(allFetchedItineraries, searchTime);
 
         setupResultTabs(allFetchedItineraries);
         renderItineraryResults('ALL');
@@ -1641,6 +1658,7 @@ async function ensureItineraryPolylines(itineraries) {
 
                 // Try to find departure/arrival stops via stop names (fast path)
                 let depStopObj = null, arrStopObj = null;
+                let resolvedDepCoords = null, resolvedArrCoords = null;
                 try {
                     if (step.departureStop) {
                         const candidates = (dataManager.findStopsByName && dataManager.findStopsByName(step.departureStop, 3)) || [];
@@ -1680,6 +1698,13 @@ async function ensureItineraryPolylines(itineraries) {
                     }
                 } catch (err) {
                     console.warn('ensureItineraryPolylines: erreur résolution arrêts', err);
+                }
+
+                if (!depStopObj && step.departureStop) {
+                    resolvedDepCoords = resolveStopCoordinates(step.departureStop);
+                }
+                if (!arrStopObj && step.arrivalStop) {
+                    resolvedArrCoords = resolveStopCoordinates(step.arrivalStop);
                 }
 
                 // Build encoded polyline from route geometry when possible
@@ -1751,8 +1776,12 @@ async function ensureItineraryPolylines(itineraries) {
 
                 // Final fallback: direct straight line using available coordinates
                 if (!encoded) {
-                    const dep = depStopObj ? { lat: parseFloat(depStopObj.stop_lat), lon: parseFloat(depStopObj.stop_lon) } : null;
-                    const arr = arrStopObj ? { lat: parseFloat(arrStopObj.stop_lat), lon: parseFloat(arrStopObj.stop_lon) } : null;
+                    const dep = depStopObj
+                        ? { lat: parseFloat(depStopObj.stop_lat), lon: parseFloat(depStopObj.stop_lon) }
+                        : (resolvedDepCoords ? { lat: resolvedDepCoords.lat, lon: resolvedDepCoords.lng } : null);
+                    const arr = arrStopObj
+                        ? { lat: parseFloat(arrStopObj.stop_lat), lon: parseFloat(arrStopObj.stop_lon) }
+                        : (resolvedArrCoords ? { lat: resolvedArrCoords.lat, lon: resolvedArrCoords.lng } : null);
                     if (dep && arr && !Number.isNaN(dep.lat) && !Number.isNaN(arr.lat)) {
                         latLngPoints = [[dep.lat, dep.lon], [arr.lat, arr.lon]];
                         encoded = encodePolyline(latLngPoints);
@@ -1779,6 +1808,55 @@ async function ensureItineraryPolylines(itineraries) {
             }
         }
     }
+}
+
+function filterExpiredItineraries(itineraries, searchTime) {
+    if (!Array.isArray(itineraries) || !itineraries.length) return itineraries;
+    if (!searchTime || searchTime.type !== 'partir') return itineraries;
+
+    const buildReferenceDate = () => {
+        let baseDate;
+        if (!searchTime.date || searchTime.date === 'today' || searchTime.date === "Aujourd'hui") {
+            baseDate = new Date();
+        } else {
+            const parsed = new Date(searchTime.date);
+            baseDate = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+        }
+        const hour = parseInt(searchTime.hour, 10);
+        const minute = parseInt(searchTime.minute, 10);
+        if (Number.isNaN(hour) || Number.isNaN(minute)) {
+            const now = new Date();
+            baseDate.setHours(now.getHours(), now.getMinutes(), 0, 0);
+        } else {
+            baseDate.setHours(hour, minute, 0, 0);
+        }
+        baseDate.setSeconds(0, 0);
+        return baseDate;
+    };
+
+    const referenceDate = buildReferenceDate();
+    const cutoffMinutes = referenceDate.getHours() * 60 + referenceDate.getMinutes();
+    const GRACE_MINUTES = 1;
+
+    const filtered = itineraries.filter((itin) => {
+        const depTime = typeof itin?.departureTime === 'string' ? itin.departureTime : null;
+        if (!depTime || depTime === '~' || depTime === '--:--') return true;
+        const match = depTime.match(/(\d{1,2}):(\d{2})/);
+        if (!match) return true;
+        const depMinutes = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+        if (Number.isNaN(depMinutes)) return true;
+        return (depMinutes + GRACE_MINUTES) >= cutoffMinutes;
+    });
+
+    if (filtered.length !== itineraries.length) {
+        console.info('filterExpiredItineraries: trajets passés masqués', {
+            initial: itineraries.length,
+            remaining: filtered.length,
+            cutoff: referenceDate.toTimeString().slice(0, 5)
+        });
+    }
+
+    return filtered;
 }
 function processSimpleRoute(data, mode, modeInfo, searchTime) { 
     if (!data || !data.routes || data.routes.length === 0 || !modeInfo) return null;
@@ -1836,6 +1914,10 @@ function processSimpleRoute(data, mode, modeInfo, searchTime) {
 
 function setupResultTabs(itineraries) {
     if (!resultsModeTabs) return;
+    if (!itineraries || !itineraries.length) {
+        resultsModeTabs.classList.add('hidden');
+        return;
+    }
     const tabs = {
         ALL: resultsModeTabs.querySelector('[data-mode="ALL"]'),
         BUS: resultsModeTabs.querySelector('[data-mode="BUS"]'),
@@ -2236,6 +2318,25 @@ const getPolylineLatLngs = (polyline) => {
     return null;
 };
 
+function extractStepPolylines(step) {
+    if (!step || step.type === 'WAIT') return [];
+
+    const collected = [];
+    const pushIfValid = (poly) => {
+        if (poly) collected.push(poly);
+    };
+
+    if (step.type === 'BUS') {
+        pushIfValid(step?.polyline);
+    } else if (Array.isArray(step.polylines) && step.polylines.length) {
+        step.polylines.forEach(pushIfValid);
+    } else {
+        pushIfValid(step?.polyline);
+    }
+
+    return collected;
+}
+
 /**
  * ✅ NOUVELLE FONCTION V46
  * Ajoute les marqueurs de Début, Fin et Correspondance sur une carte
@@ -2388,13 +2489,12 @@ function drawRouteOnResultsMap(itinerary) {
     itinerary.steps.forEach(step => {
         const style = getLeafletStyleForStep(step);
         
-        // ✅ V45: Gérer les polylines agrégées (marche/vélo) ou simples (bus)
-        const polylinesToDraw = (step.type === 'BUS') 
-            ? [step.polyline] // Le bus a une seule polyline
-            : step.polylines;  // La marche/vélo ont un tableau de polylines
+        const polylinesToDraw = extractStepPolylines(step);
 
-        if (!polylinesToDraw || polylinesToDraw.length === 0) {
-            console.warn('drawRouteOnResultsMap: étape sans polylines', { stepType: step.type, step });
+        if (!polylinesToDraw.length) {
+            if (step.type !== 'WAIT') {
+                console.warn('drawRouteOnResultsMap: étape sans polylines', { stepType: step.type, step });
+            }
             return;
         }
 
@@ -2496,6 +2596,19 @@ function renderItineraryDetailHTML(itinerary) {
                             </ul>
                         </details>
                         ` : `<span class="step-sub-instruction">${step.instruction}</span>`}
+                    </div>
+                </div>
+            `;
+        } else if (step.type === 'WAIT') {
+            const waitLabel = step.duration ? `${step.duration} d'attente` : 'Attente en cours';
+            return `
+                <div class="step-detail wait" style="--line-color: var(--text-secondary);">
+                    <div class="step-icon">
+                        ${ICONS.statusWarning}
+                    </div>
+                    <div class="step-info">
+                        <span class="step-instruction">Correspondance</span>
+                        <span class="step-sub-instruction">${waitLabel}</span>
                     </div>
                 </div>
             `;
@@ -2618,6 +2731,19 @@ function renderItineraryDetail(itinerary) {
                     </div>
                 </div>
             `;
+        } else if (step.type === 'WAIT') {
+            const waitLabel = step.duration ? `${step.duration} d'attente` : 'Attente en cours';
+            return `
+                <div class="step-detail wait" style="--line-color: var(--text-secondary);">
+                    <div class="step-icon">
+                        ${ICONS.statusWarning}
+                    </div>
+                    <div class="step-info">
+                        <span class="step-instruction">Correspondance</span>
+                        <span class="step-sub-instruction">${waitLabel}</span>
+                    </div>
+                </div>
+            `;
         } else { // BUS
             const hasIntermediateStops = step.intermediateStops && step.intermediateStops.length > 0;
             const intermediateStopCount = hasIntermediateStops ? step.intermediateStops.length : (step.numStops > 1 ? step.numStops - 1 : 0);
@@ -2697,13 +2823,12 @@ function renderItineraryDetail(itinerary) {
         itinerary.steps.forEach(step => {
             const style = getLeafletStyleForStep(step);
 
-            // ✅ V45: Gérer les polylines agrégées (marche/vélo) ou simples (bus)
-            const polylinesToDraw = (step.type === 'BUS') 
-                ? [step.polyline] // Le bus a une seule polyline
-                : step.polylines;  // La marche/vélo ont un tableau de polylines
+            const polylinesToDraw = extractStepPolylines(step);
 
-            if (!polylinesToDraw || polylinesToDraw.length === 0) {
-                console.warn('renderItineraryDetail: étape sans polylines', { stepType: step.type, step });
+            if (!polylinesToDraw.length) {
+                if (step.type !== 'WAIT') {
+                    console.warn('renderItineraryDetail: étape sans polylines', { stepType: step.type, step });
+                }
                 return;
             }
             

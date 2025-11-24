@@ -111,46 +111,24 @@
         const ua = navigator.userAgent.toLowerCase();
         const isIOS = /iphone|ipad|ipod/.test(ua);
         const isAndroid = !isIOS && ua.includes('android');
-        let deferredPrompt = null;
 
         const setHelper = (text) => { if (helper) helper.textContent = text; };
+        const redirectToHallForInstall = () => {
+            try { sessionStorage.setItem('perimapInstallTip', 'true'); } catch (_) {}
+            window.location.href = '/';
+        };
 
         if (isAndroid) {
-            setHelper('Android détecté : si le bouton reste grisé, utilisez le menu ⋮ ▸ Ajouter à l\'écran d\'accueil.');
-        } else if (!isIOS) {
-            setHelper('Depuis un navigateur compatible (Chrome, Edge), cliquez sur Installer pour l\'ancrer à l\'accueil.');
+            setHelper('Android détecté : appuyez sur Installer, vous serez redirigé vers le hall avec la procédure.');
+        } else if (isIOS) {
+            setHelper('iOS détecté : Safari vous proposera Sur l\'écran d\'accueil une fois de retour sur le hall.');
+        } else {
+            setHelper('Navigateur compatible : cliquez sur Installer pour revenir au hall avec les explications.');
         }
 
-        if (isIOS) {
-            installBtn.disabled = false;
-            installBtn.textContent = 'Guide iOS';
-            setHelper('iOS détecté : ouvrez le menu Partager ▸ Sur l\'écran d\'accueil.');
-            installBtn.addEventListener('click', () => {
-                alert('Sur iOS : ouvrez Safari ▸ Partager ▸ Sur l\'écran d\'accueil.');
-            });
-            return;
-        }
-
-        window.addEventListener('beforeinstallprompt', (event) => {
-            event.preventDefault();
-            deferredPrompt = event;
-            installBtn.disabled = false;
-            installBtn.textContent = 'Installer PériMap';
-            setHelper(isAndroid ? 'Android détecté : appuyez sur Installer ou utilisez le menu ⋮.' : 'Compatible navigateurs Chrome/Edge : utilisez le bouton Installer.');
-        });
-
-        installBtn.addEventListener('click', async () => {
-            if (!deferredPrompt) {
-                setHelper('Installation non disponible sur ce navigateur.');
-                return;
-            }
-            installBtn.disabled = true;
-            installBtn.textContent = 'Demande envoyée…';
-            deferredPrompt.prompt();
-            const choice = await deferredPrompt.userChoice;
-            setHelper(choice.outcome === 'accepted' ? 'Installation en cours sur votre écran d\'accueil.' : 'Installation annulée.');
-            deferredPrompt = null;
-        });
+        installBtn.disabled = false;
+        installBtn.textContent = 'Installer PériMap';
+        installBtn.addEventListener('click', redirectToHallForInstall);
     })();
 
     (function tileObserver() {
