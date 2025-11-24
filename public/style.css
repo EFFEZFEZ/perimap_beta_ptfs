@@ -378,7 +378,7 @@ body.about-page {
     width: 100%;
     display: flex;
     justify-content: flex-start;
-    margin: 1.25rem 0;
+    margin-bottom: 0.75rem;
 }
 
 .about-page .about-back-btn {
@@ -396,6 +396,10 @@ body.about-page {
     flex-direction: column;
     gap: 1.5rem;
     padding: 2.5rem 1.5rem 3rem;
+}
+
+.tile-layout > .about-tile:first-child {
+    margin-top: 0.25rem;
 }
 
 .tile-layout {
