@@ -13,48 +13,52 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body class="about-page">
-    <header class="about-header">
-        <a href="/" class="btn btn-secondary about-back-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            <span>Retour au menu</span>
-        </a>
+    <header id="main-header" class="about-header">
+        <div class="header-content about-header-content">
+            <a href="/" class="btn btn-secondary about-back-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                <span>Retour</span>
+            </a>
+            <div class="logo">
+                <img src="https://i.ibb.co/0jJhLPp8/Peribus.webp" alt="Logo Péribus" class="header-logo-img">
+                <div class="header-title-group">
+                    <span class="brand-name">PériMap</span>
+                    <span class="brand-sub">Planificateur indépendant</span>
+                </div>
+            </div>
+            <nav class="header-nav">
+                <button id="theme-toggle-btn" class="btn-icon-round" aria-label="Basculer thème" aria-pressed="false">
+                    <span id="theme-toggle-icon">🌙</span>
+                </button>
+            </nav>
+        </div>
     </header>
     <main class="about-main">
-        <section class="about-card">
-            <p class="legal-pill">Projet indépendant</p>
-            <h1>À propos de PériMap</h1>
-            <p>PériMap est une application web non-officielle conçue pour rendre le réseau Péribus plus accessible. Elle réutilise les données publiques publiées par le Grand Périgueux (format GTFS, licence ODbL) et les complète avec les services Google Maps Platform afin de proposer un planificateur moderne, des cartes interactives et un rendu détaillé des étapes de trajet.</p>
-            <p>L'objectif est de proposer un compagnon numérique alternatif, sans publicité ni collecte de données personnelles. Le code source et la base GTFS dérivée sont disponibles pour toute personne souhaitant auditer le projet ou contribuer.</p>
-            <ul>
-                <li>Sources : données open data officielles Péribus + API Google Maps.</li>
-                <li>Licence des données : ODbL. Attribution requise, partage à l'identique assuré via le dépôt public.</li>
-                <li>Statut : application indépendante, sans lien avec le Grand Périgueux.</li>
-            </ul>
-            <p>Retrouvez le code complet et la base <code>gtfs.bundle.json</code> sur <a href="https://github.com/EFFEZFEZ/p-rimap-sans-api-" target="_blank" rel="noopener">GitHub</a>.</p>
+        <section class="about-card hero-card">
+            <p class="legal-pill">Application indépendante</p>
+            <h1>PériMap, compagnon open data pour le réseau Péribus</h1>
+            <p>PériMap agrège les horaires officiels publiés en GTFS par le Grand Périgueux et les combine aux services Google Maps pour proposer des trajets précis, des cartes interactives et une interface fluide – sans publicité ni collecte superflue.</p>
+            <div class="about-meta-grid">
+                <div>
+                    <h3>Sources</h3>
+                    <p>Données GTFS Péribus + Google Maps Platform.</p>
+                </div>
+                <div>
+                    <h3>Licence</h3>
+                    <p>Jeux de données ODbL, base dérivée partagée.</p>
+                </div>
+                <div>
+                    <h3>Statut</h3>
+                    <p>Projet communautaire, non affilié au Grand Périgueux.</p>
+                </div>
+            </div>
+            <p>Code source et base <code>gtfs.bundle.json</code> disponibles sur <a href="https://github.com/EFFEZFEZ/p-rimap-sans-api-" target="_blank" rel="noopener">GitHub</a>.</p>
         </section>
 
         <section class="about-card install-section">
-            <h2>Installer PériMap sur votre téléphone</h2>
-            <p>PériMap peut être ajoutée à votre écran d'accueil comme une vraie application, sans occuper d'espace supplémentaire. Installez-la en quelques secondes pour y accéder hors navigateur et profiter d'une expérience plein écran.</p>
-            <div class="install-steps">
-                <div>
-                    <h3>Android (Chrome, Edge, etc.)</h3>
-                    <ol>
-                        <li>Ouvrez <strong>perimap.app</strong> dans votre navigateur mobile.</li>
-                        <li>Appuyez sur le menu ⋮ puis choisissez <strong>"Installer l'application"</strong>.</li>
-                        <li>Validez : l'icône apparaîtra sur l'écran d'accueil.</li>
-                    </ol>
-                </div>
-                <div>
-                    <h3>iOS (Safari)</h3>
-                    <ol>
-                        <li>Ouvrez <strong>perimap.app</strong> dans Safari.</li>
-                        <li>Appuyez sur <strong>Partager</strong> ▸ <strong>Sur l'écran d'accueil</strong>.</li>
-                        <li>Confirmez : l'icône est ajoutée, sans occuper d'espace supplémentaire.</li>
-                    </ol>
-                </div>
-            </div>
-            <p class="install-highlight">Astuce : aucune inscription et aucun stockage volumineux – l'app PWA utilise les ressources déjà présentes sur votre téléphone.</p>
+            <h2>Installer PériMap</h2>
+            <p class="install-blurb">Pensez à ajouter PériMap à votre écran d'accueil 😉 ça ne prend aucune place !</p>
+            <p id="install-helper" class="install-helper"></p>
             <button id="install-pwa-btn" class="install-btn" disabled>Installer PériMap</button>
         </section>
     </main>
@@ -72,28 +76,71 @@
     </footer>
 
     <script>
-    (() => {
-        let deferredPrompt = null;
+    (function themeSetup() {
+        const body = document.body;
+        const toggle = document.getElementById('theme-toggle-btn');
+        const icon = document.getElementById('theme-toggle-icon');
+        const applyTheme = (isDark) => {
+            body.classList.toggle('dark-theme', isDark);
+            toggle?.setAttribute('aria-pressed', String(isDark));
+            if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+        };
+        let saved = null;
+        try { saved = localStorage.getItem('ui-theme'); } catch (_) {}
+        const prefers = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(saved ? saved === 'dark' : prefers);
+        toggle?.addEventListener('click', () => {
+            const next = !body.classList.contains('dark-theme');
+            applyTheme(next);
+            try { localStorage.setItem('ui-theme', next ? 'dark' : 'light'); } catch (_) {}
+        });
+    })();
+
+    (function installCTA() {
         const installBtn = document.getElementById('install-pwa-btn');
+        if (!installBtn) return;
+        const helper = document.getElementById('install-helper');
+        const ua = navigator.userAgent.toLowerCase();
+        const isIOS = /iphone|ipad|ipod/.test(ua);
+        const isAndroid = !isIOS && ua.includes('android');
+        let deferredPrompt = null;
+
+        const setHelper = (text) => { if (helper) helper.textContent = text; };
+
+        if (isAndroid) {
+            setHelper('Android détecté : si le bouton reste grisé, utilisez le menu ⋮ ▸ Ajouter à l\'écran d\'accueil.');
+        } else if (!isIOS) {
+            setHelper('Depuis un navigateur compatible (Chrome, Edge), cliquez sur Installer pour l\'ancrer à l\'accueil.');
+        }
+
+        if (isIOS) {
+            installBtn.disabled = false;
+            installBtn.textContent = 'Guide iOS';
+            setHelper('iOS détecté : ouvrez le menu Partager ▸ Sur l\'écran d\'accueil.');
+            installBtn.addEventListener('click', () => {
+                alert('Sur iOS : ouvrez Safari ▸ Partager ▸ Sur l\'écran d\'accueil.');
+            });
+            return;
+        }
 
         window.addEventListener('beforeinstallprompt', (event) => {
             event.preventDefault();
             deferredPrompt = event;
-            if (installBtn) {
-                installBtn.disabled = false;
-                installBtn.textContent = 'Installer PériMap';
-            }
+            installBtn.disabled = false;
+            installBtn.textContent = 'Installer PériMap';
+            setHelper(isAndroid ? 'Android détecté : appuyez sur Installer ou utilisez le menu ⋮.' : 'Compatible navigateurs Chrome/Edge : utilisez le bouton Installer.');
         });
 
-        installBtn?.addEventListener('click', async () => {
+        installBtn.addEventListener('click', async () => {
             if (!deferredPrompt) {
-                alert('Sur iOS, utilisez le menu Partager ▸ Sur l\'écran d\'accueil.');
+                setHelper('Installation non disponible sur ce navigateur.');
                 return;
             }
             installBtn.disabled = true;
             installBtn.textContent = 'Demande envoyée…';
             deferredPrompt.prompt();
-            await deferredPrompt.userChoice;
+            const choice = await deferredPrompt.userChoice;
+            setHelper(choice.outcome === 'accepted' ? 'Installation en cours sur votre écran d\'accueil.' : 'Installation annulée.');
             deferredPrompt = null;
         });
     })();
