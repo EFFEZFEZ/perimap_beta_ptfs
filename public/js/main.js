@@ -2708,21 +2708,7 @@ function renderItineraryDetailHTML(itinerary) {
                 </div>
             `;
         } else if (isWaitStep(step)) {
-            const waitMeta = getWaitStepPresentation(itinerary.steps, index);
-            const waitDurationLabel = waitMeta.durationLabel;
-            const waitTimeLabel = waitMeta.timeLabel;
-            return `
-                <div class="step-detail wait" style="--line-color: var(--text-secondary);">
-                    <div class="step-icon">
-                        ${ICONS.statusWarning}
-                    </div>
-                    <div class="step-info wait-info">
-                        <span class="wait-time">${waitTimeLabel}</span>
-                        <span class="step-instruction">Correspondance</span>
-                        <span class="wait-duration">${waitDurationLabel}</span>
-                    </div>
-                </div>
-            `;
+            return '';
         } else if (shouldSuppressBusStep(step)) {
             return '';
         } else { // BUS
@@ -2852,21 +2838,7 @@ function renderItineraryDetail(itinerary) {
                 </div>
             `;
         } else if (isWaitStep(step)) {
-            const waitMeta = getWaitStepPresentation(itinerary.steps, index);
-            const waitDurationLabel = waitMeta.durationLabel;
-            const waitTimeLabel = waitMeta.timeLabel;
-            return `
-                <div class="step-detail wait" style="--line-color: var(--text-secondary);">
-                    <div class="step-icon">
-                        ${ICONS.statusWarning}
-                    </div>
-                    <div class="step-info wait-info">
-                        <span class="wait-time">${waitTimeLabel}</span>
-                        <span class="step-instruction">Correspondance</span>
-                        <span class="wait-duration">${waitDurationLabel}</span>
-                    </div>
-                </div>
-            `;
+            return '';
         } else if (shouldSuppressBusStep(step)) {
             return '';
         } else { // BUS
