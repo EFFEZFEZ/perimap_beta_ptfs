@@ -53,6 +53,8 @@ let geolocationManager = null;
 
 const BOTTOM_SHEET_LEVELS = [0.4, 0.6, 0.8];
 const BOTTOM_SHEET_DEFAULT_INDEX = 0;
+const BOTTOM_SHEET_DRAG_ZONE_PX = 90;
+const BOTTOM_SHEET_DRAG_BUFFER_PX = 30;
 let currentBottomSheetLevelIndex = BOTTOM_SHEET_DEFAULT_INDEX;
 let bottomSheetDragState = null;
 let bottomSheetControlsInitialized = false;
@@ -763,6 +765,14 @@ function getClosestSheetLevelIndex(fraction) {
     return bestIdx;
 }
 
+function isPointerWithinBottomSheetDragRegion(event) {
+    if (!detailBottomSheet) return false;
+    const rect = detailBottomSheet.getBoundingClientRect();
+    const topBoundary = rect.top - BOTTOM_SHEET_DRAG_BUFFER_PX;
+    const bottomBoundary = rect.top + BOTTOM_SHEET_DRAG_ZONE_PX;
+    return event.clientY >= topBoundary && event.clientY <= bottomBoundary;
+}
+
 function cancelBottomSheetDrag() {
     if (!bottomSheetDragState) return;
     window.removeEventListener('pointermove', onBottomSheetPointerMove);
@@ -775,6 +785,12 @@ function cancelBottomSheetDrag() {
 function onBottomSheetPointerDown(event) {
     if (!isMobileDetailViewport() || !detailBottomSheet || !itineraryDetailContainer?.classList.contains('is-active')) return;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const isHandle = Boolean(event.target.closest('.panel-handle'));
+    const inDragRegion = isPointerWithinBottomSheetDragRegion(event);
+    if (!isHandle && !inDragRegion) return;
+    if (!isHandle && detailPanelWrapper && detailPanelWrapper.scrollTop > 0) {
+        return; // let the content scroll if we are not on the handle and the panel is scrolled
+    }
     event.preventDefault();
     bottomSheetDragState = {
         startY: event.clientY,
@@ -813,11 +829,8 @@ function onBottomSheetPointerUp() {
 }
 
 function initBottomSheetControls() {
-    if (bottomSheetControlsInitialized || !detailBottomSheet) return;
-    const handle = detailBottomSheet.querySelector('.panel-handle');
-    if (handle) {
-        handle.addEventListener('pointerdown', onBottomSheetPointerDown, { passive: false });
-    }
+    if (bottomSheetControlsInitialized || !detailBottomSheet || !itineraryDetailContainer) return;
+    itineraryDetailContainer.addEventListener('pointerdown', onBottomSheetPointerDown, { passive: false });
     window.addEventListener('resize', handleBottomSheetResize);
     bottomSheetControlsInitialized = true;
     prepareBottomSheetForViewport(true);
