@@ -74,11 +74,8 @@
         <div class="logo">
             <img src="https://i.ibb.co/99PZh9Zq/export6-removebg-preview.webp" alt="Logo PériMap" class="header-logo-img">
             <div class="header-title-group">
-                <span class="brand-pill">Indépendant</span>
-                <div class="brand-text-stack">
-                    <span class="brand-name">PériMap</span>
-                    <span class="brand-sub">Assistant mobilité Grand Périgueux</span>
-                </div>
+                <span class="brand-name">PériMap</span>
+                <span class="brand-sub">Assistant mobilité Grand Périgueux</span>
             </div>
         </div>
         <nav class="header-nav">
@@ -238,18 +235,6 @@
                     </div>
                 </div>
 
-                <footer id="legal-strip">
-                    <div class="legal-strip-content">
-                        <span class="legal-pill">Application indépendante, non affiliée au Grand Périgueux.</span>
-                        <span>Données © Grand Périgueux / Péribus — licence ODbL.</span>
-                        <span>
-                            Base dérivée <code>gtfs.bundle.json</code> partagée sur
-                            <a href="https://github.com/EFFEZFEZ/p-rimap-sans-api-/tree/main/public/data/gtfs" target="_blank" rel="noopener">GitHub</a>.
-                        </span>
-                        <a class="legal-about-btn" href="/about.html">À propos</a>
-                    </div>
-                </footer>
-
             </div> 
             
             <div id="dashboard-content-view">
@@ -296,6 +281,18 @@
             </div> 
         </main>
     </div>
+
+    <footer id="legal-strip">
+        <div class="legal-strip-content">
+            <span class="legal-pill">Application indépendante, non affiliée au Grand Périgueux.</span>
+            <span>Données © Grand Périgueux / Péribus — licence ODbL.</span>
+            <span>
+                Base dérivée <code>gtfs.bundle.json</code> partagée sur
+                <a href="https://github.com/EFFEZFEZ/p-rimap-sans-api-/tree/main/public/data/gtfs" target="_blank" rel="noopener">GitHub</a>.
+            </span>
+            <a class="legal-about-btn" href="/about.html">À propos</a>
+        </div>
+    </footer>
     
     <div id="map-container" class="hidden">
         
@@ -404,9 +401,12 @@
         <div id="results-side-panel">
             
             <div id="itinerary-edit-panel">
-                <button id="btn-back-to-dashboard-from-results" class="btn-icon-round itinerary-back-btn" aria-label="Retour aux résultats">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-                </button>
+                <div class="itinerary-edit-header">
+                    <button id="btn-back-to-dashboard-from-results" class="btn-icon-round itinerary-back-btn" aria-label="Retour aux résultats">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                    <h2>Itinéraires</h2>
+                </div>
 
                 <div class="itinerary-edit-form">
                     <div class="planner-inputs results-planner-inputs">

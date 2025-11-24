@@ -51,8 +51,8 @@ let allFetchedItineraries = []; // Stocke tous les itinéraires (bus/vélo/march
 
 let geolocationManager = null;
 
-const BOTTOM_SHEET_LEVELS = [0.25, 0.5, 0.8];
-const BOTTOM_SHEET_DEFAULT_INDEX = 1;
+const BOTTOM_SHEET_LEVELS = [0.4, 0.6, 0.8];
+const BOTTOM_SHEET_DEFAULT_INDEX = 0;
 let currentBottomSheetLevelIndex = BOTTOM_SHEET_DEFAULT_INDEX;
 let bottomSheetDragState = null;
 let bottomSheetControlsInitialized = false;

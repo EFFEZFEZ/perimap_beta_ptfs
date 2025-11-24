@@ -268,6 +268,8 @@ body {
     font-size: 0.78rem;
     color: var(--text-secondary);
     box-shadow: 0 -6px 12px rgba(15, 23, 42, 0.05);
+    width: 100%;
+    margin-top: auto;
 }
 
 .legal-strip-content {
@@ -743,6 +745,9 @@ body.view-is-locked {
 body.view-is-locked #main-header {
     display: none;
 }
+body.view-is-locked #legal-strip {
+    display: none;
+}
 
 .header-content {
     display: flex;
@@ -769,23 +774,7 @@ body.view-is-locked #main-header {
 .header-title-group {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-}
-.brand-text-stack {
-    display: flex;
-    flex-direction: column;
     line-height: 1.05;
-}
-.brand-pill {
-    align-self: flex-start;
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 0.15rem 0.6rem;
-    border-radius: 999px;
-    background: rgba(34, 197, 94, 0.15);
-    color: var(--primary);
-    font-weight: 700;
 }
 .brand-name {
     font-size: 1.4rem;
@@ -1160,12 +1149,11 @@ body.view-is-locked #main-header {
 }
 
 .itinerary-back-btn {
-    margin-bottom: 1rem;
-    margin-left: 1.5rem;
     background: var(--bg-secondary);
     border-color: var(--border);
     color: var(--text-primary);
     box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
 }
 .itinerary-back-btn svg {
     color: var(--text-secondary);
@@ -2877,6 +2865,20 @@ body.dark-theme .real-select option {
     background: var(--bg-main);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+    padding-top: 0;
+}
+
+.itinerary-edit-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: calc(env(safe-area-inset-top, 0px) + 0.25rem) 1.5rem 0.25rem;
+}
+
+.itinerary-edit-header h2 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0;
 }
 .itinerary-edit-form {
     padding: 0 1.5rem 1rem;
@@ -3387,12 +3389,8 @@ body.dark-theme .real-select option {
         overflow-y: auto; /* Le panneau ENTIER scrolle */
     }
     
-    #itinerary-edit-panel {
-        padding-top: calc(0.5rem + env(safe-area-inset-top));
-    }
-
-    .itinerary-back-btn {
-        margin-left: 0.75rem;
+    .itinerary-edit-header {
+        padding: calc(env(safe-area-inset-top, 0px) + 0.25rem) 0.75rem 0.25rem;
     }
 
     /* Le wrapper de la liste ne doit plus scroller, c'est le parent */
@@ -3465,7 +3463,7 @@ body.dark-theme .real-select option {
         background: var(--bg-main);
         border-radius: 24px 24px 0 0;
         box-shadow: 0 -25px 60px rgba(15, 23, 42, 0.45);
-        height: var(--sheet-height, 70vh);
+        height: var(--sheet-height, 40vh);
         padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
         transform: translateY(calc(100% + env(safe-area-inset-bottom)));
         transition: transform 0.3s ease-in-out, height 0.25s ease;
@@ -3503,7 +3501,7 @@ body.dark-theme .real-select option {
         top: 24px;
         left: 0;
         right: 0;
-        z-index: 1010;
+        z-index: 1035;
         padding: 0 1rem;
         display: flex;
         align-items: center;
