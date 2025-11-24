@@ -665,6 +665,31 @@ function populateTimeSelects() {
     });
 }
 
+const isInstallTipVisible = () => installTipContainer && !installTipContainer.classList.contains('hidden');
+
+function hideInstallTip() {
+    if (!installTipContainer) return;
+    installTipContainer.classList.add('hidden');
+    installTipContainer.setAttribute('aria-hidden', 'true');
+    installTipContainer.removeAttribute('aria-modal');
+}
+
+function showInstallTip() {
+    if (!installTipContainer) return;
+    installTipContainer.classList.remove('hidden');
+    installTipContainer.setAttribute('aria-hidden', 'false');
+    installTipContainer.setAttribute('aria-modal', 'true');
+    if (installTipCloseBtn) {
+        installTipCloseBtn.focus();
+    }
+}
+
+function handleInstallTipKeydown(event) {
+    if (event.key === 'Escape' && isInstallTipVisible()) {
+        hideInstallTip();
+    }
+}
+
 function setupStaticEventListeners() {
     try { apiManager.loadGoogleMapsAPI(); } catch (error) { console.error("Impossible de charger l'API Google:", error); }
     populateTimeSelects();
