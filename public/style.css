@@ -261,6 +261,69 @@ body {
     overflow-y: auto;
 }
 
+#legal-strip {
+    background: rgba(255, 255, 255, 0.92);
+    border-top: 1px solid var(--border);
+    padding: 0.75rem 1.25rem;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    box-shadow: 0 -6px 12px rgba(15, 23, 42, 0.05);
+}
+
+.legal-strip-content {
+    max-width: 1300px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+@media (max-width: 768px) {
+    .legal-strip-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+.legal-strip-content a {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.legal-strip-content code {
+    font-family: "Manrope", monospace;
+    font-size: 0.72rem;
+    background: rgba(37, 99, 235, 0.08);
+    padding: 0.1rem 0.35rem;
+    border-radius: var(--radius-sm);
+}
+
+.legal-pill {
+    padding: 0.2rem 0.65rem;
+    border-radius: var(--radius-full);
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+body.dark-theme #legal-strip {
+    background: rgba(6, 12, 20, 0.9);
+    border-top-color: rgba(255,255,255,0.08);
+    box-shadow: 0 -10px 24px rgba(0,0,0,0.4);
+}
+
+body.dark-theme .legal-strip-content code {
+    background: rgba(74, 163, 255, 0.15);
+}
+
+body.dark-theme .legal-pill {
+    background: rgba(74, 163, 255, 0.18);
+    color: var(--text-primary);
+}
+
 /* Verrouille le scroll UNIQUEMENT pour les vues plein écran */
 body.view-is-locked {
     position: fixed; /* Plus fiable que overflow: hidden */
