@@ -3325,6 +3325,10 @@ body.dark-theme .real-select option {
     display: none;
 }
 
+#itinerary-detail-backdrop {
+    display: none;
+}
+
 /* Styles mobiles pour la vue résultats (Étape 1: Liste) */
 @media (max-width: 768px) {
     /* AMÉLIORATION LECTURE (mobile) */
@@ -3390,46 +3394,72 @@ body.dark-theme .real-select option {
     /* ÉTAPE 2 & 3: VUE DÉTAIL (Overlay IDFM-style) */
     /* ============================================ */
 
+    #itinerary-detail-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 15, 28, 0.55);
+        z-index: 1080;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+    #itinerary-detail-backdrop.is-active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
     #itinerary-detail-container {
-        display: flex; /* Rendre visible */
+        display: flex;
         flex-direction: column;
         position: fixed;
-        top: 0;
         left: 0;
-        width: 100%;
-        height: 100%;
+        right: 0;
+        bottom: 0;
+        height: 85vh;
+        max-height: calc(100vh - 32px);
         background: var(--bg-main);
-        z-index: 1100;
-        transform: translateX(100%);
+        z-index: 1110;
+        border-radius: 24px 24px 0 0;
+        box-shadow: 0 -25px 60px rgba(15, 23, 42, 0.45);
+        transform: translateY(calc(100% + env(safe-area-inset-bottom)));
         transition: transform 0.3s ease-in-out;
-        padding-top: env(safe-area-inset-top);
+        padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+        overflow: hidden;
     }
     #itinerary-detail-container.is-active {
-        transform: translateX(0);
+        transform: translateY(0);
+    }
+
+    #itinerary-detail-container .panel-handle {
+        display: block;
+        width: 48px;
+        height: 5px;
+        border-radius: 999px;
+        background: var(--border);
+        margin: 10px auto 4px;
     }
 
     /* Style du header de la carte */
     #detail-map-header {
         position: absolute;
-        top: 0;
+        top: 24px;
         left: 0;
         right: 0;
         z-index: 1010;
-        padding: calc(15px + env(safe-area-inset-top)) 1rem 1rem 1rem;
+        padding: 0 1rem;
         display: flex;
         align-items: center;
         gap: 1rem;
-        background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0));
+        background: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0));
         transition: background 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
     }
-    /* Bouton retour blanc */
     #detail-map-header #btn-back-to-results {
-        background: var(--bg-main);
+        background: rgba(255, 255, 255, 0.95);
         color: var(--text-primary);
         box-shadow: var(--shadow-md);
     }
     
-    /* Résumé du trajet dans le header */
     #detail-map-summary {
         background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(5px);
@@ -3442,66 +3472,43 @@ body.dark-theme .real-select option {
     #detail-map-summary .route-time { margin-right: 0.75rem; }
     #detail-map-summary .route-duration { color: var(--text-secondary); }
 
-    /* La carte (Étape 2) */
     #detail-map {
         width: 100%;
-        height: 45vh; /* 45% de l'écran */
+        height: 240px;
+        flex: 0 0 240px;
         flex-shrink: 0;
-        transition: height 0.3s ease-in-out;
+        transition: height 0.25s ease-in-out;
         background: #e5e5e5;
+        border-radius: 24px 24px 12px 12px;
+        overflow: hidden;
+        margin-top: 4px;
     }
 
-    /* Le panneau de détails (Étape 2) */
     #detail-panel-wrapper {
+        flex: 1 1 auto;
         width: 100%;
-        height: 55vh; /* 55% de l'écran */
-        overflow-y: scroll;
+        min-height: 0;
+        overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
-        transition: height 0.3s ease-in-out;
-        
-        /* ✅ V50 (CORRECTION): Ajout d'un padding-top pour le "handle" */
-        padding-top: 20px; 
+        padding-top: 0;
+        transition: padding 0.2s ease;
         position: relative;
-    }
-    
-    /* ✅ V50 (CORRECTION): Positionnement du "handle" */
-    #detail-panel-wrapper .panel-handle {
-        display: block; 
-        position: absolute;
-        top: 8px; /* 8px depuis le haut du wrapper */
-        left: 50%;
-        transform: translateX(-50%);
-        /* Style (width, height, bg) hérité de .panel-handle */
+        background: var(--bg-main);
     }
 
     #detail-panel-content {
-        /* ✅ V50 (CORRECTION): padding-top retiré (géré par le wrapper)
-           et padding-bottom long (15rem) conservé pour forcer le scroll.
-        */
-        padding: 0 0.75rem 15rem 0.75rem;
+        padding: 0.75rem 1rem 4rem 1rem;
     }
 
-    /* --- L'EFFET DE SCROLL (Étape 3) --- */
     #itinerary-detail-container.is-scrolled #detail-map {
-        height: 120px; /* 10% (ou fixe 120px) */
+        height: 140px;
+        flex-basis: 140px;
     }
-    #itinerary-detail-container.is-scrolled #detail-panel-wrapper {
-        height: calc(100vh - 120px);
-    }
-    
-    /* * ❌ V50 (CORRECTION) : CE BLOC EST SUPPRIMÉ.
-     * Il annulait le padding-bottom long et cassait le scroll.
-     */
-    /*
-    #itinerary-detail-container.is-scrolled #detail-panel-content {
-        padding-bottom: 1rem; 
-    }
-    */
-    
     #itinerary-detail-container.is-scrolled #detail-map-header {
         background: var(--bg-main);
         box-shadow: var(--shadow-md);
+        padding-top: 0.5rem;
     }
     
    /* ============================================ */

@@ -276,7 +276,7 @@ let resultsMap, resultsModeTabs;
 let resultsFromInput, resultsToInput, resultsFromSuggestions, resultsToSuggestions;
 let resultsSwapBtn, resultsWhenBtn, resultsPopover, resultsDate, resultsHour, resultsMinute;
 let resultsPopoverSubmitBtn, resultsPlannerSubmitBtn, resultsGeolocateBtn;
-let itineraryDetailContainer, btnBackToResults, detailMapHeader, detailMapSummary;
+let itineraryDetailBackdrop, itineraryDetailContainer, btnBackToResults, detailMapHeader, detailMapSummary;
 let detailPanelWrapper, detailPanelContent;
 let hallPlannerSubmitBtn, hallFromInput, hallToInput, hallFromSuggestions, hallToSuggestions;
 let hallWhenBtn, hallPopover, hallDate, hallHour, hallMinute, hallPopoverSubmitBtn, hallSwapBtn, hallGeolocateBtn;
@@ -292,6 +292,8 @@ const LINE_CATEGORIES = {
     'rabattement': { name: 'Lignes de rabattement', lines: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15'], color: '#7c3aed' },
     'navettes': { name: 'Navettes', lines: ['N', 'N1'], color: '#f59e0b' }
 };
+
+const DETAIL_SHEET_TRANSITION_MS = 300;
 
 function getCategoryForRoute(routeShortName) {
     for (const [categoryId, category] of Object.entries(LINE_CATEGORIES)) {
@@ -337,6 +339,7 @@ async function initializeApp() {
     resultsPopoverSubmitBtn = document.getElementById('results-popover-submit-btn');
     resultsPlannerSubmitBtn = document.getElementById('results-planner-submit-btn');
     resultsGeolocateBtn = document.getElementById('results-geolocate-btn');
+    itineraryDetailBackdrop = document.getElementById('itinerary-detail-backdrop');
     itineraryDetailContainer = document.getElementById('itinerary-detail-container');
     btnBackToResults = document.getElementById('btn-back-to-results');
     detailMapHeader = document.getElementById('detail-map-header');
@@ -598,27 +601,34 @@ function setupStaticEventListeners() {
     btnBackToDashboardFromResults.addEventListener('click', showDashboardHall); 
     btnBackToHall.addEventListener('click', showDashboardHall);
     btnBackToResults.addEventListener('click', hideDetailView);
+    if (itineraryDetailBackdrop) {
+        itineraryDetailBackdrop.addEventListener('click', hideDetailView);
+    }
 
-    let touchStartY = 0;
-    detailPanelWrapper.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true }); 
-    detailPanelWrapper.addEventListener('touchmove', (e) => {
-        const currentTouchY = e.touches[0].clientY;
-        const currentScrollTop = detailPanelWrapper.scrollTop;
-        const deltaY = currentTouchY - touchStartY;
-        if (currentScrollTop === 0 && deltaY > 0 && itineraryDetailContainer.classList.contains('is-scrolled')) {
-            e.preventDefault(); 
-            itineraryDetailContainer.classList.remove('is-scrolled');
-        }
-        if (deltaY < 0 && !itineraryDetailContainer.classList.contains('is-scrolled')) {
-            itineraryDetailContainer.classList.add('is-scrolled');
-        }
-    }, { passive: false }); 
-    detailPanelWrapper.addEventListener('scroll', () => {
-        const currentScrollTop = detailPanelWrapper.scrollTop;
-        if (currentScrollTop > 10 && !itineraryDetailContainer.classList.contains('is-scrolled')) {
-            itineraryDetailContainer.classList.add('is-scrolled');
-        }
-    });
+    if (detailPanelWrapper && itineraryDetailContainer) {
+        let touchStartY = 0;
+        detailPanelWrapper.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true }); 
+        detailPanelWrapper.addEventListener('touchmove', (e) => {
+            const currentTouchY = e.touches[0].clientY;
+            const currentScrollTop = detailPanelWrapper.scrollTop;
+            const deltaY = currentTouchY - touchStartY;
+            if (currentScrollTop === 0 && deltaY > 0 && itineraryDetailContainer.classList.contains('is-scrolled')) {
+                e.preventDefault(); 
+                itineraryDetailContainer.classList.remove('is-scrolled');
+            }
+            if (deltaY < 0 && !itineraryDetailContainer.classList.contains('is-scrolled')) {
+                itineraryDetailContainer.classList.add('is-scrolled');
+            }
+        }, { passive: false }); 
+        detailPanelWrapper.addEventListener('scroll', () => {
+            const currentScrollTop = detailPanelWrapper.scrollTop;
+            if (currentScrollTop > 10 && !itineraryDetailContainer.classList.contains('is-scrolled')) {
+                itineraryDetailContainer.classList.add('is-scrolled');
+            } else if (currentScrollTop <= 10 && itineraryDetailContainer.classList.contains('is-scrolled')) {
+                itineraryDetailContainer.classList.remove('is-scrolled');
+            }
+        });
+    }
 
     alertBannerClose.addEventListener('click', () => alertBanner.classList.add('hidden'));
     
@@ -3174,7 +3184,7 @@ function renderAlertBanner() {
 function showMapView() {
     dashboardContainer.classList.add('hidden');
     itineraryResultsContainer.classList.add('hidden');
-    itineraryDetailContainer.classList.add('hidden'); // V33
+    resetDetailViewState();
     mapContainer.classList.remove('hidden');
     document.body.classList.add('view-is-locked'); 
     if (mapRenderer && mapRenderer.map) {
@@ -3185,7 +3195,7 @@ function showMapView() {
 function showDashboardHall() {
     dashboardContainer.classList.remove('hidden');
     itineraryResultsContainer.classList.add('hidden');
-    itineraryDetailContainer.classList.add('hidden'); // V33
+    resetDetailViewState();
     mapContainer.classList.add('hidden');
     document.body.classList.remove('view-is-locked'); 
     
@@ -3202,7 +3212,7 @@ function showDashboardHall() {
 function showResultsView() {
     dashboardContainer.classList.add('hidden');
     itineraryResultsContainer.classList.remove('hidden');
-    itineraryDetailContainer.classList.add('hidden'); // V33
+    resetDetailViewState();
     mapContainer.classList.add('hidden');
     document.body.classList.add('view-is-locked'); // Verrouille le scroll
 
@@ -3223,8 +3233,17 @@ function showResultsView() {
  * Accepte la couche du trajet et gère le zoom au bon moment.
  */
 function showDetailView(routeLayer) { // ✅ V48: Accepte routeLayer en argument
+    if (!itineraryDetailContainer) return;
     itineraryDetailContainer.classList.remove('hidden');
-    
+    itineraryDetailContainer.classList.remove('is-scrolled');
+    if (detailPanelWrapper) {
+        detailPanelWrapper.scrollTop = 0;
+    }
+    if (itineraryDetailBackdrop) {
+        itineraryDetailBackdrop.classList.remove('hidden');
+        requestAnimationFrame(() => itineraryDetailBackdrop.classList.add('is-active'));
+    }
+
     // Invalide la carte des détails MAINTENANT
     if (detailMapRenderer && detailMapRenderer.map) {
         detailMapRenderer.map.invalidateSize();
@@ -3254,21 +3273,40 @@ function showDetailView(routeLayer) { // ✅ V48: Accepte routeLayer en argument
 
 // *** NOUVELLE FONCTION V33 ***
 function hideDetailView() {
+    if (!itineraryDetailContainer) return;
     itineraryDetailContainer.classList.remove('is-active');
+    itineraryDetailContainer.classList.remove('is-scrolled');
+    if (itineraryDetailBackdrop) {
+        itineraryDetailBackdrop.classList.remove('is-active');
+    }
     // Cache après la fin de la transition
     setTimeout(() => {
-        itineraryDetailContainer.classList.add('hidden');
-        // Vider le contenu pour la prochaine fois
+        resetDetailViewState();
+    }, DETAIL_SHEET_TRANSITION_MS);
+}
+
+function resetDetailViewState() {
+    if (!itineraryDetailContainer) return;
+    itineraryDetailContainer.classList.add('hidden');
+    itineraryDetailContainer.classList.remove('is-active');
+    itineraryDetailContainer.classList.remove('is-scrolled');
+    if (detailPanelWrapper) {
+        detailPanelWrapper.scrollTop = 0;
+    }
+    if (detailPanelContent) {
         detailPanelContent.innerHTML = '';
-        if (currentDetailRouteLayer) {
-            detailMapRenderer.map.removeLayer(currentDetailRouteLayer);
-            currentDetailRouteLayer = null;
-        }
-        // ✅ V46: Vider aussi les marqueurs
-        if (currentDetailMarkerLayer) {
-            currentDetailMarkerLayer.clearLayers();
-        }
-    }, 300); // 300ms (correspond au CSS)
+    }
+    if (currentDetailRouteLayer && detailMapRenderer?.map) {
+        detailMapRenderer.map.removeLayer(currentDetailRouteLayer);
+        currentDetailRouteLayer = null;
+    }
+    if (currentDetailMarkerLayer) {
+        currentDetailMarkerLayer.clearLayers();
+    }
+    if (itineraryDetailBackdrop) {
+        itineraryDetailBackdrop.classList.remove('is-active');
+        itineraryDetailBackdrop.classList.add('hidden');
+    }
 }
 
 
