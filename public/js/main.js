@@ -52,7 +52,7 @@ let allFetchedItineraries = []; // Stocke tous les itinéraires (bus/vélo/march
 let geolocationManager = null;
 
 const BOTTOM_SHEET_LEVELS = [0.4, 0.6, 0.8];
-const BOTTOM_SHEET_DEFAULT_INDEX = 0;
+const BOTTOM_SHEET_DEFAULT_INDEX = 2;
 const BOTTOM_SHEET_DRAG_ZONE_PX = 90;
 const BOTTOM_SHEET_DRAG_BUFFER_PX = 30;
 let currentBottomSheetLevelIndex = BOTTOM_SHEET_DEFAULT_INDEX;
@@ -805,6 +805,7 @@ function onBottomSheetPointerDown(event) {
 
 function onBottomSheetPointerMove(event) {
     if (!bottomSheetDragState || !detailBottomSheet) return;
+    event.preventDefault();
     const viewportHeight = getViewportHeight();
     if (!viewportHeight) return;
     const deltaY = bottomSheetDragState.startY - event.clientY;
