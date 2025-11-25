@@ -533,6 +533,7 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         }
 
         itinerary.departureTime = dataManager.formatTime(firstSegment.departureSeconds);
+        itinerary._departureSeconds = firstSegment.departureSeconds;
         itinerary.arrivalTime = dataManager.formatTime(secondSegment.arrivalSeconds);
 
         const totalDurationSeconds =
@@ -585,26 +586,73 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         const isServiceActive = (trip) => Array.from(serviceSet).some(activeServiceId => dataManager.serviceIdsMatch(trip.service_id, activeServiceId));
 
         const candidateTrips = [];
-        for (const trip of dataManager.trips) {
-            if (!isServiceActive(trip)) continue;
-            const stopTimes = dataManager.stopTimesByTrip[trip.trip_id];
-            if (!stopTimes || stopTimes.length < 2) continue;
-            for (let i = 0; i < stopTimes.length - 1; i++) {
-                const st = stopTimes[i];
-                if (!startStopSet.has(st.stop_id)) continue;
-                const departureSeconds = dataManager.timeToSeconds(st.departure_time || st.arrival_time);
-                if (!Number.isFinite(departureSeconds)) continue;
-                if (departureSeconds < windowStartSec || departureSeconds > windowEndSec) continue;
-                candidateTrips.push({
-                    trip,
-                    stopTimes,
-                    boardingIndex: i,
-                    departureSeconds
-                });
-                break;
+        const startStopIds = Array.from(startStopSet);
+        const processedTripIds = new Set();
+
+        // FIX BUG 7: Use stopTimesByStop index
+        if (dataManager.stopTimesByStop) {
+            for (const stopId of startStopIds) {
+                const stopTimesAtStop = dataManager.stopTimesByStop[stopId];
+                if (!stopTimesAtStop) continue;
+
+                for (const st of stopTimesAtStop) {
+                    if (processedTripIds.has(st.trip_id)) continue;
+                    processedTripIds.add(st.trip_id);
+
+                    const trip = dataManager.tripsById ? dataManager.tripsById[st.trip_id] : dataManager.trips.find(t => t.trip_id === st.trip_id);
+                    if (!trip || !isServiceActive(trip)) continue;
+
+                    const stopTimes = dataManager.stopTimesByTrip[trip.trip_id];
+                    if (!stopTimes || stopTimes.length < 2) continue;
+
+                    let boardingIndex = -1;
+                    if (st.stop_sequence !== undefined) {
+                        boardingIndex = stopTimes.findIndex(s => s.stop_sequence === st.stop_sequence);
+                    }
+                    if (boardingIndex === -1) {
+                        boardingIndex = stopTimes.findIndex(s => s.stop_id === stopId && s.arrival_time === st.arrival_time);
+                    }
+
+                    if (boardingIndex === -1 || boardingIndex >= stopTimes.length - 1) continue;
+
+                    const departureSeconds = dataManager.timeToSeconds(st.departure_time || st.arrival_time);
+                    if (!Number.isFinite(departureSeconds)) continue;
+                    if (departureSeconds < windowStartSec || departureSeconds > windowEndSec) continue;
+
+                    candidateTrips.push({
+                        trip,
+                        stopTimes,
+                        boardingIndex,
+                        departureSeconds
+                    });
+
+                    if (candidateTrips.length >= HYBRID_ROUTING_CONFIG.TRANSFER_CANDIDATE_TRIPS_LIMIT) break;
+                }
+                if (candidateTrips.length >= HYBRID_ROUTING_CONFIG.TRANSFER_CANDIDATE_TRIPS_LIMIT) break;
             }
-            if (candidateTrips.length >= HYBRID_ROUTING_CONFIG.TRANSFER_CANDIDATE_TRIPS_LIMIT) {
-                break;
+        } else {
+            // Fallback if stopTimesByStop is missing
+            for (const trip of dataManager.trips) {
+                if (!isServiceActive(trip)) continue;
+                const stopTimes = dataManager.stopTimesByTrip[trip.trip_id];
+                if (!stopTimes || stopTimes.length < 2) continue;
+                for (let i = 0; i < stopTimes.length - 1; i++) {
+                    const st = stopTimes[i];
+                    if (!startStopSet.has(st.stop_id)) continue;
+                    const departureSeconds = dataManager.timeToSeconds(st.departure_time || st.arrival_time);
+                    if (!Number.isFinite(departureSeconds)) continue;
+                    if (departureSeconds < windowStartSec || departureSeconds > windowEndSec) continue;
+                    candidateTrips.push({
+                        trip,
+                        stopTimes,
+                        boardingIndex: i,
+                        departureSeconds
+                    });
+                    break;
+                }
+                if (candidateTrips.length >= HYBRID_ROUTING_CONFIG.TRANSFER_CANDIDATE_TRIPS_LIMIT) {
+                    break;
+                }
             }
         }
 
@@ -632,12 +680,19 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                 const departSeconds = dataManager.timeToSeconds(transferStopTime.departure_time || transferStopTime.arrival_time);
                 if (!Number.isFinite(arrivalSeconds) || !Number.isFinite(departSeconds)) continue;
                 const earliestSecondLeg = departSeconds + HYBRID_ROUTING_CONFIG.TRANSFER_MIN_BUFFER_SECONDS;
-                if (earliestSecondLeg > 86400) break;
-                const latestSecondLeg = Math.min(earliestSecondLeg + HYBRID_ROUTING_CONFIG.TRANSFER_MAX_WAIT_SECONDS, 86400);
+                // FIX BUG 4: Remove 24h cap
+                const latestSecondLeg = earliestSecondLeg + HYBRID_ROUTING_CONFIG.TRANSFER_MAX_WAIT_SECONDS;
 
-                const secondTrips = getCachedTripsBetweenStops([
-                    transferStop.stop_id
-                ], expandedEndIds, reqDate, earliestSecondLeg, latestSecondLeg);
+                // FIX BUG 6: Use cluster IDs
+                const transferStopIds = Array.from(resolveClusterIds(transferStop));
+
+                const secondTrips = getCachedTripsBetweenStops(
+                    transferStopIds,
+                    expandedEndIds, 
+                    reqDate, 
+                    earliestSecondLeg, 
+                    latestSecondLeg
+                );
                 if (!secondTrips || !secondTrips.length) continue;
 
                 const firstSegment = {
@@ -715,15 +770,15 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
     };
 
     const reqSeconds = (reqDate.getHours() * 3600) + (reqDate.getMinutes() * 60);
-    const TWO_HOURS = 2 * 3600;
+    const SEARCH_WINDOW = 4 * 3600; // FIX BUG 8: 2h -> 4h
     let windowStartSec = reqSeconds;
-    let windowEndSec = Math.min(86400, reqSeconds + TWO_HOURS);
+    let windowEndSec = reqSeconds + SEARCH_WINDOW; // FIX BUG 4: Remove 24h cap
     if (searchTime?.type === 'arriver') {
         windowEndSec = reqSeconds;
-        windowStartSec = Math.max(0, reqSeconds - TWO_HOURS);
+        windowStartSec = Math.max(0, reqSeconds - SEARCH_WINDOW);
     }
     if (windowEndSec <= windowStartSec) {
-        windowEndSec = Math.min(86400, windowStartSec + TWO_HOURS);
+        windowEndSec = windowStartSec + SEARCH_WINDOW;
     }
 
     const resolveClusterIds = (stop) => {
@@ -762,8 +817,16 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
     );
     const itineraries = [];
 
-    if (trips && trips.length) {
-        const selected = trips.slice(0, HYBRID_ROUTING_CONFIG.MAX_ITINERARIES);
+    let selectedTrips = trips || [];
+    if (searchTime?.type === 'arriver') {
+        selectedTrips = selectedTrips.filter(t => t.arrivalSeconds <= reqSeconds);
+        selectedTrips.sort((a, b) => b.arrivalSeconds - a.arrivalSeconds);
+    } else {
+        selectedTrips.sort((a, b) => a.departureSeconds - b.departureSeconds);
+    }
+
+    if (selectedTrips.length) {
+        const selected = selectedTrips.slice(0, HYBRID_ROUTING_CONFIG.MAX_ITINERARIES);
         for (const tripCandidate of selected) {
             try {
                 const boardingStop = dataManager.getStop(tripCandidate.boardingStopId) || originCandidates[0]?.stop;
@@ -803,6 +866,7 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                 itinerary.summarySegments.push(busLeg.summary);
 
                 itinerary.departureTime = dataManager.formatTime(tripCandidate.departureSeconds);
+                itinerary._departureSeconds = tripCandidate.departureSeconds;
                 itinerary.arrivalTime = dataManager.formatTime(tripCandidate.arrivalSeconds);
 
                 const totalDurationSeconds =
@@ -845,6 +909,12 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         });
         itineraries.push(...transferItins);
     }
+
+    itineraries.sort((a, b) => {
+        const depA = a._departureSeconds !== undefined ? a._departureSeconds : (dataManager.timeToSeconds ? dataManager.timeToSeconds(a.departureTime) : 0);
+        const depB = b._departureSeconds !== undefined ? b._departureSeconds : (dataManager.timeToSeconds ? dataManager.timeToSeconds(b.departureTime) : 0);
+        return depA - depB;
+    });
 
     if (!itineraries.length) {
         console.warn('⚠️ Hybrid: aucun itinéraire GTFS (direct ou correspondance) trouvé.');

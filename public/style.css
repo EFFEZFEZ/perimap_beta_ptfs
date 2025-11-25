@@ -256,6 +256,7 @@ html, body {
     font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: var(--text-primary);
     background-color: var(--bg-light); 
+    overscroll-behavior-y: none;
 }
 
 /* Le body est le conteneur flex principal */
@@ -2877,6 +2878,8 @@ body.dark-theme .real-select option {
     background: var(--bg-main);
     border-right: 1px solid var(--border);
     z-index: 10;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* NOUVEAU : Panneau d'édition IDFM */
@@ -3406,7 +3409,7 @@ body.dark-theme .real-select option {
         width: 100%;
         flex: 1; /* Prend l'espace restant */
         border-right: none;
-        height: auto; /* Hauteur auto pour s'adapter au flex: 1 */
+        height: 100%; /* Hauteur auto pour s'adapter au flex: 1 */
         overflow-y: auto; /* Le panneau ENTIER scrolle */
     }
     
