@@ -85,7 +85,7 @@ export class UIManager {
             for (let m = 0; m < 60; m += 5) {
                 const option = document.createElement('option');
                 option.value = m;
-                option.textContent = `${String(m).padStart(2, '0')} min`;
+                option.textContent = String(m).padStart(2, '0');
                 if (m === selectedMinute) option.selected = true;
                 minEl.appendChild(option);
             }
