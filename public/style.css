@@ -3429,32 +3429,28 @@ body.dark-theme .real-select option {
     /* Le panneau latéral prend tout l'écran */
     #results-side-panel {
         width: 100%;
-        flex: 1; /* Prend l'espace restant */
+        flex: 1;
         border-right: none;
-        height: 100%; /* Hauteur auto pour s'adapter au flex: 1 */
-        overflow: hidden; /* Garder le header fixe */
+        height: 100%;
+        overflow-y: auto; /* Toute la colonne redevient scrollable */
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
         display: flex;
         flex-direction: column;
     }
 
-    /* La liste devient l'élément scrollable */
     .results-list-wrapper {
-        flex: 1; /* Doit prendre l'espace restant */
-        display: flex;
-        flex-direction: column;
-        overflow: hidden; /* L'enfant gère le scroll */
-        min-height: 0;
+        flex: none;
+        display: block;
+        overflow: visible;
+        padding-bottom: 0;
     }
     .results-list {
-        flex: 1;
-        overflow-y: auto; /* Scrolle sur mobile comme avant */
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior: contain;
+        flex: none;
+        overflow: visible;
         padding: 1rem 1rem calc(2rem + env(safe-area-inset-bottom));
-        min-height: 0;
     }
     
-    .itinerary-edit-form {
     .itinerary-edit-form {
         padding: 0 0.75rem 1rem;
     }
