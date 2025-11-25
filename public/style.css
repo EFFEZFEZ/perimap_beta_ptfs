@@ -2799,23 +2799,23 @@ body.dark-theme .real-select option {
 }
 .time-select-menu {
     position: absolute;
-    left: 50%;
+    left: 0;
     right: auto;
-    top: 50%;
+    top: calc(100% + 0.35rem);
     background: var(--bg-main);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
-    padding: 0.35rem 0;
+    padding: 0.3rem 0;
     opacity: 0;
     pointer-events: none;
-    transform: translate(-50%, -50%);
+    transform: translateY(-6px);
     transition: opacity 0.12s ease, transform 0.12s ease;
     z-index: 25;
     display: flex;
     flex-direction: column;
-    width: min(16rem, calc(100vw - 1.5rem));
-    max-height: 18rem;
+    width: min(8rem, calc(100vw - 2rem));
+    max-height: 14rem;
     overflow-y: auto;
     scrollbar-width: thin;
 }
@@ -2833,7 +2833,7 @@ body.dark-theme .real-select option {
 .time-select-wrapper.is-open .time-select-menu {
     opacity: 1;
     pointer-events: auto;
-    transform: translate(-50%, 0);
+    transform: translateY(0);
 }
 .time-select-option {
     width: 100%;
@@ -2865,21 +2865,16 @@ body.dark-theme .real-select option {
 
 @media (max-width: 640px) {
     .time-select-menu {
-        width: min(12rem, 85vw);
-        max-height: 13rem;
-        top: calc(100% + 0.4rem);
-        left: 0;
-        right: auto;
-        transform: none;
+        width: min(7rem, 60vw);
+        max-height: 12rem;
         padding: 0.2rem 0;
-        border-radius: var(--radius-md);
     }
     .time-select-wrapper-hour .time-select-menu,
     .time-select-wrapper-minute .time-select-menu {
         border-radius: var(--radius-md);
     }
     .time-select-wrapper.is-open .time-select-menu {
-        transform: none;
+        transform: translateY(0);
     }
     .time-select-option {
         padding: 0.45rem 0.75rem;
@@ -2994,8 +2989,8 @@ body.dark-theme .real-select option {
         width: 100%;
         
         /* Design */
-        max-height: 350px;
-        overflow-y: auto;
+        max-height: none;
+        overflow: visible;
         background: var(--bg-main);
         border: 1px solid var(--border);
         border-radius: var(--radius-md);
