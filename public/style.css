@@ -2801,28 +2801,35 @@ body.dark-theme .real-select option {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
-    padding: 0.35rem;
+    padding: 0.4rem 0;
     opacity: 0;
     pointer-events: none;
     transform: translate(-50%, -6px);
     transition: opacity 0.12s ease, transform 0.12s ease;
     z-index: 25;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
-    gap: 0.35rem;
-    max-height: min(72vh, 20rem);
-    overflow: hidden;
-    width: min(22rem, calc(100vw - 1.25rem));
-    min-width: min(18rem, calc(100vw - 1.25rem));
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    max-height: min(70vh, 22rem);
+    overflow-y: auto;
+    width: min(18rem, calc(100vw - 1.25rem));
+    scrollbar-width: thin;
 }
 .time-select-wrapper.is-open .time-select-menu {
     opacity: 1;
     pointer-events: auto;
     transform: translate(-50%, 0);
 }
+.time-select-menu::-webkit-scrollbar {
+    width: 4px;
+}
+.time-select-menu::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.2);
+    border-radius: 999px;
+}
 .time-select-option {
     width: 100%;
-    padding: 0.6rem 0.5rem;
+    padding: 0.55rem 1rem;
     background: transparent;
     border: none;
     color: var(--text-primary);
