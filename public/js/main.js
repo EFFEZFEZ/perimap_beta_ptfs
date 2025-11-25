@@ -1578,13 +1578,12 @@ function processIntelligentResults(intelligentResults, searchTime) {
             reqDate.setHours(reqHour, reqMinute, 0, 0);
             const reqMs = reqDate.getTime();
 
-            // B. Définir la Marge ASYMÉTRIQUE : 45 minutes AVANT, 30 minutes APRÈS (config demandée)
-            const BEFORE_MINUTES = 45; // avant l'heure demandée
-            const AFTER_MINUTES = 30;  // après l'heure demandée
+            // B. Fenêtre stricte : on accepte uniquement les arrivées AVANT ou pile à l'heure demandée
+            const BEFORE_MINUTES = 45; // fenêtre de recherche en amont
             const windowStart = reqMs - BEFORE_MINUTES * 60 * 1000;
-            const windowEnd = reqMs + AFTER_MINUTES * 60 * 1000;
+            const windowEnd = reqMs; // pas de trajets après l'heure demandée
 
-            console.log(`🕒 Cible: ${reqDate.toLocaleTimeString()} | Fenêtre: ${new Date(windowStart).toLocaleTimeString()} → ${new Date(windowEnd).toLocaleTimeString()} ( -${BEFORE_MINUTES}min / +${AFTER_MINUTES}min )`);
+            console.log(`🕒 Cible: ${reqDate.toLocaleTimeString()} | Fenêtre: ${new Date(windowStart).toLocaleTimeString()} → ${new Date(windowEnd).toLocaleTimeString()} ( -${BEFORE_MINUTES}min / +0min )`);
 
             const busItins = itineraries.filter(i => i.type === 'BUS' && i.arrivalTime && i.arrivalTime !== '~' && i.arrivalTime !== '--:--');
             const otherItins = itineraries.filter(i => i.type !== 'BUS');
@@ -1910,7 +1909,7 @@ function processIntelligentResults(intelligentResults, searchTime) {
             gtfsAdded.forEach(g => {
                 const arrivalMs = parseArrivalMs(g.arrivalTime);
                 // uniquement si dans la fenêtre (sécurité)
-                if (!isNaN(arrivalMs) && arrivalMs >= windowStart && arrivalMs <= reqMs) {
+                if (!isNaN(arrivalMs) && arrivalMs >= windowStart && arrivalMs <= windowEnd) {
                     allBuses.push({ itin: g, arrivalMs: arrivalMs, source: 'gtfs' });
                 }
             });
@@ -2162,7 +2161,7 @@ function filterExpiredItineraries(itineraries, searchTime) {
 
     const referenceDate = buildReferenceDate();
     const cutoffMinutes = referenceDate.getHours() * 60 + referenceDate.getMinutes();
-    const GRACE_MINUTES = 1;
+    const GRACE_MINUTES = 0;
 
     const filtered = itineraries.filter((itin) => {
         const depTime = typeof itin?.departureTime === 'string' ? itin.departureTime : null;
