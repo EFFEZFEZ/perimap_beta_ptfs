@@ -2861,6 +2861,14 @@ body.dark-theme .real-select option {
 @media (max-width: 640px) {
     .time-select-menu {
         width: calc(100vw - 1.25rem);
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+    .time-select-wrapper.is-open .time-select-menu {
+        transform: translate(-50%, -50%);
+    }
+    .time-select-menu {
+        max-height: 16rem;
     }
 }
 .time-select-option:hover,
