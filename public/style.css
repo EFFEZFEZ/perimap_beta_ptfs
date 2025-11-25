@@ -3437,20 +3437,21 @@ body.dark-theme .real-select option {
         flex-direction: column;
     }
 
-    /* Le wrapper de la liste scrolle */
+    /* La liste devient l'élément scrollable */
     .results-list-wrapper {
         flex: 1; /* Doit prendre l'espace restant */
         display: flex;
         flex-direction: column;
-        overflow-y: auto; /* Scrolle sur mobile aussi */
-        padding-bottom: calc(2rem + env(safe-area-inset-bottom)); /* Espace pour le scroll final */
+        overflow: hidden; /* L'enfant gère le scroll */
         min-height: 0;
     }
     .results-list {
-        flex: none;
-        overflow: visible;
-        height: auto;
-        padding-bottom: 2rem;
+        flex: 1;
+        overflow-y: auto; /* Scrolle sur mobile comme avant */
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        padding: 1rem 1rem calc(2rem + env(safe-area-inset-bottom));
+        min-height: 0;
     }
     
     .itinerary-edit-form {
