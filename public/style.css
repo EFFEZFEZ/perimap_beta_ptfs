@@ -2646,7 +2646,7 @@ body.dark-theme .install-tip-steps section {
     border: 1px solid var(--border);
     box-shadow: var(--shadow-lg);
     z-index: 1100;
-    overflow: hidden;
+    overflow: visible;
     transition: opacity 0.2s ease, transform 0.2s ease;
 }
 #planner-options-popover.hidden, #results-planner-options-popover.hidden {
@@ -2810,21 +2810,13 @@ body.dark-theme .real-select option {
     display: flex;
     flex-direction: column;
     width: min(14rem, calc(100vw - 1.5rem));
-    max-height: min(78vh, 26rem);
-    overflow-y: auto;
-    scrollbar-width: thin;
+    max-height: none;
+    overflow: visible;
 }
 .time-select-wrapper.is-open .time-select-menu {
     opacity: 1;
     pointer-events: auto;
     transform: translate(-50%, 0);
-}
-.time-select-menu::-webkit-scrollbar {
-    width: 5px;
-}
-.time-select-menu::-webkit-scrollbar-thumb {
-    background: rgba(0,0,0,0.25);
-    border-radius: 999px;
 }
 .time-select-option {
     width: 100%;
@@ -2848,6 +2840,22 @@ body.dark-theme .real-select option {
 .time-select-option.is-active {
     background: rgba(34, 197, 94, 0.12);
     color: var(--primary);
+}
+.time-select-option[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+    .time-select-menu {
+        left: 0;
+        right: 0;
+        width: calc(100vw - 1.25rem);
+        transform: translate(0, -6px);
+    }
+    .time-select-wrapper.is-open .time-select-menu {
+        transform: translate(0, 0);
+    }
 }
 .time-select-option:hover,
 .time-select-option:focus {
