@@ -297,6 +297,13 @@ export class UIManager {
             formatOption: (option) => option?.textContent || ''
         };
 
+        const id = selectEl.id || '';
+        if (/hour/i.test(id)) {
+            wrapper.classList.add('time-select-wrapper-hour');
+        } else if (/minute/i.test(id)) {
+            wrapper.classList.add('time-select-wrapper-minute');
+        }
+
         this.timeDropdowns.add(selectEl);
         if (!this.timeDropdownListenerAttached) {
             document.addEventListener('click', this.handleTimeDropdownDocumentClick);

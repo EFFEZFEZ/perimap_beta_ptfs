@@ -2813,6 +2813,22 @@ body.dark-theme .real-select option {
     max-height: none;
     overflow: visible;
 }
+.time-select-wrapper-hour .time-select-menu {
+    top: 50%;
+    max-height: 18rem;
+    overflow-y: auto;
+    transform: translate(-50%, -50%);
+}
+.time-select-wrapper-hour.is-open .time-select-menu {
+    transform: translate(-50%, -50%);
+}
+.time-select-wrapper-hour .time-select-menu::-webkit-scrollbar {
+    width: 6px;
+}
+.time-select-wrapper-hour .time-select-menu::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.25);
+    border-radius: 999px;
+}
 .time-select-wrapper.is-open .time-select-menu {
     opacity: 1;
     pointer-events: auto;
@@ -2847,14 +2863,18 @@ body.dark-theme .real-select option {
 }
 
 @media (max-width: 640px) {
-    .time-select-menu {
+    .time-select-wrapper-minute .time-select-menu {
         left: 0;
         right: 0;
         width: calc(100vw - 1.25rem);
         transform: translate(0, -6px);
     }
-    .time-select-wrapper.is-open .time-select-menu {
+    .time-select-wrapper-minute.is-open .time-select-menu {
         transform: translate(0, 0);
+    }
+    .time-select-wrapper-hour .time-select-menu {
+        left: 50%;
+        width: min(18rem, calc(100vw - 1.25rem));
     }
 }
 .time-select-option:hover,
