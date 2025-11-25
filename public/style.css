@@ -3519,6 +3519,9 @@ body.dark-theme .real-select option {
         gap: 1rem;
         background: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0));
         transition: background 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        pointer-events: none; /* Let drags pass through except on interactive children */
+    }
+    #detail-map-header > * {
         pointer-events: auto;
     }
     #detail-map-header #btn-back-to-results {
