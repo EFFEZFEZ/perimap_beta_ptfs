@@ -709,8 +709,22 @@ body.dark-theme .install-helper {
 /* Verrouille le scroll UNIQUEMENT pour les vues plein écran */
 body.view-is-locked {
     position: fixed; /* Plus fiable que overflow: hidden */
+    inset: 0; /* Évite les décalages quand on verrouille */
     width: 100%;
     overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    body.view-is-locked {
+        position: relative; /* Laisse les sous-vues gérer leur propre scroll */
+        inset: auto;
+        height: 100%;
+        min-height: 100vh;
+    }
+
+    body.view-is-locked #app-view-root {
+        min-height: 100vh; /* Garantit un conteneur flex plein écran */
+    }
 }
 
 /* Conteneurs de vue principaux */
@@ -3437,6 +3451,7 @@ body.dark-theme .real-select option {
         overscroll-behavior: contain;
         display: flex;
         flex-direction: column;
+        min-height: 0; /* Crucial pour permettre le scroll dans un flex column */
     }
 
     .results-list-wrapper {
