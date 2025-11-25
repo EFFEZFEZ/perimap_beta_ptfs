@@ -2865,7 +2865,7 @@ body.dark-theme .real-select option {
     flex: 1; /* Prend toute la hauteur restante sous le header */
     background: var(--bg-light);
     /* Assure que le conteneur ne dépasse pas la hauteur de la vue */
-    height: 100vh;
+    height: 100%;
 }
 
 /* NOUVEAU : Panneau latéral (colonne) */
@@ -2993,6 +2993,24 @@ body.dark-theme .real-select option {
     padding-bottom: 1.5rem;
     display: flex;
     flex-direction: column;
+    min-height: 0; /* Important pour le scroll flex */
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent; /* Firefox */
+}
+
+/* Scrollbar minimaliste (Webkit) */
+.results-list-wrapper::-webkit-scrollbar {
+    width: 6px;
+}
+.results-list-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+.results-list-wrapper::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+.results-list-wrapper::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
 /* La liste elle-même n'a besoin que de padding */
@@ -3400,7 +3418,7 @@ body.dark-theme .real-select option {
     #itinerary-results-container {
         flex-direction: column;
         /* *** CORRECTION V35: Hauteur dynamique pour s'adapter à Safari *** */
-        height: 100vh; 
+        height: 100%; 
     }
     
     /* **CORRECTION IDFM**: Cache la carte sur la vue liste */
@@ -3414,14 +3432,18 @@ body.dark-theme .real-select option {
         flex: 1; /* Prend l'espace restant */
         border-right: none;
         height: 100%; /* Hauteur auto pour s'adapter au flex: 1 */
-        overflow-y: auto; /* Le panneau ENTIER scrolle */
-    /* Le wrapper de la liste ne doit plus scroller, c'est le parent */
+        overflow: hidden; /* Garder le header fixe */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Le wrapper de la liste scrolle */
     .results-list-wrapper {
         flex: 1; /* Doit prendre l'espace restant */
-        display: block;
+        display: flex;
+        flex-direction: column;
         overflow-y: auto; /* Scrolle sur mobile aussi */
         padding-bottom: calc(2rem + env(safe-area-inset-bottom)); /* Espace pour le scroll final */
-        height: auto;
         min-height: 0;
     }
     .results-list {
