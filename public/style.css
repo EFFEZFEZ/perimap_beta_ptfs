@@ -2991,6 +2991,7 @@ body.dark-theme .real-select option {
     overflow-y: auto; /* C'est LUI qui scrolle */
     overscroll-behavior: contain;
     padding-bottom: 1.5rem;
+    min-height: 0; /* CRITIQUE : Permet au flex-item de rétrécir et d'activer le scroll */
 }
 
 /* La liste elle-même n'a besoin que de padding */
@@ -3409,8 +3410,10 @@ body.dark-theme .real-select option {
         width: 100%;
         flex: 1; /* Prend l'espace restant */
         border-right: none;
-        height: 100%; /* Hauteur auto pour s'adapter au flex: 1 */
+        height: auto; /* Laisse flex gérer la hauteur */
+        min-height: 0; /* Important pour le scroll */
         overflow-y: auto; /* Le panneau ENTIER scrolle */
+        -webkit-overflow-scrolling: touch;
     }
     
     .itinerary-edit-header {
