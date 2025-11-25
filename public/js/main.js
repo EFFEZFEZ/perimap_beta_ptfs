@@ -2435,7 +2435,7 @@ function renderItineraryResults(modeFilter) {
             onlineBtnWrapper.style.cursor = 'pointer';
             
             onlineBtnWrapper.innerHTML = `
-                <div class="route-option" style="justify-content: center; color: var(--primary); border: 1px dashed var(--primary); background: rgba(37, 99, 235, 0.05);">
+                <div class="route-option" style="justify-content: center; color: var(--primary); background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; transition: all 0.2s ease;">
                     <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                         Rechercher plus de résultats en ligne
@@ -2650,7 +2650,7 @@ function renderItineraryResults(modeFilter) {
         onlineBtnWrapper.style.cursor = 'pointer';
         
         onlineBtnWrapper.innerHTML = `
-            <div class="route-option" style="justify-content: center; color: var(--primary); border: 1px dashed var(--primary); background: rgba(37, 99, 235, 0.05);">
+            <div class="route-option" style="justify-content: center; color: var(--primary); background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; transition: all 0.2s ease;">
                 <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                     Rechercher plus de résultats en ligne
