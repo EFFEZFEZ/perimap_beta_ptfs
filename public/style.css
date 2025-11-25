@@ -3455,14 +3455,9 @@ body.dark-theme .real-select option {
         z-index: 0;
     }
 
-    #itinerary-detail-container.sheet-is-dragging #detail-map,
-    #itinerary-detail-container.sheet-is-dragging #detail-map-header {
+    #itinerary-detail-container.sheet-is-dragging #detail-map {
         pointer-events: none;
         touch-action: none;
-    }
-
-    #itinerary-detail-container.sheet-is-dragging #detail-map-header #btn-back-to-results {
-        pointer-events: none;
     }
 
     #detail-bottom-sheet {
@@ -3517,14 +3512,14 @@ body.dark-theme .real-select option {
         top: 24px;
         left: 0;
         right: 0;
-        z-index: 1035;
+        z-index: 1400;
         padding: 0 1rem;
         display: flex;
         align-items: center;
         gap: 1rem;
         background: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0));
         transition: background 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-        pointer-events: none; /* Allow sheet to capture drags; re-enable on interactive elements */
+        pointer-events: auto;
     }
     #detail-map-header #btn-back-to-results {
         background: rgba(255, 255, 255, 0.95);
@@ -3541,7 +3536,7 @@ body.dark-theme .real-select option {
         box-shadow: var(--shadow-md);
         font-weight: 600;
         font-size: 0.9rem;
-        pointer-events: none;
+        pointer-events: auto;
     }
     #detail-map-summary .route-time { margin-right: 0.75rem; }
     #detail-map-summary .route-duration { color: var(--text-secondary); }
@@ -3566,7 +3561,6 @@ body.dark-theme .real-select option {
     #itinerary-detail-container.is-scrolled #detail-map-header {
         background: var(--bg-main);
         box-shadow: var(--shadow-md);
-        padding-top: 0.5rem;
     }
     
    /* ============================================ */
