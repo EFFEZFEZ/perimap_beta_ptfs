@@ -3455,10 +3455,7 @@ body.dark-theme .real-select option {
         z-index: 0;
     }
 
-    #itinerary-detail-container.sheet-is-dragging #detail-map {
-        pointer-events: none;
-        touch-action: none;
-    }
+    /* Le fond de carte reste toujours interactif */
 
     #detail-bottom-sheet {
         position: absolute;
@@ -3521,9 +3518,6 @@ body.dark-theme .real-select option {
         transition: background 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
         pointer-events: none; /* Let drags pass through except on interactive children */
     }
-    #detail-map-header > * {
-        pointer-events: auto;
-    }
     #detail-map-header #btn-back-to-results {
         background: rgba(255, 255, 255, 0.95);
         color: var(--text-primary);
@@ -3539,7 +3533,7 @@ body.dark-theme .real-select option {
         box-shadow: var(--shadow-md);
         font-weight: 600;
         font-size: 0.9rem;
-        pointer-events: auto;
+        pointer-events: none;
     }
     #detail-map-summary .route-time { margin-right: 0.75rem; }
     #detail-map-summary .route-duration { color: var(--text-secondary); }
