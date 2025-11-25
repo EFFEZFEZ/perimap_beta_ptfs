@@ -3561,10 +3561,7 @@ body.dark-theme .real-select option {
         padding: 0.75rem 1rem 4rem 1rem;
     }
 
-    #itinerary-detail-container.is-scrolled #detail-map-header {
-        background: var(--bg-main);
-        box-shadow: var(--shadow-md);
-    }
+    /* Header keeps its translucent gradient regardless of sheet state */
     
    /* ============================================ */
 /* STYLAGE DES ÉTAPES (IDFM-style) */
