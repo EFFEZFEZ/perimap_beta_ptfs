@@ -668,65 +668,10 @@ function registerServiceWorker() {
         return;
     }
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js').then(registration => {
-            // Check if there's a waiting worker (update ready)
-            if (registration.waiting) {
-                showUpdateNotification(registration.waiting);
-                return;
-            }
-
-            // Listen for new workers installing
-            registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // New version installed and waiting
-                        showUpdateNotification(newWorker);
-                    }
-                });
-            });
-        }).catch((error) => {
+        navigator.serviceWorker.register('/service-worker.js').catch((error) => {
             console.warn('Service worker registration failed:', error);
         });
-
-        // Reload when the new worker takes control
-        let refreshing;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (refreshing) return;
-            window.location.reload();
-            refreshing = true;
-        });
     });
-}
-
-function showUpdateNotification(worker) {
-    let notification = document.getElementById('update-notification');
-    if (!notification) {
-        notification = document.createElement('div');
-        notification.id = 'update-notification';
-        notification.innerHTML = `
-            <div class="update-text">Une nouvelle version est disponible !</div>
-            <div class="update-actions">
-                <button class="btn-dismiss">Plus tard</button>
-                <button class="btn-update">Mettre à jour</button>
-            </div>
-        `;
-        document.body.appendChild(notification);
-        
-        notification.querySelector('.btn-dismiss').addEventListener('click', () => {
-            notification.classList.remove('visible');
-        });
-        
-        notification.querySelector('.btn-update').addEventListener('click', () => {
-            worker.postMessage({ type: 'SKIP_WAITING' });
-            notification.classList.remove('visible');
-        });
-    }
-    
-    // Small delay to allow DOM insertion before animation
-    setTimeout(() => {
-        notification.classList.add('visible');
-    }, 100);
 }
 
 function populateTimeSelects() {
@@ -1989,11 +1934,7 @@ function processIntelligentResults(intelligentResults, searchTime) {
             });
 
             // Trier chronologiquement par heure de DÉPART (DESC pour avoir le départ le plus tardif en premier)
-            allBuses.sort((a, b) => {
-                const valA = (a.departureMs && !isNaN(a.departureMs)) ? a.departureMs : 0;
-                const valB = (b.departureMs && !isNaN(b.departureMs)) ? b.departureMs : 0;
-                return valB - valA;
-            });
+            allBuses.sort((a, b) => (b.departureMs || 0) - (a.departureMs || 0));
 
             // Diagnostics GTFS
             const missingGtfs = gtfsAdded.filter(g => !filteredBus.some(f => `${f.summarySegments[0]?.name}_${f.arrivalTime}` === `${g.summarySegments[0]?.name}_${g.arrivalTime}`));
@@ -2435,7 +2376,7 @@ function renderItineraryResults(modeFilter) {
             onlineBtnWrapper.style.cursor = 'pointer';
             
             onlineBtnWrapper.innerHTML = `
-                <div class="route-option" style="justify-content: center; color: var(--primary); background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; transition: all 0.2s ease;">
+                <div class="route-option" style="justify-content: center; color: var(--primary); border: 1px dashed var(--primary); background: rgba(37, 99, 235, 0.05);">
                     <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                         Rechercher plus de résultats en ligne
@@ -2650,7 +2591,7 @@ function renderItineraryResults(modeFilter) {
         onlineBtnWrapper.style.cursor = 'pointer';
         
         onlineBtnWrapper.innerHTML = `
-            <div class="route-option" style="justify-content: center; color: var(--primary); background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; transition: all 0.2s ease;">
+            <div class="route-option" style="justify-content: center; color: var(--primary); border: 1px dashed var(--primary); background: rgba(37, 99, 235, 0.05);">
                 <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                     Rechercher plus de résultats en ligne

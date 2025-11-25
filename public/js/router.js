@@ -911,13 +911,8 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
     }
 
     itineraries.sort((a, b) => {
-        const getSeconds = (itin) => {
-            if (itin._departureSeconds !== undefined) return itin._departureSeconds;
-            if (dataManager.timeToSeconds && itin.departureTime) return dataManager.timeToSeconds(itin.departureTime);
-            return 0;
-        };
-        const depA = getSeconds(a);
-        const depB = getSeconds(b);
+        const depA = a._departureSeconds !== undefined ? a._departureSeconds : (dataManager.timeToSeconds ? dataManager.timeToSeconds(a.departureTime) : 0);
+        const depB = b._departureSeconds !== undefined ? b._departureSeconds : (dataManager.timeToSeconds ? dataManager.timeToSeconds(b.departureTime) : 0);
         
         if (searchTime?.type === 'arriver') {
             // Pour "Arriver à", on veut partir le plus TARD possible (donc décroissant)

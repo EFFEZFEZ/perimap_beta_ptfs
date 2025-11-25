@@ -2752,62 +2752,1170 @@ body.dark-theme .real-select option {
 }
 .suggestion-item strong {
     font-weight: 700;
-    color: var(--primary);
+    color: var(--text-primary);
 }
 
-/* Update Notification Toast */
-#update-notification {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%) translateY(100px);
-    background-color: var(--bg-main);
-    color: var(--text-primary);
-    padding: 16px 24px;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+
+@media (max-width: 900px) { 
+    /* 1. On nettoie le layout du formulaire */
+    .planner-form {
+        flex-direction: column;
+        align-items: stretch;
+        /* Isolation pour éviter les mélanges bizarres */
+        isolation: isolate; 
+    }
+    .planner-inputs {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem; 
+        align-items: stretch;
+        width: 100%;
+    }
+    .planner-inputs .form-group,
+    .form-group-when {
+        width: 100%;
+    }
+    .planner-inputs .swap-button-slot,
+    .results-planner-inputs .swap-button-slot {
+        order: 2;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+    .planner-inputs .swap-button-slot .btn-swap-direction,
+    .results-planner-inputs .swap-button-slot .btn-swap-direction {
+        display: inline-flex;
+        margin: 0 auto;
+        width: 44px;
+        height: 44px;
+    }
+    .btn-when { width: 100%; }
+
+    /* 2. LE PARENT DU MENU (L'Ancre) */
+    .form-group-when {
+        position: relative; 
+        margin-bottom: 0;
+        /* CRUCIAL : Il doit être devant le bouton Rechercher */
+        z-index: 500; 
+    }
+
+    /* 3. LE MENU LUI-MÊME */
+    #planner-options-popover {
+        /* Position absolue par rapport à .form-group-when */
+        position: absolute !important; 
+        top: calc(100% + 10px); /* Juste sous le bouton */
+        left: 0;
+        width: 100%;
+        
+        /* Design */
+        max-height: 350px;
+        overflow-y: auto;
+        background: var(--bg-main);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3); /* Grosse ombre */
+        
+        /* CRUCIAL : Z-Index très haut pour flotter */
+        z-index: 1000;
+        
+        /* S'assurer qu'il est cliquable */
+        pointer-events: auto;
+    }
+
+    /* 4. Cacher proprement quand c'est fermé */
+    #planner-options-popover.hidden {
+        display: none !important;
+    }
+
+    /* 5. LE BOUTON RECHERCHER */
+    .planner-search-btn {
+        position: relative;
+        /* Z-Index plus bas que le menu */
+        z-index: 1; 
+        margin-top: 0;
+    }
+
+    /* 6. NETTOYAGE : Suppression totale des "écrans gris" (backdrops) */
+    #planner-options-popover::before,
+    #planner-options-popover:not(.hidden)::before {
+        display: none !important;
+        content: none !important;
+    }
+
+    .results-planner-inputs {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .results-planner-inputs .btn-swap-direction {
+        order: 0;
+        margin: 0 auto;
+    }
+}
+
+
+/* =========================================
+ * NOUVELLE VUE : RÉSULTATS D'ITINÉRAIRE
+ * ========================================= */
+
+/* Le conteneur principal est maintenant un flex en LIGNE */
+#itinerary-results-container {
+    display: flex;
+    flex-direction: row; /* Panneau à gauche, carte à droite */
+    flex: 1; /* Prend toute la hauteur restante sous le header */
+    background: var(--bg-light);
+    /* Assure que le conteneur ne dépasse pas la hauteur de la vue */
+    height: 100vh;
+}
+
+/* NOUVEAU : Panneau latéral (colonne) */
+#results-side-panel {
+    width: 400px; /* Largeur fixe type IDFM */
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Prend toute la hauteur du conteneur */
+    background: var(--bg-main);
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* NOUVEAU : Panneau d'édition IDFM */
+#itinerary-edit-panel {
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    padding-top: 0;
+}
+
+.itinerary-edit-header {
     display: flex;
     align-items: center;
-    gap: 16px;
-    z-index: 9999;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid var(--border);
-    max-width: 90vw;
-    width: max-content;
+    gap: 0.75rem;
+    padding: 0.5rem 1.5rem 0.25rem;
 }
 
-#update-notification.visible {
-    transform: translateX(-50%) translateY(0);
+.itinerary-edit-header h2 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0;
+}
+.itinerary-edit-form {
+    padding: 0 1.5rem 1rem;
+    position: relative;
+}
+.itinerary-edit-form .form-group {
+    margin-bottom: 0.75rem;
+}
+.itinerary-edit-form .form-group:last-of-type {
+    margin-bottom: 1rem;
 }
 
-#update-notification .update-text {
-    font-weight: 500;
-    font-size: 0.95rem;
+/* Bloc d'inputs pour la vue résultats */
+.results-planner-inputs {
+    --swap-col-width: 56px;
+    margin-bottom: 1rem;
+}
+.results-planner-inputs .form-group {
+    margin-bottom: 0;
 }
 
-#update-notification .update-actions {
-    display: flex;
-    gap: 8px;
-}
-
-#update-notification .btn-update {
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: var(--radius-md);
+/* Bouton "Lancer la recherche" pleine largeur */
+.btn-full-width {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem;
+    font-size: 1rem;
     font-weight: 600;
-    cursor: pointer;
-    font-size: 0.9rem;
+    border-radius: var(--radius-md);
 }
 
-#update-notification .btn-dismiss {
+/* NOUVEAU : Onglets de mode de transport */
+#results-mode-tabs {
+    display: flex;
+    justify-content: space-around;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    flex-shrink: 0; /* Ne doit pas rétrécir */
+}
+.mode-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem;
+    border: none;
     background: transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    flex: 1;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+.mode-tab:hover {
+    background: var(--bg-main);
+}
+.mode-tab.active {
+    background: var(--bg-main);
+    border-bottom-color: var(--primary);
+}
+.mode-tab.hidden {
+    display: none;
+}
+.mode-tab svg {
+    width: 24px;
+    height: 24px;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+}
+.mode-tab.active svg {
+    color: var(--primary);
+}
+.mode-tab-duration {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.mode-tab-duration.empty {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+
+/* NOUVEAU : Conteneur pour la liste des résultats */
+.results-list-wrapper {
+    flex: 1; /* Prend tout l'espace restant dans le panneau latéral */
+    overflow-y: auto; /* C'est LUI qui scrolle */
+    overscroll-behavior: contain;
+    padding-bottom: 1.5rem;
+}
+
+/* La liste elle-même n'a besoin que de padding */
+.results-list {
+    padding: 1rem;
+}
+
+/* La CARTE prend le reste de l'espace */
+#results-map {
+    flex: 1; /* Prend tout l'espace restant à droite */
+    height: 100%;
+    background: #e5e5e5;
+    touch-action: pan-x pan-y;
+}
+
+
+.results-message {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+.results-message.error {
+    color: var(--color-red);
+    font-style: normal;
+    font-weight: 600;
+}
+
+.route-option-wrapper {
+    margin-bottom: 1rem;
+}
+.route-option-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    padding-left: 0.25rem;
+}
+
+/* =========================================
+ * NOUVEAU STYLE DE CARTE (V40 - Simplifié)
+ * ========================================= */
+.route-option {
+    display: flex;
+    flex-direction: column; /* Mise en page sur 2 lignes */
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 0.75rem; /* Espace entre la ligne de bus et le footer */
+}
+.route-option.is-active,
+.route-option:hover {
+    border-color: var(--primary);
+    background: var(--bg-main);
+}
+
+/* --- (1) Ligne des bus --- */
+.route-summary-line {
+    display: flex;
+    align-items: center;
+    column-gap: 0.35rem;
+    row-gap: 0.4rem;
+    flex-wrap: wrap; /* Permet le passage à la ligne */
+}
+.route-summary-bus-icon {
+    font-size: 0.8rem;
+    font-weight: 700;
     color: var(--text-secondary);
     border: 1px solid var(--border);
-    padding: 8px 12px;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    font-size: 0.9rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg-main);
+    /* NOUVEAU: pour aligner les icônes */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
 }
+.route-summary-bus-icon svg {
+    width: 20px;
+    height: 20px;
+}
+.route-summary-dot {
+    color: var(--text-secondary);
+    font-weight: 600;
+    align-self: center;
+}
+.route-line-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    font-size: 0.9rem;
+    border-radius: 999px;
+    width: 46px;
+    min-width: 46px;
+    height: 32px;
+    padding: 0;
+    text-align: center;
+}
+
+/* --- (2) Footer (Temps + Durée) --- */
+.route-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.route-time {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.route-duration {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+.route-duration-eco {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #1e8e3e; /* Vert "éco" */
+}
+.route-duration-eco svg {
+    width: 16px;
+    height: 16px;
+}
+/* *** FIN DES NOUVEAUX STYLES (V40) *** */
+
+
+/* --- Styles pour les détails d'itinéraire (PC - Accordéon) --- */
+/* (Ces styles s'appliqueront > 768px) */
+.route-details {
+    padding: 1rem;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    margin-top: -0.5rem; /* Chevauche la carte */
+    animation: fadeIn 0.3s ease;
+}
+.route-details.hidden {
+    display: none;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* *** NOUVEAU V34 : Styles pour l'accordéon PC *** */
+.route-details .step-detail {
+    display: flex;
+    position: relative;
+    padding-left: 3.5rem; /* MODIFIÉ: 3rem -> 3.5rem (plus d'espace) */
+    margin-bottom: 1.5rem;
+    /* variable --line-color définie inline par JS */
+}
+.route-details .step-detail:last-child {
+    margin-bottom: 0;
+}
+.route-details .step-detail::before { /* Ligne verticale */
+    content: '';
+    position: absolute;
+    left: 19px; /* Centre de l'icône de 40px */
+    top: 24px;
+    bottom: -1.5rem;
+    width: 4px; /* Augmenté pour la visibilité */
+    background: var(--line-color, var(--border));
+}
+.route-details .step-detail:last-child::before {
+    bottom: 12px; /* conserve un trait court sous la dernière icône */
+}
+/* *** CORRECTION V36 : Utilise text-secondary pour le contraste *** */
+.route-details .step-detail.walk::before,
+.route-details .step-detail.bicycle::before { /* Ajout vélo */
+    background: repeating-linear-gradient(
+        var(--text-secondary) 0,
+        var(--text-secondary) 4px,
+        transparent 4px,
+        transparent 8px
+    );
+}
+
+/* *** NOUVEAU V36 : Point de connexion (cercle) *** */
+.route-details .step-detail::after {
+    content: '';
+    position: absolute;
+    left: 14px; /* (40px icon / 2) - ( (12px dot + 2*2px border) / 2 ) */
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--bg-main);
+    border: 2px solid var(--line-color, var(--border));
+    z-index: 1; /* Derrière l'icône, mais devant la ligne */
+}
+.route-details .step-detail.walk::after,
+.route-details .step-detail.bicycle::after { /* Ajout vélo */
+    border-color: var(--text-secondary);
+}
+
+
+.route-details .step-icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--bg-main);
+    /* *** CORRECTION V36: Ajout du Z-index *** */
+    position: relative; /* z-index a besoin de position */
+    z-index: 2;
+}
+.route-details .step-detail.walk .step-icon,
+.route-details .step-detail.bicycle .step-icon { /* Ajout vélo */
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+.route-details .step-icon svg {
+    width: 20px;
+    height: 20px;
+}
+.route-details .step-detail.walk .step-icon svg,
+.route-details .step-detail.bicycle .step-icon svg {
+    color: inherit;
+}
+.route-details .step-icon .route-line-badge {
+    font-size: 1.1rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.route-details .step-info {
+    display: flex;
+    flex-direction: column;
+    padding-top: 4px; /* Aligner avec l'icône */
+}
+.route-details .step-instruction {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.route-details .step-duration-inline {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-left: 0.25rem;
+.route-details .wait-info .wait-time {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+.route-details .wait-info .wait-duration {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+}
+.route-details .step-sub-instruction {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+.route-details .step-stop-point {
+    margin-top: 0.5rem;
+    padding-left: 1rem;
+    position: relative;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+.route-details .step-stop-point::before { /* Puce avant le temps/arrêt */
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+}
+.route-details .step-stop-point .step-time-detail {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    margin-left: 0.25rem;
+}
+.route-details .step-stop-point strong {
+    font-weight: 700;
+}
+
+.route-details .intermediate-stops {
+    margin: 0.5rem 0 0.5rem 1rem;
+}
+.route-details .intermediate-stops summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--primary);
+    list-style: none; /* Cache le marqueur par défaut */
+    padding: 0.25rem 0;
+}
+.route-details .intermediate-stops summary::-webkit-details-marker {
+    display: none; /* Cache le marqueur sur Chrome/Safari */
+}
+.route-details .intermediate-stops summary .chevron {
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+}
+.route-details .intermediate-stops[open] summary .chevron {
+    transform: rotate(180deg);
+}
+.route-details .intermediate-stops-list {
+    margin: 0.5rem 0 0 0.5rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--line-color, var(--border));
+    list-style-type: none;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+.route-details .intermediate-stops-list li {
+    position: relative;
+    padding: 0.25rem 0 0.25rem 0.75rem;
+}
+.route-details .intermediate-stops-list li::before { /* Puce pour la liste d'arrêts */
+    content: '';
+    position: absolute;
+    left: -1rem;
+    top: 0.7em;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--line-color, var(--border));
+}
+
+/* NOUVEAU V46: Styles pour les étapes de marche détaillées */
+.route-details .intermediate-stops-list.walk-steps {
+    border-left-color: transparent;
+    padding-left: 0;
+    margin-left: 0;
+    font-weight: 500;
+}
+.route-details .intermediate-stops-list.walk-steps li {
+    padding-left: 0;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+.route-details .intermediate-stops-list.walk-steps li::before {
+    display: none;
+}
+.route-details .intermediate-stops-list.walk-steps svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    margin-top: 0.2em;
+}
+.route-details .intermediate-stops-list .walk-step-info {
+    display: flex;
+    flex-direction: column;
+}
+.route-details .intermediate-stops-list .walk-step-meta {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+
+/* =========================================
+ * VUE 3: DÉTAIL D'ITINÉRAIRE (MOBILE IDFM)
+ * ========================================= */
+
+#itinerary-detail-container {
+    /* Caché par défaut, géré par JS */
+    display: none;
+}
+
+#itinerary-detail-backdrop {
+    display: none;
+}
+
+/* Styles mobiles pour la vue résultats (Étape 1: Liste) */
+@media (max-width: 768px) {
+    /* AMÉLIORATION LECTURE (mobile) */
+    .wait-time,
+    .departure-time strong,
+    .step-time-detail {
+        font-size: 0.875rem; /* Au lieu de 0.8125rem */
+    }
+
+    /* ÉTAPE 1: VUE LISTE (IDFM-style) */
+    
+    /* Rétablit la direction en colonne */
+    #itinerary-results-container {
+        flex-direction: column;
+        /* *** CORRECTION V35: Hauteur dynamique pour s'adapter à Safari *** */
+        height: 100vh; 
+    }
+    
+    /* **CORRECTION IDFM**: Cache la carte sur la vue liste */
+    #itinerary-results-container #results-map {
+        display: none;
+    }
+
+    /* Le panneau latéral prend tout l'écran */
+    #results-side-panel {
+        width: 100%;
+        flex: 1; /* Prend l'espace restant */
+        border-right: none;
+        height: 100%; /* Hauteur auto pour s'adapter au flex: 1 */
+        overflow-y: auto; /* Le panneau ENTIER scrolle */
+    }
+    
+    .itinerary-edit-header {
+        padding: calc(env(safe-area-inset-top, 0px) + 0.25rem) 0.75rem 0.25rem;
+    }
+
+    /* Le wrapper de la liste ne doit plus scroller, c'est le parent */
+    .results-list-wrapper {
+        flex: none; /* Ne grandit pas, s'adapte au contenu */
+        overflow-y: visible;
+        padding-bottom: 2rem;
+    }
+    .itinerary-edit-form {
+        padding: 0 0.75rem 1rem;
+    }
+    
+    .results-planner-inputs {
+        width: 100%;
+    }
+
+    /* --- Styles mobiles pour les détails d'itinéraire (ACCORDÉON PC) --- */
+    /* On cache l'accordéon PC sur mobile */
+    .route-details {
+        display: none !important;
+    }
+
+
+    /* ============================================ */
+    /* ÉTAPE 2 & 3: VUE DÉTAIL (Overlay IDFM-style) */
+    /* ============================================ */
+
+    #itinerary-detail-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 15, 28, 0.55);
+        z-index: 1080;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+    #itinerary-detail-backdrop.is-active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    #itinerary-detail-container {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 1110;
+        transform: translateY(calc(100% + env(safe-area-inset-bottom)));
+        transition: transform 0.35s ease;
+        pointer-events: none;
+    }
+    #itinerary-detail-container.is-active {
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    #detail-map {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        background: #e5e5e5;
+        z-index: 0;
+        touch-action: pan-x pan-y;
+    }
+
+    /* Le fond de carte reste toujours interactif */
+
+    #detail-bottom-sheet {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--bg-main);
+        border-radius: 24px 24px 0 0;
+        box-shadow: 0 -25px 60px rgba(15, 23, 42, 0.45);
+        height: var(--sheet-height, 40vh);
+        padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+        transform: translateY(calc(100% + env(safe-area-inset-bottom)));
+        transition: transform 0.3s ease-in-out, height 0.25s ease;
+        overflow: hidden;
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        z-index: 1200; /* Sits above map header so drags reach the sheet */
+    }
+    #itinerary-detail-container.is-active #detail-bottom-sheet {
+        transform: translateY(0);
+    }
+    #detail-bottom-sheet.is-dragging {
+        transition: none !important;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    #detail-bottom-sheet.sheet-height-no-transition {
+        transition: transform 0.3s ease-in-out, height 0s;
+    }
+
+    #detail-bottom-sheet .panel-handle {
+        display: block;
+        width: 48px;
+        height: 5px;
+        border-radius: 999px;
+        background: var(--border);
+        margin: 10px auto 4px;
+        cursor: grab;
+        touch-action: none;
+    }
+    #detail-bottom-sheet.is-dragging .panel-handle {
+        cursor: grabbing;
+    }
+
+    /* Style du header de la carte */
+    #detail-map-header {
+        position: absolute;
+        top: 24px;
+        left: 0;
+        right: 0;
+        z-index: 1400;
+        padding: 0 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0));
+        transition: background 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        pointer-events: none; /* Let drags pass through except on interactive children */
+    }
+    #detail-map-header #btn-back-to-results {
+        background: rgba(255, 255, 255, 0.95);
+        color: var(--text-primary);
+        box-shadow: var(--shadow-md);
+        pointer-events: auto;
+    }
+    
+    #detail-map-summary {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(5px);
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius-full);
+        box-shadow: var(--shadow-md);
+        font-weight: 600;
+        font-size: 0.9rem;
+        pointer-events: none;
+    }
+    #detail-map-summary .route-time { margin-right: 0.75rem; }
+    #detail-map-summary .route-duration { color: var(--text-secondary); }
+
+    #detail-panel-wrapper {
+        flex: 1 1 auto;
+        width: 100%;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        padding-top: 0.5rem;
+        position: relative;
+        background: var(--bg-main);
+    }
+
+    #detail-panel-content {
+        padding: 0.75rem 1rem 4rem 1rem;
+    }
+
+    /* Header keeps its translucent gradient regardless of sheet state */
+    
+   /* ============================================ */
+/* STYLAGE DES ÉTAPES (IDFM-style) */
+/* ============================================ */
+
+#detail-panel-content .step-detail {
+    display: flex;
+    position: relative;
+    padding-left: 3rem; /* MODIFIÉ: 2.5rem -> 3rem (plus d'espace) */
+    padding-bottom: 1.5rem;
+    min-height: 40px;
+    /* variable --line-color définie inline par JS */
+}
+
+#detail-panel-content .step-detail:last-child {
+    padding-bottom: 0;
+}
+
+#detail-panel-content .step-detail::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: -1.5rem; /* ⬅️ Correspond au padding-bottom de .step-detail */
+    width: 4px;
+    background: var(--line-color, var(--border));
+}
+
+/* Masquer la ligne pour la dernière étape */
+#detail-panel-content .step-detail:last-child::before {
+    bottom: 0.75rem;
+}
+    
+    /* Point de départ/arrêt */
+    #detail-panel-content .step-detail::after {
+        content: '';
+        position: absolute;
+        left: 11px; /* (32px / 2) - (12px / 2) + 1px */
+        top: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--bg-main);
+        border: 2px solid var(--line-color, var(--border));
+        z-index: 1; /* V36 */
+    }
+    
+    #detail-panel-content .step-detail.walk::before,
+    #detail-panel-content .step-detail.bicycle::before { /* Ajout vélo */
+        background: repeating-linear-gradient(
+            var(--line-color, var(--text-secondary)) 0,
+            var(--line-color, var(--text-secondary)) 4px,
+            transparent 4px,
+            transparent 8px
+        );
+    }
+    #detail-panel-content .step-detail.walk::after,
+    #detail-panel-content .step-detail.bicycle::after { /* Ajout vélo */
+        border-color: var(--line-color, var(--text-secondary));
+    }
+    
+    /* Icône de l'étape */
+    #detail-panel-content .step-icon {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--bg-main);
+        z-index: 2; /* Au-dessus de la ligne */
+    }
+    
+    /* Icône pour la MARCHE */
+    #detail-panel-content .step-detail.walk .step-icon,
+    #detail-panel-content .step-detail.bicycle .step-icon { /* Ajout vélo */
+        background: var(--bg-main);
+        color: var(--text-secondary);
+    }
+    #detail-panel-content .step-detail.walk .step-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    /* NOUVEAU: Ajout vélo */
+    #detail-panel-content .step-detail.bicycle .step-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    /* Icône pour le BUS (badge) */
+    #detail-panel-content .step-icon .route-line-badge {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.6rem;
+        min-width: 32px;
+        height: 32px;
+        border-radius: 50%; /* Rond comme IDFM */
+        box-shadow: var(--shadow-sm);
+        border: 2px solid white;
+    }
+    
+    #detail-panel-content .step-info {
+        display: flex;
+        flex-direction: column;
+        padding-top: 4px; /* Aligner avec l'icône */
+    }
+    
+    #detail-panel-content .step-instruction {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        line-height: 1.4;
+    }
+
+    #detail-panel-content .step-detail.wait .wait-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+    #detail-panel-content .wait-info .wait-time {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+    #detail-panel-content .wait-info .wait-duration {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+    #detail-panel-content .step-duration-inline {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-left: 0.25rem;
+    }
+    #detail-panel-content .step-sub-instruction {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+    }
+
+    /* Montée et Descente */
+    #detail-panel-content .step-stop-point {
+        margin-top: 0.75rem;
+        padding-left: 0;
+        position: relative;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+    #detail-panel-content .step-stop-point::before {
+        /* On n'utilise plus la puce, on a la ligne verticale */
+        display: none;
+    }
+    #detail-panel-content .step-stop-point .step-time-detail {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-left: 0.5rem;
+        font-weight: 500;
+    }
+    
+    /* Arrêts intermédiaires */
+    #detail-panel-content .intermediate-stops {
+        margin: 0.75rem 0 0.75rem 0;
+        padding-left: 0;
+    }
+    #detail-panel-content .intermediate-stops summary {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--primary);
+        padding: 0.25rem 0;
+    }
+    #detail-panel-content .intermediate-stops-list {
+        margin: 0.5rem 0 0 0;
+        padding-left: 0.5rem;
+        list-style-type: none;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        border-left: 4px solid var(--line-color, var(--border));
+    }
+    #detail-panel-content .intermediate-stops-list li {
+        position: relative;
+        padding: 0.3rem 0 0.3rem 0.75rem;
+    }
+    #detail-panel-content .intermediate-stops-list li::before {
+        content: '';
+        position: absolute;
+        left: -0.7rem;
+        top: 0.65em;
+        width: 8px;
+        height: 2px;
+        background: var(--line-color, var(--border));
+    }
+    
+    /* NOUVEAU V46: Styles pour les étapes de marche détaillées */
+    #detail-panel-content .intermediate-stops-list.walk-steps {
+        border-left-color: transparent;
+        padding-left: 0;
+        margin-top: 0.75rem;
+    }
+    #detail-panel-content .intermediate-stops-list.walk-steps li {
+        padding-left: 0;
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-start;
+        padding-bottom: 0.5rem;
+    }
+    #detail-panel-content .intermediate-stops-list.walk-steps li::before {
+        display: none;
+    }
+    #detail-panel-content .intermediate-stops-list.walk-steps svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        color: var(--text-secondary);
+        margin-top: 0.2em;
+    }
+    #detail-panel-content .intermediate-stops-list .walk-step-info {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.5;
+    }
+    #detail-panel-content .intermediate-stops-list .walk-step-meta {
+        font-size: 0.9em;
+        color: var(--text-secondary);
+        font-weight: 400;
+    }
+/* =========================================
+ * ANIMATIONS & MOBILE OPTIMIZATIONS
+ * ========================================= */
+
+/* 1. L'Animation d'entrée (Le site "glisse" vers le haut) */
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-section, 
+.main-nav-buttons-condensed {
+    animation: slideUpFade 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    opacity: 0; /* Caché au départ */
+}
+.main-nav-buttons-condensed { animation-delay: 0.1s; }
+
+/* .bottom-content-wrapper ne doit PAS avoir d'animation :
+   une animation crée un stacking context qui gêne l'empilement
+   avec le planificateur. On conserve son rendu sans animation. */
+.bottom-content-wrapper {
+    opacity: 1; /* visible par défaut, pas d'animation */
+}
+
+
+/* 2. RESTRUCTURATION MOBILE (Le plus important) */
+    
+    /* Réduire les marges du bloc principal */
+    .hero-section {
+        padding: 1.25rem 1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* TRANSFORMER LES 3 BOUTONS EN GRILLE HORIZONTALE */
+    .main-nav-buttons-condensed {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* 3 colonnes égales */
+        gap: 0.75rem; /* Espace réduit */
+        margin-top: 1.5rem;
+    }
+
+    .nav-button-condensed {
+        padding: 0.75rem 0.25rem;
+        flex-direction: column; /* Icône au-dessus du texte */
+        text-align: center;
+        justify-content: flex-start;
+        height: auto;
+        aspect-ratio: 1 / 1; /* Carré parfait */
+        border-radius: 16px; /* Plus arrondi (style iOS) */
+    }
+
+    .nav-button-condensed svg {
+        width: 24px;
+        height: 24px;
+        margin-bottom: 6px; /* Espace entre icône et texte */
+    }
+
+    .nav-button-condensed span {
+        font-size: 0.7rem; /* Texte plus petit */
+        line-height: 1.1;
+    }
+
+    /* ALIGNER LES CHIFFRES CLÉS SUR UNE LIGNE */
+    .key-figures-grid {
+        display: flex;
+        flex-direction: row; /* Force la ligne */
+        justify-content: space-between; /* Espacement égal */
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        /* Défensif : s'assurer que ce bloc reste sous le popover 'Quand' */
+        position: relative;
+        z-index: 10 !important;
+    }
+
+    .key-figure-item {
+        flex: 1;
+        margin-bottom: 0; /* Supprime la marge verticale */
+    }
+
+    .key-figure-number {
+        font-size: 1.5rem; /* Chiffres un peu plus petits pour tenir */
+    }
+
+    .key-figure-label {
+        font-size: 0.7rem;
+    }
+    
+    /* Réduire la taille du titre "Où allons-nous ?" */
+    .hero-section .planner-block .planner-title-bar h3 {
+        font-size: 1.2rem;
+    }
+
+    
+
+    /* Ajustement spécifique des badges dans le panneau détail (mobile) */
+    #detail-panel-content .step-icon .route-line-badge {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.6rem;
+        min-width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        box-shadow: var(--shadow-sm);
+        border: 2px solid white;
+    }
+
+} /* ⬅️ FIN du @media (max-width: 768px) */
+/* ⬅️ FIN du @media (max-width: 768px) pour itinerary-detail */
 
