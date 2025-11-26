@@ -184,6 +184,13 @@ function getCachedTripsBetweenStopsInternal(context, startIds, endIds, reqDate, 
 }
 
 async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRaw, searchTime, labels = {}) {
+    // Réinitialiser les flags de debug pour chaque nouvelle recherche
+    globalThis._transferHubsLogged = false;
+    globalThis._hubDebugLogged = false;
+    globalThis._assembleDebugLogged = false;
+    globalThis._transferResultsLogged = false;
+    globalThis._routerGroupMapLogged = false;
+    
     const dataManager = context.dataManager;
     const ICONS = context.icons;
     const HYBRID_ROUTING_CONFIG = context.config;
@@ -560,6 +567,7 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         itinerary.departureTime = dataManager.formatTime(firstSegment.departureSeconds);
         itinerary._departureSeconds = firstSegment.departureSeconds;
         itinerary.arrivalTime = dataManager.formatTime(secondSegment.arrivalSeconds);
+        itinerary._arrivalSeconds = secondSegment.arrivalSeconds;
 
         const totalDurationSeconds =
             (approachStep?._durationSeconds || 0) +
@@ -777,14 +785,16 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         }
         
         // Construire les itinéraires via les hubs trouvés
+        // On collecte TOUS les candidats puis on trie par heure de départ
         const processedTripPairs = new Set();
+        const allCandidates = []; // Collecter tous les itinéraires candidats
         let hubsProcessed = 0;
         let firstLegTripsTotal = 0;
         let secondLegSearches = 0;
         let matchesFound = 0;
         
         for (const [hubKey, hub] of transferHubs) {
-            if (transferResults.length >= HYBRID_ROUTING_CONFIG.TRANSFER_MAX_ITINERARIES) break;
+            // Ne plus break prématurément - on collecte tout d'abord
             hubsProcessed++;
             
             const alightStopId = hub.isExact ? hubKey : hub.alightStop;
@@ -829,6 +839,9 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
             
             firstLegTripsTotal += firstLegTrips.length;
             
+            // Trier par heure de départ pour avoir les plus proches de l'heure demandée en premier
+            firstLegTrips.sort((a, b) => a.depSec - b.depSec);
+            
             // Log pour le premier hub
             if (hubsProcessed === 1 && !globalThis._hubDebugLogged) {
                 globalThis._hubDebugLogged = true;
@@ -847,18 +860,16 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
             }
             
             // Trouver les trips qui vont du hub à l'arrivée
-            for (const firstLeg of firstLegTrips.slice(0, 5)) { // Limiter pour performance
-                if (transferResults.length >= HYBRID_ROUTING_CONFIG.TRANSFER_MAX_ITINERARIES) break;
+            // On prend les 10 premiers (triés par heure de départ) pour avoir plus d'options
+            for (const firstLeg of firstLegTrips.slice(0, 10)) {
+                // Plus de break prématuré - on collecte tous les candidats
                 
                 const minSecondLegDep = firstLeg.arrSec + HYBRID_ROUTING_CONFIG.TRANSFER_MIN_BUFFER_SECONDS;
                 const maxSecondLegDep = firstLeg.arrSec + HYBRID_ROUTING_CONFIG.TRANSFER_MAX_WAIT_SECONDS;
                 
                 for (const routeId of hub.endRoutes) {
-                    if (transferResults.length >= HYBRID_ROUTING_CONFIG.TRANSFER_MAX_ITINERARIES) break;
-                    
                     const routeTrips = dataManager.tripsByRoute[routeId] || [];
                     for (const trip of routeTrips) {
-                        if (transferResults.length >= HYBRID_ROUTING_CONFIG.TRANSFER_MAX_ITINERARIES) break;
                         if (trip.trip_id === firstLeg.trip.trip_id) continue; // Pas le même trip
                         if (!isServiceActive(trip)) continue;
                         
@@ -950,7 +961,7 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                                         itinerary._transferInfo.walkBetweenStops = hub.walkDistance;
                                         itinerary._transferInfo.transferBoardStopName = transferBoardStop?.stop_name;
                                     }
-                                    transferResults.push(itinerary);
+                                    allCandidates.push(itinerary);
                                 }
                             }
                         }
@@ -959,23 +970,40 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
             }
         }
         
+        // Trier tous les candidats selon le mode de recherche
+        const isArriveMode = searchTime?.type === 'arriver';
+        if (isArriveMode) {
+            // Mode ARRIVER: trier par heure d'arrivée DÉCROISSANTE (arrivée la plus proche de l'heure demandée en premier)
+            // Les arrivées les plus tardives (mais <= heure demandée) sont les meilleures
+            allCandidates.sort((a, b) => {
+                const arrA = a._arrivalSeconds || dataManager.timeToSeconds(a.arrivalTime) || 0;
+                const arrB = b._arrivalSeconds || dataManager.timeToSeconds(b.arrivalTime) || 0;
+                return arrB - arrA; // Décroissant
+            });
+        } else {
+            // Mode PARTIR: trier par heure de départ CROISSANTE (premier départ en premier)
+            allCandidates.sort((a, b) => (a._departureSeconds || 0) - (b._departureSeconds || 0));
+        }
+        transferResults.push(...allCandidates.slice(0, HYBRID_ROUTING_CONFIG.TRANSFER_MAX_ITINERARIES));
+        
         // Log de synthèse
         if (!globalThis._transferResultsLogged) {
             globalThis._transferResultsLogged = true;
             console.log('🔄 Résultat correspondances:', {
                 hubsAnalyses: hubsProcessed,
                 firstLegTripsTotal,
-                itinerairesAssembles: transferResults.length
+                candidatsTotal: allCandidates.length,
+                itinerairesGardés: transferResults.length
             });
             if (firstLegTripsTotal === 0) {
                 console.log('⚠️ Aucun trip first leg trouvé - vérifier startStopSet vs alightStopId');
             }
             if (transferResults.length > 0) {
                 console.log('✅ Itinéraires de correspondance:', transferResults.map(it => ({
-                    tripId: it.tripId,
                     departure: it.departureTime,
                     arrival: it.arrivalTime,
-                    stepsCount: it.steps?.length
+                    stepsCount: it.steps?.length,
+                    _depSec: it._departureSeconds
                 })));
             }
         }
@@ -1022,6 +1050,14 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
     if (windowEndSec <= windowStartSec) {
         windowEndSec = windowStartSec + SEARCH_WINDOW;
     }
+    
+    // Debug: afficher la fenêtre de recherche
+    const formatSec = (s) => `${Math.floor(s/3600).toString().padStart(2,'0')}:${Math.floor((s%3600)/60).toString().padStart(2,'0')}`;
+    console.log(`⏰ Fenêtre de recherche (${searchTime?.type || 'partir'}):`, {
+        demandé: formatSec(reqSeconds),
+        fenêtre: `${formatSec(windowStartSec)} - ${formatSec(windowEndSec)}`,
+        durée: `${SEARCH_WINDOW/3600}h`
+    });
 
     const resolveClusterIds = (stop) => {
         const ids = new Set();
@@ -1129,6 +1165,7 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                 itinerary.departureTime = dataManager.formatTime(tripCandidate.departureSeconds);
                 itinerary._departureSeconds = tripCandidate.departureSeconds;
                 itinerary.arrivalTime = dataManager.formatTime(tripCandidate.arrivalSeconds);
+                itinerary._arrivalSeconds = tripCandidate.arrivalSeconds;
 
                 const totalDurationSeconds =
                     (approachStep?._durationSeconds || 0) +
@@ -1171,11 +1208,27 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         itineraries.push(...transferItins);
     }
 
+    // Tri final selon le mode de recherche
+    const isArriveMode = searchTime?.type === 'arriver';
     itineraries.sort((a, b) => {
-        const depA = a._departureSeconds !== undefined ? a._departureSeconds : (dataManager.timeToSeconds ? dataManager.timeToSeconds(a.departureTime) : 0);
-        const depB = b._departureSeconds !== undefined ? b._departureSeconds : (dataManager.timeToSeconds ? dataManager.timeToSeconds(b.departureTime) : 0);
-        return depA - depB;
+        if (isArriveMode) {
+            // Mode ARRIVER: trier par arrivée DÉCROISSANTE (arrivée la plus proche de l'heure demandée en premier)
+            const arrA = a._arrivalSeconds !== undefined ? a._arrivalSeconds : (dataManager.timeToSeconds ? dataManager.timeToSeconds(a.arrivalTime) : 0);
+            const arrB = b._arrivalSeconds !== undefined ? b._arrivalSeconds : (dataManager.timeToSeconds ? dataManager.timeToSeconds(b.arrivalTime) : 0);
+            return arrB - arrA; // Décroissant
+        } else {
+            // Mode PARTIR: trier par départ CROISSANT (premier départ en premier)
+            const depA = a._departureSeconds !== undefined ? a._departureSeconds : (dataManager.timeToSeconds ? dataManager.timeToSeconds(a.departureTime) : 0);
+            const depB = b._departureSeconds !== undefined ? b._departureSeconds : (dataManager.timeToSeconds ? dataManager.timeToSeconds(b.departureTime) : 0);
+            return depA - depB;
+        }
     });
+    
+    console.log(`📊 Itinéraires triés (${isArriveMode ? 'ARRIVER' : 'PARTIR'}):`, itineraries.slice(0, 3).map(it => ({
+        dep: it.departureTime,
+        arr: it.arrivalTime,
+        type: it.type
+    })));
 
     if (!itineraries.length) {
         console.warn('⚠️ Hybrid: aucun itinéraire GTFS (direct ou correspondance) trouvé.');

@@ -37,6 +37,7 @@ export function createResultsRenderer(deps) {
     }
 
     // Regroupement seulement pour mode départ
+    // On garde l'ordre de tri pour les BUS (par heure de départ)
     if (!isArrival && mode === 'ALL' && list.length > 1) {
       const suggested = list[0];
       const rest = list.slice(1);
@@ -48,6 +49,7 @@ export function createResultsRenderer(deps) {
         else if (t === 'WALK') buckets.WALK.push(it);
         else buckets.OTHER.push(it);
       });
+      // Note: les BUS sont déjà triés par heure de départ, on les garde dans l'ordre
       list = [suggested, ...buckets.BUS, ...buckets.BIKE, ...buckets.WALK, ...buckets.OTHER];
     }
 

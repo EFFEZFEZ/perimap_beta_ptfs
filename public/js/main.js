@@ -1179,12 +1179,30 @@ async function executeItinerarySearch(source, sourceElements) {
             }
         }
 
+        // Debug: afficher ce qu'on a trouvé en local
+        console.log('🔍 Résultat routage GTFS local:', {
+            mode: searchTime.type || 'partir',
+            heureRecherche: `${searchTime.hour}:${searchTime.minute}`,
+            itinerairesLocaux: hybridItins?.length || 0,
+            premiers: hybridItins?.slice(0, 3).map(it => ({
+                dep: it.departureTime,
+                arr: it.arrivalTime,
+                type: it.type
+            }))
+        });
+
         if (hybridItins && hybridItins.length) {
             allFetchedItineraries = hybridItins;
         } else {
             console.log('🆘 Aucun trajet GTFS local, fallback Google Transit en cours...');
-            const intelligentResults = await apiManager.fetchItinerary(fromPlaceId, toPlaceId, searchTime); 
-            allFetchedItineraries = processIntelligentResults(intelligentResults, searchTime);
+            try {
+                const intelligentResults = await apiManager.fetchItinerary(fromPlaceId, toPlaceId, searchTime); 
+                allFetchedItineraries = processIntelligentResults(intelligentResults, searchTime);
+                console.log('✅ Résultat API Google:', allFetchedItineraries?.length || 0, 'itinéraires');
+            } catch (apiError) {
+                console.error('❌ Erreur API Google Transit:', apiError);
+                allFetchedItineraries = [];
+            }
         }
         // Ensure every BUS step has a polyline (GTFS constructed or fallback)
         try {
@@ -1204,18 +1222,38 @@ async function executeItinerarySearch(source, sourceElements) {
             allFetchedItineraries = filterLateArrivals(allFetchedItineraries, targetHour, targetMinute);
         }
 
+        // Debug: après filtrage
+        console.log('📋 Après filtrage:', {
+            mode: searchTime.type || 'partir',
+            restants: allFetchedItineraries?.length || 0
+        });
+
         // Dédupliquer (même trajet avec horaires différents → garder le meilleur)
         const searchMode = searchTime.type || 'partir';
         allFetchedItineraries = deduplicateItineraries(allFetchedItineraries, searchMode);
+        
+        console.log('🎯 Après déduplication:', allFetchedItineraries?.length || 0, 'itinéraires uniques');
 
         // Trier les itinéraires selon le mode
         if (searchTime.type === 'arriver') {
             arrivalRankedAll = rankArrivalItineraries(allFetchedItineraries, searchTime);
             arrivalRenderedCount = Math.min(ARRIVAL_PAGE_SIZE, arrivalRankedAll.length);
             allFetchedItineraries = arrivalRankedAll; // Utiliser la liste triée
+            console.log('📊 Tri mode ARRIVER (arrivée <= ' + searchTime.hour + ':' + searchTime.minute + '):', 
+                allFetchedItineraries.slice(0, 5).map(it => ({
+                    dep: it.departureTime,
+                    arr: it.arrivalTime,
+                    dur: it.duration
+                })));
         } else {
             // Mode "partir" : trier par premier départ, moins de correspondances
             allFetchedItineraries = rankDepartureItineraries(allFetchedItineraries);
+            console.log('📊 Tri mode PARTIR (départ >= ' + searchTime.hour + ':' + searchTime.minute + '):', 
+                allFetchedItineraries.slice(0, 5).map(it => ({
+                    dep: it.departureTime,
+                    arr: it.arrivalTime,
+                    dur: it.duration
+                })));
             arrivalRankedAll = [];
             arrivalRenderedCount = 0;
         }
