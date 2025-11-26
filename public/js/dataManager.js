@@ -1013,20 +1013,38 @@ export class DataManager {
         const serviceSet = this.getServiceIds(date instanceof Date ? date : new Date(date));
 
         // DEBUG: Voir les IDs cherchés vs les IDs dans stop_times
-        const sampleStopTimeIds = new Set();
-        let tripChecked = 0;
-        for (const trip of this.trips) {
-            const st = this.stopTimesByTrip[trip.trip_id];
-            if (st && st.length > 0) {
-                st.slice(0, 3).forEach(s => sampleStopTimeIds.add(s.stop_id));
-                tripChecked++;
+        if (!window._gtfsDebugLogged) {
+            window._gtfsDebugLogged = true;
+            const sampleStopTimeIds = new Set();
+            let tripChecked = 0;
+            for (const trip of this.trips) {
+                const st = this.stopTimesByTrip[trip.trip_id];
+                if (st && st.length > 0) {
+                    st.slice(0, 5).forEach(s => sampleStopTimeIds.add(s.stop_id));
+                    tripChecked++;
+                }
+                if (tripChecked >= 10) break;
             }
-            if (tripChecked >= 5) break;
+            console.log('🔬 DEBUG IDs - Cherchés départ:', JSON.stringify(Array.from(startSet).slice(0, 5)));
+            console.log('🔬 DEBUG IDs - Cherchés arrivée:', JSON.stringify(Array.from(endSet).slice(0, 5)));
+            console.log('🔬 DEBUG IDs - Dans stop_times (sample):', JSON.stringify(Array.from(sampleStopTimeIds)));
+            console.log('🔬 DEBUG - Services actifs:', JSON.stringify(Array.from(serviceSet)));
+            
+            // Vérifier si les IDs cherchés existent dans stop_times global
+            const allStopTimeIds = new Set();
+            Object.values(this.stopTimesByTrip).forEach(stArr => {
+                stArr.forEach(st => allStopTimeIds.add(st.stop_id));
+            });
+            const startFound = Array.from(startSet).filter(id => allStopTimeIds.has(id));
+            const endFound = Array.from(endSet).filter(id => allStopTimeIds.has(id));
+            console.log('🔬 DEBUG - IDs départ trouvés dans stop_times:', startFound.length, '/', startSet.size, startFound.slice(0, 3));
+            console.log('🔬 DEBUG - IDs arrivée trouvés dans stop_times:', endFound.length, '/', endSet.size, endFound.slice(0, 3));
+            
+            // Vérifier groupedStopMap
+            const sampleKeys = Object.keys(this.groupedStopMap || {}).slice(0, 3);
+            console.log('🔬 DEBUG groupedStopMap samples:');
+            sampleKeys.forEach(k => console.log(`   ${k} -> ${JSON.stringify(this.groupedStopMap[k])}`));
         }
-        console.log('🔬 DEBUG IDs - Cherchés départ:', Array.from(startSet).slice(0, 3));
-        console.log('🔬 DEBUG IDs - Cherchés arrivée:', Array.from(endSet).slice(0, 3));
-        console.log('🔬 DEBUG IDs - Dans stop_times:', Array.from(sampleStopTimeIds));
-        console.log('🔬 DEBUG - Services actifs:', Array.from(serviceSet));
 
         const results = [];
         let debugStats = { serviceRejected: 0, noStopTimes: 0, noBoardingFound: 0, noAlightFound: 0, wrongOrder: 0, outOfWindow: 0, accepted: 0 };
