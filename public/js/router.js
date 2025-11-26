@@ -815,6 +815,9 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
     const expandedStartIds = Array.from(startStopSet);
     const expandedEndIds = Array.from(endStopSet);
 
+    console.log('🔍 Router: Recherche de trajets entre', expandedStartIds.length, 'arrêts départ et', expandedEndIds.length, 'arrêts arrivée');
+    console.log('🔍 Router: Fenêtre horaire:', windowStartSec, '-', windowEndSec, 'secondes');
+
     const trips = getCachedTripsBetweenStops(
         expandedStartIds,
         expandedEndIds,
@@ -822,6 +825,9 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         windowStartSec,
         windowEndSec
     );
+    
+    console.log('🔍 Router: Trips trouvés:', trips?.length || 0);
+    
     const itineraries = [];
 
     let selectedTrips = trips || [];

@@ -9,7 +9,7 @@ import { StopTimesStore } from './stopTimesStore.js';
  */
 
 const GTFS_CACHE_KEY = 'peribus_gtfs_cache_v2';
-const GTFS_CACHE_VERSION = '2.2.0';  // Version incrémentée pour régénérer les index groupedStopMap
+const GTFS_CACHE_VERSION = '2.3.0';  // Version incrémentée pour forcer le rechargement complet
 const GTFS_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 heures
 const GTFS_CACHE_META_KEY = 'peribus_gtfs_cache_meta';
 const GTFS_CACHE_DB = 'peribus_gtfs_cache_db';
@@ -1013,7 +1013,7 @@ export class DataManager {
         const serviceSet = this.getServiceIds(date instanceof Date ? date : new Date(date));
 
         // Debug: log des paramètres de recherche
-        console.debug('🔍 getTripsBetweenStops DEBUG:', {
+        console.log('🔍 getTripsBetweenStops DEBUG:', {
             startStopIds: Array.from(startSet).slice(0, 5),
             endStopIds: Array.from(endSet).slice(0, 5),
             date: date instanceof Date ? date.toISOString() : date,
@@ -1075,7 +1075,7 @@ export class DataManager {
             });
         }
 
-        console.debug('🔍 getTripsBetweenStops STATS:', debugStats);
+        console.log('🔍 getTripsBetweenStops STATS:', debugStats);
 
         // Sort by departure time
         results.sort((a, b) => a.departureSeconds - b.departureSeconds);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'peribus-cache-v1';
+const CACHE_NAME = 'peribus-cache-v2';
 const OFFLINE_ASSETS = [
   '/',
   '/index.html',
