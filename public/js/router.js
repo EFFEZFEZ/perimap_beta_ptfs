@@ -493,9 +493,20 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         originCandidates,
         destCandidates,
         windowStartSec,
-        windowEndSec
+        windowEndSec,
+        startStopSet = new Set(),
+        endStopSet = new Set()
     }) => {
-        if (!firstSegment || !secondSegment || !boardingStop || !transferStop || !finalStop) return null;
+        if (!firstSegment || !secondSegment || !boardingStop || !transferStop || !finalStop) {
+            console.warn('assembleTransferItinerary: missing required params', {
+                firstSegment: !!firstSegment,
+                secondSegment: !!secondSegment,
+                boardingStop: !!boardingStop,
+                transferStop: !!transferStop,
+                finalStop: !!finalStop
+            });
+            return null;
+        }
 
         const boardingStopName = getStopDisplayName(boardingStop);
         const transferStopName = getStopDisplayName(transferStop);
@@ -524,14 +535,20 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         }
 
         const firstLeg = buildBusLegStep(firstSegment, boardingStop, transferStop);
-        if (!firstLeg) return null;
+        if (!firstLeg) {
+            console.warn('assembleTransferItinerary: firstLeg build failed');
+            return null;
+        }
         itinerary.steps.push(firstLeg.step);
         itinerary.summarySegments.push(firstLeg.summary);
 
         const waitSeconds = Math.max(0, secondSegment.departureSeconds - firstSegment.arrivalSeconds);
 
         const secondLeg = buildBusLegStep(secondSegment, transferStop, finalStop);
-        if (!secondLeg) return null;
+        if (!secondLeg) {
+            console.warn('assembleTransferItinerary: secondLeg build failed');
+            return null;
+        }
         itinerary.steps.push(secondLeg.step);
         itinerary.summarySegments.push(secondLeg.summary);
 
@@ -910,8 +927,22 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                                     originCandidates,
                                     destCandidates,
                                     windowStartSec,
-                                    windowEndSec
+                                    windowEndSec,
+                                    startStopSet,
+                                    endStopSet
                                 });
+                                
+                                // Debug: pourquoi l'itinéraire est null ?
+                                if (!itinerary && !globalThis._assembleDebugLogged) {
+                                    globalThis._assembleDebugLogged = true;
+                                    console.log('⚠️ assembleTransferItinerary returned null:', {
+                                        firstBoardingStop: firstBoardingStop?.stop_name,
+                                        transferAlightStop: transferAlightStop?.stop_name,
+                                        finalStop: finalStop?.stop_name,
+                                        firstSegment: !!firstSegment,
+                                        secondSegment: !!secondSegment
+                                    });
+                                }
                                 
                                 if (itinerary) {
                                     // Ajouter info sur la marche entre arrêts si différents
@@ -938,6 +969,14 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
             });
             if (firstLegTripsTotal === 0) {
                 console.log('⚠️ Aucun trip first leg trouvé - vérifier startStopSet vs alightStopId');
+            }
+            if (transferResults.length > 0) {
+                console.log('✅ Itinéraires de correspondance:', transferResults.map(it => ({
+                    tripId: it.tripId,
+                    departure: it.departureTime,
+                    arrival: it.arrivalTime,
+                    stepsCount: it.steps?.length
+                })));
             }
         }
 
