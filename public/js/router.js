@@ -599,6 +599,19 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         // Compteurs pour le diagnostic
         let transferSearchStats = { candidatesFound: 0, secondLegSearches: 0, secondLegFound: 0 };
 
+        // Diagnostic: vérifier stopTimesByStop
+        if (!globalThis._stopTimesByStopDiag) {
+            globalThis._stopTimesByStopDiag = true;
+            const stbsKeys = Object.keys(dataManager.stopTimesByStop || {});
+            console.log('🔍 stopTimesByStop diagnostic:', {
+                exists: !!dataManager.stopTimesByStop,
+                totalKeys: stbsKeys.length,
+                sampleKeys: stbsKeys.slice(0, 5),
+                startStopIds: startStopIds.slice(0, 5),
+                matchCount: startStopIds.filter(id => dataManager.stopTimesByStop && dataManager.stopTimesByStop[id]).length
+            });
+        }
+
         // FIX BUG 7: Use stopTimesByStop index
         if (dataManager.stopTimesByStop) {
             for (const stopId of startStopIds) {
@@ -752,8 +765,8 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
 
         // Log de synthèse pour les correspondances (une seule fois)
         transferSearchStats.candidatesFound = candidateTrips.length;
-        if (!window._transferStatsLogged) {
-            window._transferStatsLogged = true;
+        if (!globalThis._transferStatsLogged) {
+            globalThis._transferStatsLogged = true;
             console.log('🔄 Recherche correspondances:', JSON.stringify({
                 tripsPartantDuDépart: candidateTrips.length,
                 recherchesSecondLeg: transferSearchStats.secondLegSearches,
@@ -827,8 +840,8 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
 
     // Diagnostic one-time: check if groupedStopMap has Quays
     const sampleKey = Object.keys(dataManager.groupedStopMap || {})[0];
-    if (sampleKey && !window._routerGroupMapLogged) {
-        window._routerGroupMapLogged = true;
+    if (sampleKey && !globalThis._routerGroupMapLogged) {
+        globalThis._routerGroupMapLogged = true;
         console.log('🗺️ groupedStopMap sample:', sampleKey, '->', dataManager.groupedStopMap[sampleKey]);
     }
 

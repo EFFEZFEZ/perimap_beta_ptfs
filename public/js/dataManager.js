@@ -1013,8 +1013,8 @@ export class DataManager {
         const serviceSet = this.getServiceIds(date instanceof Date ? date : new Date(date));
 
         // DEBUG: Log uniquement pour la première recherche directe
-        if (!window._gtfsDebugLogged) {
-            window._gtfsDebugLogged = true;
+        if (!globalThis._gtfsDebugLogged) {
+            globalThis._gtfsDebugLogged = true;
             
             // Vérifier si les IDs cherchés existent dans stop_times
             const allStopTimeIds = new Set();
@@ -1087,8 +1087,8 @@ export class DataManager {
         results.sort((a, b) => a.departureSeconds - b.departureSeconds);
         
         // Log stats uniquement pour le premier appel (pas pour les correspondances)
-        if (!window._gtfsStatsLogged && results.length === 0) {
-            window._gtfsStatsLogged = true;
+        if (!globalThis._gtfsStatsLogged && results.length === 0) {
+            globalThis._gtfsStatsLogged = true;
             console.log('📊 getTripsBetweenStops STATS:', JSON.stringify(debugStats));
             if (debugStats.noBoardingFound > 0 && debugStats.noAlightFound > 0 && debugStats.accepted === 0) {
                 console.log('⚠️ AUCUN trajet DIRECT: les arrêts départ/arrivée ne sont pas sur la même ligne.');
