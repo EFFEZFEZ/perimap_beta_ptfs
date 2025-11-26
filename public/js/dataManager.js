@@ -9,7 +9,7 @@ import { StopTimesStore } from './stopTimesStore.js';
  */
 
 const GTFS_CACHE_KEY = 'peribus_gtfs_cache_v2';
-const GTFS_CACHE_VERSION = '2.3.0';  // Version incrémentée pour forcer le rechargement complet
+const GTFS_CACHE_VERSION = '2.4.0';  // Forcer régénération des index groupedStopMap
 const GTFS_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 heures
 const GTFS_CACHE_META_KEY = 'peribus_gtfs_cache_meta';
 const GTFS_CACHE_DB = 'peribus_gtfs_cache_db';
@@ -1007,22 +1007,10 @@ export class DataManager {
      * date: Date object
      * windowStartSeconds/windowEndSeconds: optional seconds-since-midnight window to filter departures
      */
-    getTripsBetweenStops(startStopIds, endStopIds, date, windowStartSeconds = 0, windowEndSeconds = 86400, verbose = false) {
+    getTripsBetweenStops(startStopIds, endStopIds, date, windowStartSeconds = 0, windowEndSeconds = 86400) {
         const startSet = new Set(Array.isArray(startStopIds) ? startStopIds : Array.from(startStopIds || []));
         const endSet = new Set(Array.isArray(endStopIds) ? endStopIds : Array.from(endStopIds || []));
         const serviceSet = this.getServiceIds(date instanceof Date ? date : new Date(date));
-
-        // Debug: log des paramètres de recherche (seulement si verbose)
-        if (verbose) {
-            console.log('🔍 getTripsBetweenStops DEBUG:', {
-                startStopIds: Array.from(startSet),
-                endStopIds: Array.from(endSet),
-                date: date instanceof Date ? date.toISOString() : date,
-                serviceSet: Array.from(serviceSet),
-                window: `${windowStartSeconds}s - ${windowEndSeconds}s`,
-                totalTrips: this.trips?.length || 0
-            });
-        }
 
         const results = [];
         let debugStats = { serviceRejected: 0, noStopTimes: 0, noBoardingFound: 0, noAlightFound: 0, wrongOrder: 0, outOfWindow: 0, accepted: 0 };
@@ -1075,10 +1063,6 @@ export class DataManager {
                 trip: trip,
                 route: this.getRoute(trip.route_id)
             });
-        }
-
-        if (verbose) {
-            console.log('🔍 getTripsBetweenStops STATS:', debugStats);
         }
 
         // Sort by departure time

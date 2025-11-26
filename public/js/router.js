@@ -6,11 +6,11 @@ export const HYBRID_ROUTING_CONFIG = Object.freeze({
     MAX_ITINERARIES: 12,
     WALK_DIRECT_MAX_METERS: 100,
     ENABLE_TRANSFERS: true,
-    TRANSFER_MAX_ITINERARIES: 6,
+    TRANSFER_MAX_ITINERARIES: 4,       // Réduit de 6 à 4
     TRANSFER_MIN_BUFFER_SECONDS: 180,
-    TRANSFER_MAX_WAIT_SECONDS: 2700,
-    TRANSFER_MAX_FIRST_LEG_STOPS: 12,
-    TRANSFER_CANDIDATE_TRIPS_LIMIT: 60
+    TRANSFER_MAX_WAIT_SECONDS: 1800,   // Réduit de 2700 (45min) à 1800 (30min)
+    TRANSFER_MAX_FIRST_LEG_STOPS: 8,   // Réduit de 12 à 8
+    TRANSFER_CANDIDATE_TRIPS_LIMIT: 20 // Réduit de 60 à 20
 });
 
 const AVERAGE_WALK_SPEED_MPS = 1.35; // ~4.8 km/h
@@ -20,8 +20,8 @@ export function createRouterContext({ dataManager, apiManager, icons }) {
     const gtfsTripsCache = new Map();
 
     const getWalkingRoute = (startPoint, endPoint) => getWalkingRouteInternal({ dataManager, apiManager, placeIdCache }, startPoint, endPoint);
-    const getCachedTripsBetweenStops = (startIds, endIds, reqDate, windowStartSec, windowEndSec, verbose = false) =>
-        getCachedTripsBetweenStopsInternal({ dataManager, gtfsTripsCache }, startIds, endIds, reqDate, windowStartSec, windowEndSec, verbose);
+    const getCachedTripsBetweenStops = (startIds, endIds, reqDate, windowStartSec, windowEndSec) =>
+        getCachedTripsBetweenStopsInternal({ dataManager, gtfsTripsCache }, startIds, endIds, reqDate, windowStartSec, windowEndSec);
 
     return {
         computeHybridItinerary: (fromCoordsRaw, toCoordsRaw, searchTime, labels = {}) =>
@@ -164,7 +164,7 @@ async function getCachedPlaceIdInternal(context, lat, lon) {
     }
 }
 
-function getCachedTripsBetweenStopsInternal(context, startIds, endIds, reqDate, windowStartSec, windowEndSec, verbose = false) {
+function getCachedTripsBetweenStopsInternal(context, startIds, endIds, reqDate, windowStartSec, windowEndSec) {
     const { dataManager, gtfsTripsCache } = context;
     try {
         const key = JSON.stringify({ startIds: startIds.slice().sort(), endIds: endIds.slice().sort(), date: reqDate.toISOString().split('T')[0], windowStartSec, windowEndSec });
@@ -173,12 +173,12 @@ function getCachedTripsBetweenStopsInternal(context, startIds, endIds, reqDate, 
         if (cached && (now - cached.ts) < GTFS_TRIPS_CACHE_TTL_MS) {
             return cached.value;
         }
-        const result = dataManager.getTripsBetweenStops(startIds, endIds, reqDate, windowStartSec, windowEndSec, verbose) || [];
+        const result = dataManager.getTripsBetweenStops(startIds, endIds, reqDate, windowStartSec, windowEndSec) || [];
         gtfsTripsCache.set(key, { ts: now, value: result });
         return result;
     } catch (err) {
         console.warn('getCachedTripsBetweenStops error', err);
-        return dataManager.getTripsBetweenStops(startIds, endIds, reqDate, windowStartSec, windowEndSec, verbose) || [];
+        return dataManager.getTripsBetweenStops(startIds, endIds, reqDate, windowStartSec, windowEndSec) || [];
     }
 }
 
@@ -802,6 +802,13 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         return ids;
     };
 
+    // Diagnostic one-time: check if groupedStopMap has Quays
+    const sampleKey = Object.keys(dataManager.groupedStopMap || {})[0];
+    if (sampleKey && !window._routerGroupMapLogged) {
+        window._routerGroupMapLogged = true;
+        console.log('🗺️ groupedStopMap sample:', sampleKey, '->', dataManager.groupedStopMap[sampleKey]);
+    }
+
     const startStopSet = new Set();
     originCandidates.forEach(candidate => {
         resolveClusterIds(candidate.stop).forEach(id => startStopSet.add(id));
@@ -815,21 +822,24 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
     const expandedStartIds = Array.from(startStopSet);
     const expandedEndIds = Array.from(endStopSet);
 
-    console.log('🔍 Router: Recherche de trajets entre', expandedStartIds.length, 'arrêts départ et', expandedEndIds.length, 'arrêts arrivée');
-    console.log('🔍 Router: Start IDs:', expandedStartIds);
-    console.log('🔍 Router: End IDs:', expandedEndIds);
-    console.log('🔍 Router: Fenêtre horaire:', windowStartSec, '-', windowEndSec, 'secondes');
+    // Log détaillé une seule fois pour diagnostiquer
+    console.log(`🔍 Router: Recherche directe`, {
+        startIds: expandedStartIds.slice(0, 5),
+        endIds: expandedEndIds.slice(0, 5),
+        fenetre: `${Math.floor(windowStartSec/3600)}h${Math.floor((windowStartSec%3600)/60)} - ${Math.floor(windowEndSec/3600)}h${Math.floor((windowEndSec%3600)/60)}`
+    });
 
     const trips = getCachedTripsBetweenStops(
         expandedStartIds,
         expandedEndIds,
         reqDate,
         windowStartSec,
-        windowEndSec,
-        true  // verbose = true pour le premier appel
+        windowEndSec
     );
     
-    console.log('🔍 Router: Trips trouvés:', trips?.length || 0);
+    if (trips?.length > 0) {
+        console.log(`✅ Router: ${trips.length} trip(s) direct(s) trouvé(s)`);
+    }
     
     const itineraries = [];
 
