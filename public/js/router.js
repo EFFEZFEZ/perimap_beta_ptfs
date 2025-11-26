@@ -1,17 +1,17 @@
 const GTFS_TRIPS_CACHE_TTL_MS = 60 * 1000; // 60s cache
 
 export const HYBRID_ROUTING_CONFIG = Object.freeze({
-    STOP_SEARCH_RADIUS_M: 500,
-    STOP_SEARCH_LIMIT: 12,
+    STOP_SEARCH_RADIUS_M: 600,         // Augmenté de 500 à 600 pour inclure plus d'arrêts
+    STOP_SEARCH_LIMIT: 15,             // Augmenté de 12 à 15
     MAX_ITINERARIES: 12,
     WALK_DIRECT_MAX_METERS: 100,
     ENABLE_TRANSFERS: true,
-    TRANSFER_MAX_ITINERARIES: 4,       // Réduit de 6 à 4
+    TRANSFER_MAX_ITINERARIES: 6,       // Augmenté de 4 à 6
     TRANSFER_MIN_BUFFER_SECONDS: 180,
-    TRANSFER_MAX_WAIT_SECONDS: 1800,   // Réduit de 2700 (45min) à 1800 (30min)
-    TRANSFER_MAX_FIRST_LEG_STOPS: 8,   // Réduit de 12 à 8
-    TRANSFER_CANDIDATE_TRIPS_LIMIT: 20, // Réduit de 60 à 20
-    TRANSFER_WALK_RADIUS_M: 200        // Rayon pour chercher des arrêts proches pour correspondance (ex: Tourny ↔ Tourny Pompidou)
+    TRANSFER_MAX_WAIT_SECONDS: 2400,   // Augmenté de 1800 (30min) à 2400 (40min)
+    TRANSFER_MAX_FIRST_LEG_STOPS: 15,  // Augmenté de 8 à 15 pour atteindre les hubs de correspondance
+    TRANSFER_CANDIDATE_TRIPS_LIMIT: 40, // Augmenté de 20 à 40
+    TRANSFER_WALK_RADIUS_M: 250        // Augmenté de 200 à 250 pour mieux connecter les arrêts proches
 });
 
 const AVERAGE_WALK_SPEED_MPS = 1.35; // ~4.8 km/h
@@ -692,6 +692,20 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
 
         candidateTrips.sort((a, b) => a.departureSeconds - b.departureSeconds);
 
+        // Log les trips candidats pour diagnostic
+        if (!globalThis._candidateTripsLogged) {
+            globalThis._candidateTripsLogged = true;
+            console.log(`🚌 Trips candidats pour correspondance (${candidateTrips.length}):`, 
+                candidateTrips.slice(0, 5).map(c => ({
+                    tripId: c.trip.trip_id.split(':').pop(),
+                    route: c.trip.route_id.split(':').pop(),
+                    depart: `${Math.floor(c.departureSeconds/3600)}:${String(Math.floor((c.departureSeconds%3600)/60)).padStart(2,'0')}`,
+                    fromStop: dataManager.getStop(c.stopTimes[c.boardingIndex]?.stop_id)?.stop_name,
+                    totalStops: c.stopTimes.length - c.boardingIndex
+                }))
+            );
+        }
+
         const seenPairs = new Set();
 
         for (const candidate of candidateTrips) {
@@ -743,7 +757,9 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                 if (transferSearchStats.secondLegSearches < 3) {
                     console.log(`🔎 Second leg search #${transferSearchStats.secondLegSearches + 1}:`, {
                         transferStop: transferStop.stop_name,
+                        transferStopId: transferStop.stop_id,
                         transferStopIds: transferStopIdsArray.slice(0, 5),
+                        transferStopCount: transferStopIdsArray.length,
                         expandedEndIds: expandedEndIds.slice(0, 5),
                         timeWindow: `${Math.floor(earliestSecondLeg/3600)}:${String(Math.floor((earliestSecondLeg%3600)/60)).padStart(2,'0')} - ${Math.floor(latestSecondLeg/3600)}:${String(Math.floor((latestSecondLeg%3600)/60)).padStart(2,'0')}`
                     });
