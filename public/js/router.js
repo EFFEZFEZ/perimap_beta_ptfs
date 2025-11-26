@@ -739,9 +739,14 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         
         // Construire les itinéraires via les hubs trouvés
         const processedTripPairs = new Set();
+        let hubsProcessed = 0;
+        let firstLegTripsTotal = 0;
+        let secondLegSearches = 0;
+        let matchesFound = 0;
         
         for (const [hubKey, hub] of transferHubs) {
             if (transferResults.length >= HYBRID_ROUTING_CONFIG.TRANSFER_MAX_ITINERARIES) break;
+            hubsProcessed++;
             
             const alightStopId = hub.isExact ? hubKey : hub.alightStop;
             const boardStopId = hub.isExact ? hubKey : hub.boardStop;
@@ -781,6 +786,25 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                         }
                     }
                 }
+            }
+            
+            firstLegTripsTotal += firstLegTrips.length;
+            
+            // Log pour le premier hub
+            if (hubsProcessed === 1 && !globalThis._hubDebugLogged) {
+                globalThis._hubDebugLogged = true;
+                const hubName = hub.isExact 
+                    ? dataManager.getStop(hubKey)?.stop_name 
+                    : `${dataManager.getStop(hub.alightStop)?.stop_name} → ${dataManager.getStop(hub.boardStop)?.stop_name}`;
+                console.log(`🔎 Hub #1 "${hubName}":`, {
+                    alightStopId,
+                    boardStopId,
+                    startRoutes: Array.from(hub.startRoutes).map(r => r.split(':').pop()),
+                    endRoutes: Array.from(hub.endRoutes).map(r => r.split(':').pop()),
+                    firstLegTrips: firstLegTrips.length,
+                    startStopSetSize: startStopSet.size,
+                    endStopSetSize: endStopSet.size
+                });
             }
             
             // Trouver les trips qui vont du hub à l'arrivée
@@ -886,9 +910,13 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         if (!globalThis._transferResultsLogged) {
             globalThis._transferResultsLogged = true;
             console.log('🔄 Résultat correspondances:', {
-                hubsAnalyses: transferHubs.size,
+                hubsAnalyses: hubsProcessed,
+                firstLegTripsTotal,
                 itinerairesAssembles: transferResults.length
             });
+            if (firstLegTripsTotal === 0) {
+                console.log('⚠️ Aucun trip first leg trouvé - vérifier startStopSet vs alightStopId');
+            }
         }
 
         return transferResults;
