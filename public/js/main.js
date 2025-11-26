@@ -21,9 +21,6 @@ import { RouterWorkerClient } from './routerWorkerClient.js';
 import { UIManager } from './uiManager.js';
 import { createGeolocationManager } from './geolocationManager.js';
 
-// Remplacez cette chaîne par votre clé d'API Google Cloud restreinte par HTTP Referrer
-const GOOGLE_API_KEY = "AIzaSyBYDN_8hSHSx_irp_fxLw--XyxuLiixaW4";
-
 // Modules
 let dataManager;
 let timeManager;
@@ -37,6 +34,7 @@ let apiManager;
 let routerContext = null;
 let routerWorkerClient = null;
 let uiManager = null;
+let resultsRenderer = null; // instance du renderer des résultats
 
 // Feature flags
 let gtfsAvailable = true; // set to false if GTFS loading fails -> degraded API-only mode
@@ -52,14 +50,20 @@ let allFetchedItineraries = []; // Stocke tous les itinéraires (bus/vélo/march
 let lastSearchMode = null; // 'partir' | 'arriver'
 let arrivalRankedAll = []; // Liste complète triée (arriver)
 let arrivalRenderedCount = 0; // Combien affichés actuellement
-const ARRIVAL_PAGE_SIZE = 5; // Limite initiale / pagination
+let ARRIVAL_PAGE_SIZE = 5; // Limite initiale / pagination (surchargée par config runtime)
 
 let geolocationManager = null;
 
 const BOTTOM_SHEET_LEVELS = [0.4, 0.6, 0.8];
+import { getAppConfig } from './config.js';
+import { deduplicateItineraries, rankArrivalItineraries } from './itinerary/ranking.js';
+import { normalizeStopNameForLookup, resolveStopCoordinates } from './utils/geo.js';
+import { createResultsRenderer } from './ui/resultsRenderer.js';
 const BOTTOM_SHEET_DEFAULT_INDEX = 0;
 const BOTTOM_SHEET_DRAG_ZONE_PX = 110;
-const BOTTOM_SHEET_DRAG_BUFFER_PX = 40;
+const APP_CONFIG = getAppConfig();
+const GOOGLE_API_KEY = APP_CONFIG.googleApiKey; // dynamique (config.js), jamais hardcodé ici
+ARRIVAL_PAGE_SIZE = APP_CONFIG.arrivalPageSize || ARRIVAL_PAGE_SIZE; // surcharge si fourni
 const BOTTOM_SHEET_SCROLL_UNLOCK_THRESHOLD = 4; // px tolerance before locking drag
 const BOTTOM_SHEET_VELOCITY_THRESHOLD = 0.35; // px per ms
 const BOTTOM_SHEET_MIN_DRAG_DISTANCE_PX = 45; // px delta before forcing next snap
@@ -71,6 +75,7 @@ const isSheetAtMinLevel = () => currentBottomSheetLevelIndex === 0;
 const isSheetAtMaxLevel = () => currentBottomSheetLevelIndex === BOTTOM_SHEET_LEVELS.length - 1;
 
 // ICÔNES SVG
+// ICONS locaux (option A : conserver définition locale au lieu de constants.js)
 const ICONS = {
     BUS: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="12" rx="3"/><path d="M4 10h16"/><path d="M6 15v2"/><path d="M18 15v2"/><circle cx="8" cy="19" r="1.5"/><circle cx="16" cy="19" r="1.5"/></svg>`,
     busSmall: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="11" rx="2.5"/><path d="M5 10h14"/><path d="M7 15v2"/><path d="M17 15v2"/><circle cx="9" cy="19" r="1.2"/><circle cx="15" cy="19" r="1.2"/></svg>`,
@@ -89,7 +94,6 @@ const ICONS = {
         TURN_LEFT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>`,
         TURN_RIGHT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>`,
         TURN_SLIGHT_LEFT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 5 9 13v7"></path><path d="m8 18 4-4"></path></svg>`,
-        TURN_SLIGHT_RIGHT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m7 5 8 8v7"></path><path d="m16 18-4-4"></path></svg>`,
         ROUNDABOUT_LEFT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 9.5c.1-.4.5-.8.9-1s1-.3 1.5-.3c.7 0 1.3.1 1.9.4c.6.3 1.1.7 1.5 1.1c.4.5.7 1 .8 1.7c.1.6.1 1.3 0 1.9c-.2.7-.4 1.3-.8 1.8c-.4.5-1 1-1.6 1.3c-.6.3-1.3.5-2.1.5c-.6 0-1.1-.1-1.6-.2c-.5-.1-1-.4-1.4-.7c-.4-.3-.7-.7-.9-1.1"></path><path d="m7 9 3-3 3 3"></path><circle cx="12" cy="12" r="10"></circle></svg>`,
         ROUNDABOUT_RIGHT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9.5c-.1-.4-.5-.8-.9-1s-1-.3-1.5-.3c-.7 0-1.3.1-1.9.4c-.6.3-1.1.7-1.5 1.1c-.4.5-.7 1-.8 1.7c-.1.6-.1 1.3 0 1.9c.2.7.4 1.3.8 1.8c.4.5 1 1 1.6 1.3c.6.3 1.3.5 2.1.5c.6 0 1.1-.1 1.6-.2c.5-.1 1-.4 1.4-.7c.4-.3.7-.7-.9-1.1"></path><path d="m17 9-3-3-3 3"></path><circle cx="12" cy="12" r="10"></circle></svg>`,
         DEFAULT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="m12 16 4-4-4-4"></path><path d="M8 12h8"></path></svg>`
@@ -462,6 +466,16 @@ async function initializeApp() {
     hallGeolocateBtn = document.getElementById('hall-geolocate-btn');
     installTipContainer = document.getElementById('install-tip');
     installTipCloseBtn = document.getElementById('install-tip-close');
+
+    // Instanciation du renderer (après sélection des éléments DOM)
+    resultsRenderer = createResultsRenderer({
+        resultsListContainer,
+        resultsModeTabs,
+        getAllItineraries: () => allFetchedItineraries,
+        getArrivalState: () => ({ lastSearchMode, arrivalRankedAll, arrivalRenderedCount, pageSize: ARRIVAL_PAGE_SIZE }),
+        setArrivalRenderedCount: (val) => { arrivalRenderedCount = val; },
+        onSelectItinerary: (itinerary, cardEl) => onSelectItinerary(itinerary, cardEl)
+    });
 
     apiManager = new ApiManager(GOOGLE_API_KEY);
     dataManager = new DataManager();
@@ -1183,8 +1197,17 @@ async function executeItinerarySearch(source, sourceElements) {
 
         allFetchedItineraries = filterExpiredItineraries(allFetchedItineraries, searchTime);
 
-        setupResultTabs(allFetchedItineraries);
-        renderItineraryResults('ALL');
+        // Préparer tri/pagination mode "arriver"
+        if (searchTime.type === 'arriver') {
+            const deduped = deduplicateItineraries(allFetchedItineraries);
+            arrivalRankedAll = rankArrivalItineraries(deduped, searchTime);
+            arrivalRenderedCount = Math.min(ARRIVAL_PAGE_SIZE, arrivalRankedAll.length);
+        } else {
+            arrivalRankedAll = [];
+            arrivalRenderedCount = 0;
+        }
+        setupResultTabs(searchTime.type === 'arriver' ? arrivalRankedAll : allFetchedItineraries);
+        if (resultsRenderer) resultsRenderer.render('ALL');
         if (allFetchedItineraries.length > 0) {
             drawRouteOnResultsMap(allFetchedItineraries[0]);
         }
@@ -1508,33 +1531,7 @@ function processGoogleRoutesResponse(data) {
     }).filter(itinerary => itinerary !== null);
 }
 
-const createItinerarySignature = (itinerary) => {
-    if (!itinerary) return 'null-itinerary';
-    const type = itinerary.type || 'BUS';
-    const dep = itinerary.departureTime || '';
-    const arr = itinerary.arrivalTime || '';
-    const duration = itinerary.duration || '';
-    const summary = (itinerary.summarySegments || [])
-        .map(seg => `${seg.type || ''}:${seg.name || ''}:${seg.duration || ''}`)
-        .join('|');
-    const steps = (itinerary.steps || [])
-        .map(step => `${step.type || ''}:${step.routeShortName || ''}:${step.distance || ''}:${step.duration || ''}`)
-        .join('|');
-    const tripId = itinerary.tripId || itinerary.trip?.trip_id || '';
-    const polylineId = itinerary.polyline?.encodedPolyline || itinerary.polyline?.points || '';
-    return `${type}|${dep}|${arr}|${duration}|${summary}|${steps}|${tripId}|${polylineId}`;
-};
-
-function deduplicateItineraries(list) {
-    if (!Array.isArray(list)) return [];
-    const seen = new Set();
-    return list.filter(itinerary => {
-        const key = createItinerarySignature(itinerary);
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    });
-}
+// (Déduplication déplacée vers itinerary/ranking.js)
 
 function processIntelligentResults(intelligentResults, searchTime) {
     console.log("=== DÉBUT PROCESS INTELLIGENT RESULTS ===");
@@ -2363,7 +2360,7 @@ function setupResultTabs(itineraries) {
             resultsModeTabs.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
             newTab.classList.add('active');
             const mode = newTab.dataset.mode;
-            renderItineraryResults(mode);
+            if (resultsRenderer) resultsRenderer.render(mode);
         });
     });
     const defaultActiveTab = resultsModeTabs.querySelector('[data-mode="ALL"]');
@@ -2392,262 +2389,7 @@ function setupResultTabs(itineraries) {
 //    dans la fonction `initializeRouteFilter`.
 // ===================================================================
 
-/**
- * Affiche les itinéraires formatés dans la liste des résultats
- */
-function getItineraryType(itinerary) {
-    if (!itinerary) return 'BUS';
-    if (itinerary.type) return itinerary.type;
-    if (itinerary.summarySegments && itinerary.summarySegments.length > 0) return 'BUS';
-    if (itinerary._isBike) return 'BIKE';
-    if (itinerary._isWalk) return 'WALK';
-    return 'BUS';
-}
-
-function renderItineraryResults(modeFilter) {
-    if (!resultsListContainer) return;
-
-    console.log('renderItineraryResults: start', {
-        mode: modeFilter,
-        totalItineraries: allFetchedItineraries.length
-    });
-
-    resultsListContainer.innerHTML = ''; 
-
-    // 1. Sélection de la source selon mode de recherche
-    let itinerariesToRender;
-    const isArrivalMode = (lastSearchMode === 'arriver');
-
-    if (isArrivalMode) {
-        // Pagination arrivée: slice la liste triée
-        const base = arrivalRankedAll.slice(0, arrivalRenderedCount || ARRIVAL_PAGE_SIZE);
-        itinerariesToRender = (modeFilter === 'ALL') ? base : base.filter(i => i.type === modeFilter);
-    } else {
-        if (modeFilter === 'ALL') {
-            itinerariesToRender = allFetchedItineraries;
-        } else {
-            itinerariesToRender = allFetchedItineraries.filter(i => i.type === modeFilter);
-        }
-    }
-
-    if (itinerariesToRender.length === 0) {
-        let message = "Aucun itinéraire trouvé pour ce mode.";
-        if (modeFilter === 'ALL') message = "Aucun itinéraire n'a été trouvé.";
-        resultsListContainer.innerHTML = `<p class="results-message">${message}</p>`;
-        console.warn('renderItineraryResults: aucun itinéraire à afficher', { mode: modeFilter });
-        return;
-    }
-
-    // ✅ V56 (CORRECTION): Déclaration des variables pour la logique de titrage
-    let hasShownBusTitle = false;
-    let hasShownBikeTitle = false;
-    let hasShownWalkTitle = false;
-
-    // Regroupement par type UNIQUEMENT en mode départ (partir). En mode arrivée on conserve l'ordre de tri.
-    if (!isArrivalMode && modeFilter === 'ALL' && itinerariesToRender.length > 1) {
-        const suggested = itinerariesToRender[0];
-        const rest = itinerariesToRender.slice(1);
-        const buckets = {
-            BUS: [],
-            BIKE: [],
-            WALK: [],
-            OTHER: []
-        };
-        rest.forEach(itin => {
-            const type = getItineraryType(itin);
-            if (type === 'BUS') buckets.BUS.push(itin);
-            else if (type === 'BIKE') buckets.BIKE.push(itin);
-            else if (type === 'WALK') buckets.WALK.push(itin);
-            else buckets.OTHER.push(itin);
-        });
-        itinerariesToRender = [suggested, ...buckets.BUS, ...buckets.BIKE, ...buckets.WALK, ...buckets.OTHER];
-    }
-
-    itinerariesToRender.forEach((itinerary, index) => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'route-option-wrapper';
-        
-        // --- ✅ V56 (CORRECTION LOGIQUE DE TITRAGE) ---
-        let title = '';
-        
-        // 3. (V56) S'assurer que le type est valide (robustesse)
-        let itinType = getItineraryType(itinerary);
-
-        if (modeFilter === 'ALL') { // Uniquement sur l'onglet "Suggéré"
-            
-            // Gérer le "Suggéré" (index 0)
-            if (index === 0) {
-                title = 'Suggéré';
-                // Marquer le type comme "affiché"
-                if (itinType === 'BUS') hasShownBusTitle = true;
-                if (itinType === 'BIKE') hasShownBikeTitle = true;
-                if (itinType === 'WALK') hasShownWalkTitle = true;
-            }
-            
-            // Gérer les autres titres de section
-            // (Nous n'utilisons PLUS previousItinerary.type)
-            if (itinType === 'BUS' && !hasShownBusTitle) {
-                title = 'Itinéraires Bus';
-                hasShownBusTitle = true;
-            } 
-            else if (itinType === 'BIKE' && !hasShownBikeTitle) {
-                title = 'Itinéraires Vélo';
-                hasShownBikeTitle = true;
-            } 
-            else if (itinType === 'WALK' && !hasShownWalkTitle) {
-                title = 'Itinéraires Piéton';
-                hasShownWalkTitle = true;
-            }
-        }
-        // --- FIN LOGIQUE DE TITRE V56 ---
-        
-        if(title) {
-            wrapper.innerHTML += `<p class="route-option-title">${title}</p>`;
-        }
-
-
-        const card = document.createElement('div');
-        card.className = 'route-option';
-        
-        let summarySegmentsHtml = '';
-        let cardTitle = ''; // ✅ NOUVEAU: Titre à l'intérieur de la carte
-
-        if (itinType === 'BIKE') { // V56: Utilise itinType
-            // V45: Utilise la distance de l'étape agrégée
-            cardTitle = `Trajet à vélo (${itinerary.steps[0].distance})`;
-            summarySegmentsHtml = `
-                <div class="route-summary-bus-icon" style="color: #059669; border-color: #059669;">
-                    ${ICONS.BICYCLE}
-                </div>
-                <span style="font-weight: 600; font-size: 0.9rem;">${cardTitle}</span>`;
-        } else if (itinType === 'WALK') { // V56: Utilise itinType
-            // V45: Utilise la distance de l'étape agrégée
-            cardTitle = `Trajet à pied (${itinerary.steps[0].distance})`;
-            summarySegmentsHtml = `
-                <div class="route-summary-bus-icon" style="color: var(--secondary); border-color: var(--secondary);">
-                    ${ICONS.WALK}
-                </div>
-                <span style="font-weight: 600; font-size: 0.9rem;">${cardTitle}</span>`;
-        } else { // V56: Par défaut (BUS)
-            // ✅ V48 (MODIFICATION IMPLÉMENTÉE): Utilise l'icône SVG pour le BUS
-            summarySegmentsHtml = `<div class="route-summary-bus-icon" style="color: var(--primary); border-color: var(--primary);">
-                                       ${ICONS.BUS}
-                                   </div>`;
-            
-            // Logique BUS (existante)
-            itinerary.summarySegments.forEach((segment, index) => {
-                const segmentLabel = getSafeRouteBadgeLabel(segment.name);
-                summarySegmentsHtml += `
-                    <div class="route-line-badge" style="background-color: ${segment.color}; color: ${segment.textColor};">${segmentLabel}</div>
-                `;
-                
-                if (index < itinerary.summarySegments.length - 1) {
-                    summarySegmentsHtml += `<span class="route-summary-dot">•</span>`;
-                }
-            });
-        }
-        
-        // L'icône "éco" ne s'affiche que pour le tout premier résultat de l'onglet "TOUS"
-        // V52: Logique modifiée pour s'adapter au titre "Suggéré"
-        const isBestSuggere = (index === 0 && modeFilter === 'ALL');
-        
-        const durationHtml = (isBestSuggere && itinType === 'BUS') // V56: Utilise itinType
-            ? `<span class="route-duration-eco">${ICONS.LEAF_ICON} ${itinerary.duration}</span>`
-            : `<span>${itinerary.duration}</span>`;
-
-        // Gérer les heures de départ/arrivée pour Vélo/Marche
-        const timeHtml = (itinerary.departureTime === '~')
-            ? `<span class="route-time" style="color: var(--text-secondary); font-weight: 500;">(Trajet)</span>`
-            : `<span class="route-time">${itinerary.departureTime} &gt; ${itinerary.arrivalTime}</span>`;
-
-
-        card.innerHTML = `
-            <div class="route-summary-line">
-                ${summarySegmentsHtml}
-            </div>
-            <div class="route-footer">
-                ${timeHtml}
-                <span class="route-duration">${durationHtml}</span>
-            </div>
-        `;
-        
-        
-        // Logique Clic (PC vs Mobile)
-        card.addEventListener('click', () => {
-            console.log('renderItineraryResults: itinéraire sélectionné', {
-                mode: modeFilter,
-                itineraryType: itinType,
-                itineraryId: itinerary.tripId || itinerary.trip?.trip_id || itinerary.id || null
-            });
-            const isMobile = window.innerWidth <= 768;
-            
-            // ✅ MODIFICATION V44: Passe l'objet itinéraire entier
-            drawRouteOnResultsMap(itinerary);
-            
-            if (isMobile) {
-                // ✅ V48 (MODIFICATION IMPLÉMENTÉE): 
-                // 1. On récupère la couche de trajet créée
-                const routeLayer = renderItineraryDetail(itinerary);
-                // 2. On la passe à showDetailView pour qu'IL gère le zoom
-                showDetailView(routeLayer);
-            } else {
-                // ✅ CORRECTION: Logique Desktop simplifiée
-                const allCards = resultsListContainer.querySelectorAll('.route-option');
-                const allDetails = resultsListContainer.querySelectorAll('.route-details');
-                const detailDiv = card.nextElementSibling; // Devrait exister pour tous
-
-                if (card.classList.contains('is-active')) {
-                    // Clic sur l'élément déjà actif: on ferme tout
-                    card.classList.remove('is-active');
-                    if (detailDiv) detailDiv.classList.add('hidden');
-                } else {
-                    // Clic sur un nouvel élément: on ferme les autres, on ouvre celui-ci
-                    allCards.forEach(c => c.classList.remove('is-active'));
-                    allDetails.forEach(d => d.classList.add('hidden'));
-                    
-                    card.classList.add('is-active');
-                    
-                    // On ouvre le 'detailDiv' s'il existe
-                    if (detailDiv) {
-                        detailDiv.classList.remove('hidden');
-                        // On le remplit s'il est vide (1ère ouverture)
-                        if (!detailDiv.hasChildNodes()) {
-                            detailDiv.innerHTML = renderItineraryDetailHTML(itinerary);
-                        }
-                    }
-                }
-            }
-        });
-
-
-        wrapper.appendChild(card);
-        
-        // ✅ CORRECTION: Crée un div "details" pour TOUS les types
-        // (il sera rempli au clic par renderItineraryDetailHTML)
-        const detailsDiv = document.createElement('div');
-        detailsDiv.className = 'route-details hidden';
-        wrapper.appendChild(detailsDiv);
-        
-        resultsListContainer.appendChild(wrapper);
-    });
-
-    // Bouton "Charger plus" pour arrivée (uniquement onglet ALL)
-    if (isArrivalMode && modeFilter === 'ALL' && arrivalRenderedCount < arrivalRankedAll.length) {
-        const loadMoreWrapper = document.createElement('div');
-        loadMoreWrapper.className = 'load-more-wrapper';
-        const btn = document.createElement('button');
-        btn.id = 'results-load-more';
-        btn.className = 'btn btn-secondary';
-        btn.textContent = 'Charger plus';
-        btn.addEventListener('click', () => {
-            arrivalRenderedCount = Math.min(arrivalRenderedCount + ARRIVAL_PAGE_SIZE, arrivalRankedAll.length);
-            renderItineraryResults('ALL');
-            // Scroll position préservée; le bouton sera régénéré si encore des éléments
-        });
-        loadMoreWrapper.appendChild(btn);
-        resultsListContainer.appendChild(loadMoreWrapper);
-    }
-}
+// Anciennes fonctions de rendu (getItineraryType, renderItineraryResults) supprimées.
 
 /**
  * *** MODIFIÉ V44 ***

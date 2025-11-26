@@ -1838,6 +1838,15 @@ details[open] .accordion-content {
     .results-list {
         padding-bottom: 2rem;
     }
+    /* Load more wrapper (itinéraires arrivée pagination) */
+    .load-more-wrapper {
+        display: flex;
+        justify-content: center;
+        padding: 1rem 0 1.5rem;
+    }
+    .load-more-wrapper .btn {
+        min-width: 160px;
+    }
 }
 
 
