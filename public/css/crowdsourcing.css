@@ -1,0 +1,472 @@
+/* ============================================
+   CROWDSOURCING GO MODE - Styles
+   ============================================ */
+
+/* Container principal */
+.go-container {
+    position: fixed;
+    bottom: 100px;
+    right: 16px;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.go-container.hidden {
+    display: none;
+}
+
+/* Bouton GO principal */
+.go-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+    transition: all 0.3s ease;
+}
+
+.go-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.5);
+}
+
+.go-button:active {
+    transform: translateY(0);
+}
+
+.go-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.go-status {
+    white-space: nowrap;
+}
+
+/* Panel actif (quand GO est activé) */
+.go-panel {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    min-width: 220px;
+}
+
+.go-panel.hidden {
+    display: none;
+}
+
+.go-container.active .go-panel {
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0%, 100% {
+        box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);
+    }
+    50% {
+        box-shadow: 0 4px 30px rgba(76, 175, 80, 0.6);
+    }
+}
+
+.go-trip-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.go-route-badge {
+    padding: 4px 10px;
+    background: #1976D2;
+    color: white;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.go-direction {
+    font-size: 13px;
+    color: #666;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.go-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.go-duration {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    font-family: 'Roboto Mono', monospace;
+}
+
+.go-points {
+    font-size: 14px;
+    color: #4CAF50;
+    font-weight: 600;
+}
+
+.go-stop-button {
+    width: 100%;
+    padding: 10px;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.go-stop-button:hover {
+    background: #d32f2f;
+}
+
+/* Modal de sélection de trip */
+.go-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 16px;
+}
+
+.go-modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 400px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.go-modal-content h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.go-modal-subtitle {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.go-trip-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.go-loading {
+    text-align: center;
+    padding: 24px;
+    color: #666;
+}
+
+.go-no-trips {
+    text-align: center;
+    padding: 24px;
+    color: #666;
+}
+
+.go-no-trips p {
+    margin: 0 0 8px 0;
+}
+
+.go-hint {
+    font-size: 12px;
+    color: #999;
+}
+
+.go-trip-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.go-trip-option:hover {
+    background: #e8f5e9;
+    border-color: #4CAF50;
+}
+
+.go-trip-route {
+    padding: 4px 8px;
+    background: #1976D2;
+    color: white;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 12px;
+    min-width: 40px;
+    text-align: center;
+}
+
+.go-trip-direction {
+    flex: 1;
+    font-size: 14px;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.go-trip-time {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+.go-modal-cancel {
+    width: 100%;
+    padding: 12px;
+    background: #eee;
+    color: #666;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.go-modal-cancel:hover {
+    background: #ddd;
+}
+
+/* Indicateur de position crowdsourcée sur la carte */
+.crowdsource-marker {
+    width: 24px;
+    height: 24px;
+    background: #4CAF50;
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.crowdsource-marker::after {
+    content: '🚌';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+}
+
+.crowdsource-marker.live {
+    animation: live-pulse 1.5s infinite;
+}
+
+@keyframes live-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(76, 175, 80, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    }
+}
+
+/* Badge niveau utilisateur */
+.go-user-level {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: #f5f5f5;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #666;
+}
+
+.go-user-level .level-icon {
+    font-size: 14px;
+}
+
+.go-user-level .level-name {
+    font-weight: 500;
+}
+
+/* Stats panel (pour page profil) */
+.go-stats-panel {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.go-stats-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.go-stats-icon {
+    font-size: 32px;
+}
+
+.go-stats-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.go-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.go-stat-item {
+    text-align: center;
+}
+
+.go-stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+.go-stat-label {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+}
+
+/* Progress vers prochain niveau */
+.go-level-progress {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+}
+
+.go-level-bar {
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.go-level-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.go-level-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #666;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .go-panel,
+    .go-modal-content,
+    .go-stats-panel {
+        background: #1e1e1e;
+        color: #fff;
+    }
+
+    .go-stats {
+        background: #2d2d2d;
+    }
+
+    .go-duration {
+        color: #fff;
+    }
+
+    .go-direction,
+    .go-modal-subtitle,
+    .go-stat-label,
+    .go-level-text {
+        color: #aaa;
+    }
+
+    .go-trip-option {
+        background: #2d2d2d;
+        border-color: #3d3d3d;
+    }
+
+    .go-trip-option:hover {
+        background: #1b3d1b;
+        border-color: #4CAF50;
+    }
+
+    .go-trip-direction {
+        color: #fff;
+    }
+
+    .go-modal-cancel {
+        background: #3d3d3d;
+        color: #ccc;
+    }
+
+    .go-level-bar {
+        background: #3d3d3d;
+    }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .go-container {
+        bottom: 80px;
+        right: 12px;
+        left: 12px;
+    }
+
+    .go-button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .go-panel {
+        min-width: unset;
+    }
+}

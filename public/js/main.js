@@ -1303,6 +1303,12 @@ async function executeItinerarySearch(source, sourceElements) {
         if (resultsRenderer) resultsRenderer.render('ALL');
         if (allFetchedItineraries.length > 0) {
             drawRouteOnResultsMap(allFetchedItineraries[0]);
+            
+            // Afficher le bouton GO si des itinéraires bus sont disponibles
+            const hasBusItinerary = allFetchedItineraries.some(it => it.type === 'BUS' || it.type === 'TRANSIT');
+            if (hasBusItinerary && typeof CrowdsourcingManager !== 'undefined') {
+                CrowdsourcingManager.showGoButton();
+            }
         }
     } catch (error) {
         console.error("Échec de la recherche d'itinéraire:", error);
