@@ -10,7 +10,8 @@ export const HYBRID_ROUTING_CONFIG = Object.freeze({
     TRANSFER_MIN_BUFFER_SECONDS: 180,
     TRANSFER_MAX_WAIT_SECONDS: 1800,   // Réduit de 2700 (45min) à 1800 (30min)
     TRANSFER_MAX_FIRST_LEG_STOPS: 8,   // Réduit de 12 à 8
-    TRANSFER_CANDIDATE_TRIPS_LIMIT: 20 // Réduit de 60 à 20
+    TRANSFER_CANDIDATE_TRIPS_LIMIT: 20, // Réduit de 60 à 20
+    TRANSFER_WALK_RADIUS_M: 200        // Rayon pour chercher des arrêts proches pour correspondance (ex: Tourny ↔ Tourny Pompidou)
 });
 
 const AVERAGE_WALK_SPEED_MPS = 1.35; // ~4.8 km/h
@@ -603,13 +604,23 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         if (!globalThis._stopTimesByStopDiag) {
             globalThis._stopTimesByStopDiag = true;
             const stbsKeys = Object.keys(dataManager.stopTimesByStop || {});
-            console.log('🔍 stopTimesByStop diagnostic:', {
+            const matchingIds = startStopIds.filter(id => dataManager.stopTimesByStop && dataManager.stopTimesByStop[id]);
+            console.log('🔍 stopTimesByStop diagnostic:', JSON.stringify({
                 exists: !!dataManager.stopTimesByStop,
                 totalKeys: stbsKeys.length,
-                sampleKeys: stbsKeys.slice(0, 5),
-                startStopIds: startStopIds.slice(0, 5),
-                matchCount: startStopIds.filter(id => dataManager.stopTimesByStop && dataManager.stopTimesByStop[id]).length
-            });
+                sampleKeys: stbsKeys.slice(0, 3),
+                startStopIds: startStopIds.slice(0, 3),
+                matchCount: matchingIds.length,
+                matchingIds: matchingIds
+            }));
+            
+            // Vérifier si les Quay IDs existent
+            const quayIds = startStopIds.filter(id => id.includes('Quay'));
+            const quayMatches = quayIds.filter(id => dataManager.stopTimesByStop && dataManager.stopTimesByStop[id]);
+            console.log('🔍 Quay IDs check:', JSON.stringify({
+                quayIdsSearched: quayIds,
+                quayIdsFound: quayMatches.length
+            }));
         }
 
         // FIX BUG 7: Use stopTimesByStop index
@@ -706,12 +717,31 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                 // FIX BUG 4: Remove 24h cap
                 const latestSecondLeg = earliestSecondLeg + HYBRID_ROUTING_CONFIG.TRANSFER_MAX_WAIT_SECONDS;
 
-                // FIX BUG 6: Use cluster IDs
-                const transferStopIds = Array.from(resolveClusterIds(transferStop));
+                // FIX BUG 6: Use cluster IDs + nearby stops for transfer (ex: Tourny ↔ Tourny Pompidou)
+                const transferStopIds = new Set(resolveClusterIds(transferStop));
+                
+                // Ajouter les arrêts proches pour permettre les correspondances à pied (ex: Tourny → Tourny Pompidou)
+                const transferLat = parseFloat(transferStop.stop_lat);
+                const transferLon = parseFloat(transferStop.stop_lon);
+                if (Number.isFinite(transferLat) && Number.isFinite(transferLon)) {
+                    for (const stop of dataManager.stops) {
+                        if (transferStopIds.has(stop.stop_id)) continue;
+                        const stopLat = parseFloat(stop.stop_lat);
+                        const stopLon = parseFloat(stop.stop_lon);
+                        if (!Number.isFinite(stopLat) || !Number.isFinite(stopLon)) continue;
+                        const dist = dataManager.calculateDistance(transferLat, transferLon, stopLat, stopLon);
+                        if (dist <= HYBRID_ROUTING_CONFIG.TRANSFER_WALK_RADIUS_M) {
+                            // Ajouter cet arrêt et tous ses IDs de cluster
+                            resolveClusterIds(stop).forEach(id => transferStopIds.add(id));
+                        }
+                    }
+                }
+                
+                const transferStopIdsArray = Array.from(transferStopIds);
 
                 transferSearchStats.secondLegSearches++;
                 const secondTrips = getCachedTripsBetweenStops(
-                    transferStopIds,
+                    transferStopIdsArray,
                     expandedEndIds, 
                     reqDate, 
                     earliestSecondLeg, 

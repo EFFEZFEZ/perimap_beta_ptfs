@@ -9,7 +9,7 @@ import { StopTimesStore } from './stopTimesStore.js';
  */
 
 const GTFS_CACHE_KEY = 'peribus_gtfs_cache_v2';
-const GTFS_CACHE_VERSION = '2.6.0';  // Logs correspondances optimisés
+const GTFS_CACHE_VERSION = '2.7.0';  // Correspondances avec arrêts proches (Tourny ↔ Tourny Pompidou)
 const GTFS_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 heures
 const GTFS_CACHE_META_KEY = 'peribus_gtfs_cache_meta';
 const GTFS_CACHE_DB = 'peribus_gtfs_cache_db';
@@ -194,6 +194,15 @@ export class DataManager {
         this.masterStops = indexes.masterStops || [];
         this.shapesById = indexes.shapesById || {};
         console.log(`📍 ${this.masterStops.length} arrêts maîtres`);
+        
+        // Diagnostic stopTimesByStop
+        const stbsKeys = Object.keys(this.stopTimesByStop);
+        console.log(`📊 stopTimesByStop: ${stbsKeys.length} arrêts indexés`);
+        if (stbsKeys.length > 0) {
+            console.log(`   Exemples: ${stbsKeys.slice(0, 3).join(', ')}`);
+        } else {
+            console.warn('⚠️ stopTimesByStop est VIDE - les recherches de correspondances ne fonctionneront pas!');
+        }
     }
 
     hasShapeData() {

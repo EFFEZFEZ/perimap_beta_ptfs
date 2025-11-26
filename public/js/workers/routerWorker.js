@@ -53,6 +53,13 @@ async function handleInit(payload = {}) {
     workerDataManager.shapes = snapshot.dataset?.shapes || [];
     workerDataManager.buildRouteGeometryIndex();
     workerDataManager.isLoaded = true;
+    
+    // DEBUG: Vérifier stopTimesByStop
+    const stopTimesByStopKeys = Object.keys(workerDataManager.stopTimesByStop || {});
+    console.log('🔧 [Worker] stopTimesByStop reçu:', stopTimesByStopKeys.length, 'stops');
+    if (stopTimesByStopKeys.length > 0) {
+        console.log('🔧 [Worker] Sample stopTimesByStop IDs:', stopTimesByStopKeys.slice(0, 5));
+    }
 
     const apiBridge = createWorkerApiBridge(googleApiKey, { geocodeProxyUrl });
     routerContext = createRouterContext({
