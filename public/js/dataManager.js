@@ -1012,6 +1012,22 @@ export class DataManager {
         const endSet = new Set(Array.isArray(endStopIds) ? endStopIds : Array.from(endStopIds || []));
         const serviceSet = this.getServiceIds(date instanceof Date ? date : new Date(date));
 
+        // DEBUG: Voir les IDs cherchés vs les IDs dans stop_times
+        const sampleStopTimeIds = new Set();
+        let tripChecked = 0;
+        for (const trip of this.trips) {
+            const st = this.stopTimesByTrip[trip.trip_id];
+            if (st && st.length > 0) {
+                st.slice(0, 3).forEach(s => sampleStopTimeIds.add(s.stop_id));
+                tripChecked++;
+            }
+            if (tripChecked >= 5) break;
+        }
+        console.log('🔬 DEBUG IDs - Cherchés départ:', Array.from(startSet).slice(0, 3));
+        console.log('🔬 DEBUG IDs - Cherchés arrivée:', Array.from(endSet).slice(0, 3));
+        console.log('🔬 DEBUG IDs - Dans stop_times:', Array.from(sampleStopTimeIds));
+        console.log('🔬 DEBUG - Services actifs:', Array.from(serviceSet));
+
         const results = [];
         let debugStats = { serviceRejected: 0, noStopTimes: 0, noBoardingFound: 0, noAlightFound: 0, wrongOrder: 0, outOfWindow: 0, accepted: 0 };
 
