@@ -1723,6 +1723,8 @@ function processIntelligentResults(intelligentResults, searchTime) {
                                                 // 1) Prefer a stop that matches any origin candidate stop IDs (if available)
                                                 // 2) Otherwise, pick the nearest predecessor before alightIndex (within a small window)
                                                 let boardingIndex = null;
+                                                // Déclarer originCandidateIds en dehors du try pour qu'il soit accessible plus bas
+                                                let originCandidateIds = new Set();
                                                 try {
                                                     // Build origin candidate IDs from the current Google results (departure stops)
                                                     const originCandidateNames = new Set();
@@ -1731,7 +1733,6 @@ function processIntelligentResults(intelligentResults, searchTime) {
                                                         const firstBusStep = [...bi.steps].find(s => s.type === 'BUS');
                                                         if (firstBusStep && firstBusStep.departureStop) originCandidateNames.add(firstBusStep.departureStop);
                                                     });
-                                                    const originCandidateIds = new Set();
                                                     originCandidateNames.forEach(n => {
                                                         const key = (n || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]/g, '').trim();
                                                         if (dataManager.stopsByName && dataManager.stopsByName[key]) {

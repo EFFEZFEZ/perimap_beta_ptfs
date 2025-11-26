@@ -1012,16 +1012,27 @@ export class DataManager {
         const endSet = new Set(Array.isArray(endStopIds) ? endStopIds : Array.from(endStopIds || []));
         const serviceSet = this.getServiceIds(date instanceof Date ? date : new Date(date));
 
+        // Debug: log des paramètres de recherche
+        console.debug('🔍 getTripsBetweenStops DEBUG:', {
+            startStopIds: Array.from(startSet).slice(0, 5),
+            endStopIds: Array.from(endSet).slice(0, 5),
+            date: date instanceof Date ? date.toISOString() : date,
+            serviceSet: Array.from(serviceSet).slice(0, 3),
+            window: `${windowStartSeconds}s - ${windowEndSeconds}s`,
+            totalTrips: this.trips?.length || 0
+        });
+
         const results = [];
+        let debugStats = { serviceRejected: 0, noStopTimes: 0, noBoardingFound: 0, noAlightFound: 0, wrongOrder: 0, outOfWindow: 0, accepted: 0 };
 
         // Iterate over all trips (could be optimized later)
         for (const trip of this.trips) {
             // Check service active
             const isServiceActive = Array.from(serviceSet).some(activeServiceId => this.serviceIdsMatch(trip.service_id, activeServiceId));
-            if (!isServiceActive) continue;
+            if (!isServiceActive) { debugStats.serviceRejected++; continue; }
 
             const stopTimes = this.stopTimesByTrip[trip.trip_id];
-            if (!stopTimes || stopTimes.length < 2) continue;
+            if (!stopTimes || stopTimes.length < 2) { debugStats.noStopTimes++; continue; }
 
             let boardingIndex = -1;
             let alightIndex = -1;
@@ -1037,8 +1048,9 @@ export class DataManager {
                 if (boardingIndex !== -1 && alightIndex !== -1) break;
             }
 
-            if (boardingIndex === -1 || alightIndex === -1) continue;
-            if (boardingIndex >= alightIndex) continue; // must be in order
+            if (boardingIndex === -1) { debugStats.noBoardingFound++; continue; }
+            if (alightIndex === -1) { debugStats.noAlightFound++; continue; }
+            if (boardingIndex >= alightIndex) { debugStats.wrongOrder++; continue; } // must be in order
 
             const boardingST = stopTimes[boardingIndex];
             const alightST = stopTimes[alightIndex];
@@ -1046,8 +1058,9 @@ export class DataManager {
             const depSec = this.timeToSeconds(boardingST.departure_time || boardingST.arrival_time);
             const arrSec = this.timeToSeconds(alightST.arrival_time || alightST.departure_time);
 
-            if (depSec < windowStartSeconds || depSec > windowEndSeconds) continue;
+            if (depSec < windowStartSeconds || depSec > windowEndSeconds) { debugStats.outOfWindow++; continue; }
 
+            debugStats.accepted++;
             results.push({
                 tripId: trip.trip_id,
                 routeId: trip.route_id,
@@ -1061,6 +1074,8 @@ export class DataManager {
                 route: this.getRoute(trip.route_id)
             });
         }
+
+        console.debug('🔍 getTripsBetweenStops STATS:', debugStats);
 
         // Sort by departure time
         results.sort((a, b) => a.departureSeconds - b.departureSeconds);
