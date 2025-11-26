@@ -56,7 +56,7 @@ let geolocationManager = null;
 
 const BOTTOM_SHEET_LEVELS = [0.4, 0.6, 0.8];
 import { getAppConfig } from './config.js';
-import { deduplicateItineraries, rankArrivalItineraries } from './itinerary/ranking.js';
+import { deduplicateItineraries, rankArrivalItineraries, rankDepartureItineraries, filterExpiredDepartures, filterLateArrivals } from './itinerary/ranking.js';
 import { normalizeStopNameForLookup, resolveStopCoordinates } from './utils/geo.js';
 import { createResultsRenderer } from './ui/resultsRenderer.js';
 const BOTTOM_SHEET_DEFAULT_INDEX = 0;
@@ -1193,18 +1193,33 @@ async function executeItinerarySearch(source, sourceElements) {
             console.warn('Erreur lors de l\'assurance des polylines:', e);
         }
 
-        allFetchedItineraries = filterExpiredItineraries(allFetchedItineraries, searchTime);
-
-        // Préparer tri/pagination mode "arriver"
+        // TOUJOURS filtrer les trajets dont le départ est passé (même en mode "arriver")
+        allFetchedItineraries = filterExpiredDepartures(allFetchedItineraries);
+        
+        // En mode "arriver", filtrer aussi les trajets qui arrivent APRÈS l'heure demandée
         if (searchTime.type === 'arriver') {
-            const deduped = deduplicateItineraries(allFetchedItineraries);
-            arrivalRankedAll = rankArrivalItineraries(deduped, searchTime);
+            const targetHour = parseInt(searchTime.hour) || 0;
+            const targetMinute = parseInt(searchTime.minute) || 0;
+            allFetchedItineraries = filterLateArrivals(allFetchedItineraries, targetHour, targetMinute);
+        }
+
+        // Dédupliquer (même trajet avec horaires différents → garder le meilleur)
+        const searchMode = searchTime.type || 'partir';
+        allFetchedItineraries = deduplicateItineraries(allFetchedItineraries, searchMode);
+
+        // Trier les itinéraires selon le mode
+        if (searchTime.type === 'arriver') {
+            arrivalRankedAll = rankArrivalItineraries(allFetchedItineraries, searchTime);
             arrivalRenderedCount = Math.min(ARRIVAL_PAGE_SIZE, arrivalRankedAll.length);
+            allFetchedItineraries = arrivalRankedAll; // Utiliser la liste triée
         } else {
+            // Mode "partir" : trier par premier départ, moins de correspondances
+            allFetchedItineraries = rankDepartureItineraries(allFetchedItineraries);
             arrivalRankedAll = [];
             arrivalRenderedCount = 0;
         }
-        setupResultTabs(searchTime.type === 'arriver' ? arrivalRankedAll : allFetchedItineraries);
+        
+        setupResultTabs(allFetchedItineraries);
         if (resultsRenderer) resultsRenderer.render('ALL');
         if (allFetchedItineraries.length > 0) {
             drawRouteOnResultsMap(allFetchedItineraries[0]);
@@ -2197,54 +2212,6 @@ async function ensureItineraryPolylines(itineraries) {
     }
 }
 
-function filterExpiredItineraries(itineraries, searchTime) {
-    if (!Array.isArray(itineraries) || !itineraries.length) return itineraries;
-    if (!searchTime || searchTime.type !== 'partir') return itineraries;
-
-    const buildReferenceDate = () => {
-        let baseDate;
-        if (!searchTime.date || searchTime.date === 'today' || searchTime.date === "Aujourd'hui") {
-            baseDate = new Date();
-        } else {
-            const parsed = new Date(searchTime.date);
-            baseDate = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-        }
-        const hour = parseInt(searchTime.hour, 10);
-        const minute = parseInt(searchTime.minute, 10);
-        if (Number.isNaN(hour) || Number.isNaN(minute)) {
-            const now = new Date();
-            baseDate.setHours(now.getHours(), now.getMinutes(), 0, 0);
-        } else {
-            baseDate.setHours(hour, minute, 0, 0);
-        }
-        baseDate.setSeconds(0, 0);
-        return baseDate;
-    };
-
-    const referenceDate = buildReferenceDate();
-    const cutoffMinutes = referenceDate.getHours() * 60 + referenceDate.getMinutes();
-    const GRACE_MINUTES = 0;
-
-    const filtered = itineraries.filter((itin) => {
-        const depTime = typeof itin?.departureTime === 'string' ? itin.departureTime : null;
-        if (!depTime || depTime === '~' || depTime === '--:--') return true;
-        const match = depTime.match(/(\d{1,2}):(\d{2})/);
-        if (!match) return true;
-        const depMinutes = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
-        if (Number.isNaN(depMinutes)) return true;
-        return (depMinutes + GRACE_MINUTES) >= cutoffMinutes;
-    });
-
-    if (filtered.length !== itineraries.length) {
-        console.info('filterExpiredItineraries: trajets passés masqués', {
-            initial: itineraries.length,
-            remaining: filtered.length,
-            cutoff: referenceDate.toTimeString().slice(0, 5)
-        });
-    }
-
-    return filtered;
-}
 function processSimpleRoute(data, mode, modeInfo, searchTime) { 
     if (!data || !data.routes || data.routes.length === 0 || !modeInfo) return null;
     const route = data.routes[0];
