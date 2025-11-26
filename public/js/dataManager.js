@@ -9,7 +9,7 @@ import { StopTimesStore } from './stopTimesStore.js';
  */
 
 const GTFS_CACHE_KEY = 'peribus_gtfs_cache_v2';
-const GTFS_CACHE_VERSION = '2.4.0';  // Forcer régénération des index groupedStopMap
+const GTFS_CACHE_VERSION = '2.5.0';  // Logs optimisés
 const GTFS_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 heures
 const GTFS_CACHE_META_KEY = 'peribus_gtfs_cache_meta';
 const GTFS_CACHE_DB = 'peribus_gtfs_cache_db';
@@ -1012,42 +1012,26 @@ export class DataManager {
         const endSet = new Set(Array.isArray(endStopIds) ? endStopIds : Array.from(endStopIds || []));
         const serviceSet = this.getServiceIds(date instanceof Date ? date : new Date(date));
 
-        // DEBUG: Voir les IDs cherchés vs les IDs dans stop_times
+        // DEBUG: Log uniquement pour la première recherche directe
         if (!window._gtfsDebugLogged) {
             window._gtfsDebugLogged = true;
-            const sampleStopTimeIds = new Set();
-            let tripChecked = 0;
-            for (const trip of this.trips) {
-                const st = this.stopTimesByTrip[trip.trip_id];
-                if (st && st.length > 0) {
-                    st.slice(0, 5).forEach(s => sampleStopTimeIds.add(s.stop_id));
-                    tripChecked++;
-                }
-                if (tripChecked >= 10) break;
-            }
-            console.log('🔬 DEBUG IDs - Cherchés départ:', JSON.stringify(Array.from(startSet).slice(0, 5)));
-            console.log('🔬 DEBUG IDs - Cherchés arrivée:', JSON.stringify(Array.from(endSet).slice(0, 5)));
-            console.log('🔬 DEBUG IDs - Dans stop_times (sample):', JSON.stringify(Array.from(sampleStopTimeIds)));
-            console.log('🔬 DEBUG - Services actifs:', JSON.stringify(Array.from(serviceSet)));
             
-            // Vérifier si les IDs cherchés existent dans stop_times global
+            // Vérifier si les IDs cherchés existent dans stop_times
             const allStopTimeIds = new Set();
             Object.values(this.stopTimesByTrip).forEach(stArr => {
                 stArr.forEach(st => allStopTimeIds.add(st.stop_id));
             });
             const startFound = Array.from(startSet).filter(id => allStopTimeIds.has(id));
             const endFound = Array.from(endSet).filter(id => allStopTimeIds.has(id));
-            console.log('🔬 DEBUG - IDs départ trouvés dans stop_times:', startFound.length, '/', startSet.size, startFound.slice(0, 3));
-            console.log('🔬 DEBUG - IDs arrivée trouvés dans stop_times:', endFound.length, '/', endSet.size, endFound.slice(0, 3));
             
-            // Vérifier groupedStopMap
-            const sampleKeys = Object.keys(this.groupedStopMap || {}).slice(0, 3);
-            console.log('🔬 DEBUG groupedStopMap samples:');
-            sampleKeys.forEach(k => console.log(`   ${k} -> ${JSON.stringify(this.groupedStopMap[k])}`));
+            console.log('🔬 Recherche GTFS directe:');
+            console.log(`   Départ: ${startFound.length}/${startSet.size} IDs valides`, startFound.slice(0, 2));
+            console.log(`   Arrivée: ${endFound.length}/${endSet.size} IDs valides`, endFound.slice(0, 2));
+            console.log(`   Services actifs: ${Array.from(serviceSet).join(', ')}`);
         }
 
         const results = [];
-        let debugStats = { serviceRejected: 0, noStopTimes: 0, noBoardingFound: 0, noAlightFound: 0, wrongOrder: 0, outOfWindow: 0, accepted: 0 };
+        const debugStats = { serviceRejected: 0, noStopTimes: 0, noBoardingFound: 0, noAlightFound: 0, wrongOrder: 0, outOfWindow: 0, accepted: 0 };
 
         // Iterate over all trips (could be optimized later)
         for (const trip of this.trips) {
@@ -1101,6 +1085,17 @@ export class DataManager {
 
         // Sort by departure time
         results.sort((a, b) => a.departureSeconds - b.departureSeconds);
+        
+        // Log stats uniquement pour le premier appel (pas pour les correspondances)
+        if (!window._gtfsStatsLogged && results.length === 0) {
+            window._gtfsStatsLogged = true;
+            console.log('📊 getTripsBetweenStops STATS:', JSON.stringify(debugStats));
+            if (debugStats.noBoardingFound > 0 && debugStats.noAlightFound > 0 && debugStats.accepted === 0) {
+                console.log('⚠️ AUCUN trajet DIRECT: les arrêts départ/arrivée ne sont pas sur la même ligne.');
+                console.log('💡 Une correspondance sera nécessaire.');
+            }
+        }
+        
         return results;
     }
 
