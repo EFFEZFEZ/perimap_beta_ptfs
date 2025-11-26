@@ -3743,3 +3743,26 @@ function updateDataStatus(message, status = '') {
 export async function bootstrapApp() {
     await initializeApp();
 }
+
+// =====================
+// DEBUG EXPORTS (harness)
+// =====================
+// Expose pure / side-effect-light helpers for local testing in debug.html
+if (typeof window !== 'undefined') {
+    window.__DEBUG = Object.assign({}, window.__DEBUG || {}, {
+        // Imported pure functions
+        rankArrivalItineraries,
+        deduplicateItineraries,
+        // Local helpers (remain internal but exposed for inspection)
+        processIntelligentResults,
+        ensureItineraryPolylines,
+        filterExpiredItineraries,
+        computeTimeDifferenceMinutes,
+        getWaitStepPresentation,
+        // State inspectors
+        getAllFetched: () => allFetchedItineraries,
+        getArrivalState: () => ({ lastSearchMode, arrivalRankedAll, arrivalRenderedCount, ARRIVAL_PAGE_SIZE }),
+        // Manual trigger (simulate minimal search rendering without network)
+        _debugRender: (mode='ALL') => resultsRenderer && resultsRenderer.render(mode)
+    });
+}
