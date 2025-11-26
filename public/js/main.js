@@ -1901,10 +1901,19 @@ function processIntelligentResults(intelligentResults, searchTime) {
                                 };
                                     // Verify trip headsign/direction loosely matches candidate arrival names to avoid cloning reverse trips
                                     if (trip.trip_headsign) {
-                                        const th = (trip.trip_headsign || '').toLowerCase();
-                                        const matchesHeadsign = Array.from(candidateNames).some(n => n && th.includes((n || '').toLowerCase()));
+                                        const th = (trip.trip_headsign || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+                                        const matchesHeadsign = Array.from(candidateNames).some(n => {
+                                            if (!n) return false;
+                                            const normalizedN = n.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+                                            // Match si headsign contient le nom OU si le nom contient le headsign
+                                            return th.includes(normalizedN) || normalizedN.includes(th);
+                                        });
                                         if (!matchesHeadsign) {
-                                            console.debug('GTFS injection: trip headsign does not match candidate arrival names, skipping', { tripId: st.trip_id, trip_headsign: trip.trip_headsign });
+                                            console.debug('GTFS injection: trip headsign does not match candidate arrival names, skipping', { 
+                                                tripId: st.trip_id, 
+                                                trip_headsign: trip.trip_headsign,
+                                                candidateNames: Array.from(candidateNames)
+                                            });
                                             continue;
                                         }
                                     }
