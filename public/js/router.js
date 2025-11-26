@@ -739,6 +739,16 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                 
                 const transferStopIdsArray = Array.from(transferStopIds);
 
+                // Diagnostic: log les 3 premières recherches de second leg
+                if (transferSearchStats.secondLegSearches < 3) {
+                    console.log(`🔎 Second leg search #${transferSearchStats.secondLegSearches + 1}:`, {
+                        transferStop: transferStop.stop_name,
+                        transferStopIds: transferStopIdsArray.slice(0, 5),
+                        expandedEndIds: expandedEndIds.slice(0, 5),
+                        timeWindow: `${Math.floor(earliestSecondLeg/3600)}:${String(Math.floor((earliestSecondLeg%3600)/60)).padStart(2,'0')} - ${Math.floor(latestSecondLeg/3600)}:${String(Math.floor((latestSecondLeg%3600)/60)).padStart(2,'0')}`
+                    });
+                }
+
                 transferSearchStats.secondLegSearches++;
                 const secondTrips = getCachedTripsBetweenStops(
                     transferStopIdsArray,
@@ -747,6 +757,12 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                     earliestSecondLeg, 
                     latestSecondLeg
                 );
+                
+                // Diagnostic: si aucun trip trouvé sur les 3 premières recherches
+                if (transferSearchStats.secondLegSearches <= 3 && (!secondTrips || !secondTrips.length)) {
+                    console.log(`❌ Aucun trip trouvé pour second leg #${transferSearchStats.secondLegSearches}`);
+                }
+                
                 if (!secondTrips || !secondTrips.length) continue;
                 transferSearchStats.secondLegFound += secondTrips.length;
 

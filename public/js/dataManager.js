@@ -1037,6 +1037,9 @@ export class DataManager {
             console.log(`   Départ: ${startFound.length}/${startSet.size} IDs valides`, startFound.slice(0, 2));
             console.log(`   Arrivée: ${endFound.length}/${endSet.size} IDs valides`, endFound.slice(0, 2));
             console.log(`   Services actifs: ${Array.from(serviceSet).join(', ')}`);
+            
+            // Sauvegarder les IDs valides pour comparaison ultérieure
+            globalThis._validEndIds = endFound;
         }
 
         const results = [];
@@ -1102,6 +1105,21 @@ export class DataManager {
             if (debugStats.noBoardingFound > 0 && debugStats.noAlightFound > 0 && debugStats.accepted === 0) {
                 console.log('⚠️ AUCUN trajet DIRECT: les arrêts départ/arrivée ne sont pas sur la même ligne.');
                 console.log('💡 Une correspondance sera nécessaire.');
+            }
+        }
+        
+        // Log pour les recherches de second leg (correspondances)
+        if (globalThis._gtfsStatsLogged && !globalThis._secondLegStatsLogged) {
+            globalThis._secondLegCallCount = (globalThis._secondLegCallCount || 0) + 1;
+            // Logger seulement les 3 premières recherches de second leg en détail
+            if (globalThis._secondLegCallCount <= 3 && results.length === 0) {
+                console.log(`🔍 Second leg #${globalThis._secondLegCallCount} STATS:`, JSON.stringify(debugStats));
+                console.log(`   StartIds (${startSet.size}):`, Array.from(startSet).slice(0, 3));
+                console.log(`   EndIds (${endSet.size}):`, Array.from(endSet).slice(0, 3));
+                console.log(`   Window: ${Math.floor(windowStartSeconds/3600)}:${String(Math.floor((windowStartSeconds%3600)/60)).padStart(2,'0')} - ${Math.floor(windowEndSeconds/3600)}:${String(Math.floor((windowEndSeconds%3600)/60)).padStart(2,'0')}`);
+            }
+            if (globalThis._secondLegCallCount === 3) {
+                globalThis._secondLegStatsLogged = true;
             }
         }
         
