@@ -4110,6 +4110,9 @@ body.dark-theme .real-select option {
         display: flex;
         flex-direction: column;
         z-index: 1200; /* Sits above map header so drags reach the sheet */
+        /* Bloquer tout overflow par défaut */
+        overflow-y: hidden;
+        overflow-x: hidden;
     }
     #itinerary-detail-container.is-active #detail-bottom-sheet {
         transform: translateY(0);
@@ -4196,20 +4199,48 @@ body.dark-theme .real-select option {
         flex: 1 1 auto;
         width: 100%;
         min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
+        overflow: hidden; /* Par défaut : pas de scroll */
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
-        touch-action: pan-y;
+        touch-action: none; /* Bloque le touch scroll par défaut */
         padding-top: 0.5rem;
         position: relative;
         background: var(--bg-main);
     }
     
-    /* V60: Bloquer le scroll quand le sheet n'est pas expanded */
+    /* Uniquement quand le sheet est expanded : permettre le scroll */
+    #detail-bottom-sheet.is-expanded #detail-panel-wrapper {
+        overflow-y: auto;
+        overflow-x: hidden;
+        touch-action: pan-y;
+        /* Scrollbar fine */
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    }
+    
+    #detail-bottom-sheet.is-expanded #detail-panel-wrapper::-webkit-scrollbar {
+        width: 6px;
+    }
+    #detail-bottom-sheet.is-expanded #detail-panel-wrapper::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #detail-bottom-sheet.is-expanded #detail-panel-wrapper::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 3px;
+    }
+    #detail-bottom-sheet.is-expanded #detail-panel-wrapper::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.35);
+    }
+    
+    /* V60: Masquer explicitement la scrollbar quand non expanded */
     #detail-bottom-sheet:not(.is-expanded) #detail-panel-wrapper {
-        overflow: hidden;
-        touch-action: none;
+        overflow: hidden !important;
+        touch-action: none !important;
+        scrollbar-width: none;
+    }
+    #detail-bottom-sheet:not(.is-expanded) #detail-panel-wrapper::-webkit-scrollbar {
+        display: none;
+        width: 0;
     }
 
     #detail-panel-content {
