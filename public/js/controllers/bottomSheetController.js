@@ -403,7 +403,9 @@ export function setupDetailPanelScrollHandlers(elements) {
     detailPanelWrapper.addEventListener('touchmove', (e) => {
         // Si on n'est pas au niveau max, bloquer le scroll et permettre le drag
         if (currentLevelIndex < BOTTOM_SHEET_EXPANDED_LEVEL_INDEX) {
-            e.preventDefault();
+            if (e.cancelable) {
+                e.preventDefault();
+            }
             return;
         }
         
@@ -412,7 +414,9 @@ export function setupDetailPanelScrollHandlers(elements) {
         const deltaY = currentTouchY - touchStartY;
         
         if (currentScrollTop === 0 && deltaY > 0 && itineraryDetailContainer.classList.contains('is-scrolled')) {
-            e.preventDefault(); 
+            if (e.cancelable) {
+                e.preventDefault(); 
+            }
             itineraryDetailContainer.classList.remove('is-scrolled');
         }
         if (deltaY < 0 && !itineraryDetailContainer.classList.contains('is-scrolled')) {

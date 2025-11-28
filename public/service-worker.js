@@ -10,7 +10,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v20'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT
+const CACHE_VERSION = 'v21'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 
 // Fichiers essentiels pour le mode hors-ligne
