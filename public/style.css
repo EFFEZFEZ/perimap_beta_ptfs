@@ -4153,3 +4153,62 @@ body.dark-theme .real-select option {
 } /* ⬅️ FIN du @media (max-width: 768px) */
 /* ⬅️ FIN du @media (max-width: 768px) pour itinerary-detail */
 
+/* ============================================
+   BANNIÈRE DE MISE À JOUR
+   ============================================ */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+#update-banner {
+    font-family: inherit;
+}
+
+#update-banner .update-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+#update-banner .btn-sm {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+}
+
+#update-banner #update-dismiss {
+    width: 28px;
+    height: 28px;
+    font-size: 1.2rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+#update-banner #update-dismiss:hover {
+    color: var(--text-primary);
+}
+
+@media (max-width: 480px) {
+    #update-banner {
+        left: 10px;
+        right: 10px;
+        transform: none;
+        bottom: 10px;
+    }
+    
+    #update-banner .update-banner-content {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
