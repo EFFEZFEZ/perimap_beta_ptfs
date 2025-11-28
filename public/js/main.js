@@ -1028,7 +1028,125 @@ function setupStaticEventListeners() {
         }
     });
 
+    // === NAVIGATION DROPDOWN IDFM-STYLE ===
+    setupNavigationDropdowns();
+    
     initBottomSheetControls();
+}
+
+// Nouvelle fonction pour gérer les menus dropdown
+function setupNavigationDropdowns() {
+    // Mobile menu toggle
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    if (mobileMenuToggle && mobileMenu) {
+        mobileMenuToggle.addEventListener('click', () => {
+            mobileMenuToggle.classList.toggle('is-active');
+            mobileMenu.classList.toggle('hidden');
+        });
+    }
+    
+    // Gestion des actions de navigation (desktop dropdown items)
+    document.querySelectorAll('.nav-dropdown-item[data-action]').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const action = item.dataset.action;
+            handleNavigationAction(action);
+        });
+    });
+    
+    // Gestion des actions de navigation (mobile menu items)
+    document.querySelectorAll('.mobile-menu-item[data-action]').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const action = item.dataset.action;
+            // Fermer le menu mobile
+            if (mobileMenuToggle) mobileMenuToggle.classList.remove('is-active');
+            if (mobileMenu) mobileMenu.classList.add('hidden');
+            handleNavigationAction(action);
+        });
+    });
+    
+    // Fermer les menus au clic ailleurs
+    document.addEventListener('click', (e) => {
+        // Fermer le menu mobile si on clique ailleurs
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+            if (!e.target.closest('#mobile-menu') && !e.target.closest('#mobile-menu-toggle')) {
+                mobileMenuToggle.classList.remove('is-active');
+                mobileMenu.classList.add('hidden');
+            }
+        }
+    });
+}
+
+// Gérer les actions de navigation
+function handleNavigationAction(action) {
+    switch(action) {
+        case 'itineraire':
+            // Aller à la vue résultats d'itinéraire (sans recherche préalable)
+            showItineraryResultsView();
+            break;
+        case 'horaires':
+            showDashboardView('horaires');
+            break;
+        case 'info-trafic':
+            showDashboardView('info-trafic');
+            break;
+        case 'carte':
+            showMapView();
+            break;
+        case 'tarifs':
+            showTarifsView();
+            break;
+        default:
+            console.log('Action non gérée:', action);
+    }
+}
+
+// Afficher la vue Tarifs
+async function showTarifsView() {
+    try {
+        const response = await fetch('/views/tarifs.html');
+        const html = await response.text();
+        
+        const appViewRoot = document.getElementById('app-view-root');
+        appViewRoot.innerHTML = html;
+        
+        // Bouton retour
+        const backBtn = document.getElementById('btn-back-to-hall-tarifs');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                showDashboardHall();
+            });
+        }
+        
+        // Injecter le contenu tarifaire (placeholder pour l'instant)
+        const tarifsContent = document.getElementById('tarifs-content');
+        if (tarifsContent) {
+            tarifsContent.innerHTML = `
+                <h2>Tickets à l'unité</h2>
+                <p>Retrouvez ci-dessous les tarifs en vigueur sur le réseau Péribus.</p>
+                
+                <div class="tarifs-note">
+                    <p><strong>💡 Information :</strong> Le contenu détaillé des tarifs sera ajouté prochainement. Consultez le site officiel du Grand Périgueux pour les informations à jour.</p>
+                </div>
+                
+                <p style="text-align: center; margin-top: 2rem;">
+                    <a href="https://www.grandperigueux.fr/mon-quotidien/transports-mobilite/se-deplacer-en-bus-car/reseau-peribus/" target="_blank" rel="noopener" class="btn btn-primary">
+                        Voir les tarifs sur le site officiel
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                </p>
+            `;
+        }
+        
+        // Scroll en haut
+        window.scrollTo(0, 0);
+        
+    } catch (error) {
+        console.error('Erreur chargement vue Tarifs:', error);
+    }
 }
 
 function setupDataDependentEventListeners() {
