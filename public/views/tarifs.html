@@ -5,16 +5,167 @@
     </button>
     
     <div class="tarifs-header">
-        <h1>Tarification Péribus</h1>
+        <h1>🚌 Les tarifs des bus Péribus</h1>
         <p>Retrouvez tous les tarifs du réseau de transport du Grand Périgueux</p>
     </div>
     
+    <!-- Section Quels sont les tarifs -->
     <div class="tarifs-card">
-        <div class="tarifs-content" id="tarifs-content">
-            <!-- Le contenu sera injecté ici -->
-            <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">
-                Chargement des informations tarifaires...
-            </p>
+        <h2 class="tarifs-section-title">
+            <span class="tarifs-icon">💰</span>
+            Quels sont les tarifs ?
+        </h2>
+        <div class="tarifs-content">
+            <p>En fonction de mes besoins de transport (fréquences, trajets…) et de ma situation personnelle (âge, situation sociale), les tarifs des bus varient.</p>
+            
+            <div class="tarifs-info-box">
+                <div class="tarifs-info-item">
+                    <span class="tarifs-bullet">👔</span>
+                    <p><strong>Salarié ?</strong> L'employeur peut rembourser <strong>50% du coût</strong> de votre abonnement au transport public (valable pour les pass mensuels ou annuels).</p>
+                </div>
+                <div class="tarifs-info-item">
+                    <span class="tarifs-bullet">🤝</span>
+                    <p><strong>Situation sociale compliquée ?</strong> Vous pouvez bénéficier d'une <strong>tarification sociale</strong>. Renseignez-vous auprès du Centre communal d'action sociale (CCAS) de votre commune.</p>
+                </div>
+            </div>
+            
+            <a href="data/fichehoraire/grandperigueux_peribus_depliant_tarifs_bus_2025.pdf" target="_blank" class="tarifs-download-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Télécharger le dépliant des tarifs Péribus 2025
+            </a>
+        </div>
+    </div>
+    
+    <!-- Section Où acheter -->
+    <div class="tarifs-card">
+        <h2 class="tarifs-section-title">
+            <span class="tarifs-icon">🎫</span>
+            Où acheter mes titres de transport ?
+        </h2>
+        <div class="tarifs-content">
+            <div class="tarifs-buy-options">
+                <div class="tarifs-buy-item">
+                    <div class="tarifs-buy-icon">🚌</div>
+                    <div class="tarifs-buy-text">
+                        <strong>À bord du bus</strong>
+                        <p>En espèces auprès du conducteur ou par carte bancaire directement sur le valideur situé à l'intérieur du bus.</p>
+                    </div>
+                </div>
+                
+                <div class="tarifs-buy-item">
+                    <div class="tarifs-buy-icon">🏢</div>
+                    <div class="tarifs-buy-text">
+                        <strong>À l'agence Périmouv'</strong>
+                        <p>11 rue Wilson à Périgueux</p>
+                    </div>
+                </div>
+                
+                <div class="tarifs-buy-item">
+                    <div class="tarifs-buy-icon">🏪</div>
+                    <div class="tarifs-buy-text">
+                        <strong>Chez les dépositaires</strong>
+                        <p>Auchan (Marsac-sur-l'Isle), Leclerc (Trélissac et Clos-Chassaing à Périgueux), Kiosque place Bugeaud (Périgueux), Mairies de Boulazac-Isle-Manoire, Trélissac et Coulounieix-Chamiers.</p>
+                    </div>
+                </div>
+                
+                <div class="tarifs-buy-item">
+                    <div class="tarifs-buy-icon">💻</div>
+                    <div class="tarifs-buy-text">
+                        <strong>Via la boutique en ligne</strong>
+                        <p><a href="https://boutique.perimouv.fr" target="_blank">boutique.perimouv.fr</a></p>
+                    </div>
+                </div>
+                
+                <div class="tarifs-buy-item">
+                    <div class="tarifs-buy-icon">📱</div>
+                    <div class="tarifs-buy-text">
+                        <strong>Via l'application Modalis</strong>
+                        <p>
+                            <a href="https://play.google.com/store/apps/details?id=com.affluences.modalis" target="_blank">Android</a> | 
+                            <a href="https://apps.apple.com/fr/app/modalis/id1534579883" target="_blank">Apple</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section Billettique -->
+    <div class="tarifs-card">
+        <h2 class="tarifs-section-title">
+            <span class="tarifs-icon">💳</span>
+            La billettique
+        </h2>
+        <div class="tarifs-content">
+            <p>J'accède à des services simplifiant mes déplacements et l'accès aux bus.</p>
+            
+            <div class="tarifs-features">
+                <div class="tarifs-feature">
+                    <div class="tarifs-feature-icon">💳</div>
+                    <div class="tarifs-feature-content">
+                        <strong>Paiement sans contact</strong>
+                        <p>Par carte bancaire sur le valideur situé à l'intérieur du bus. Pratique, facile, rapide pour éviter d'acheter un ticket au préalable.</p>
+                        <a href="https://www.perimouv.fr/suivi-cb" target="_blank" class="tarifs-link">Suivre mes voyages effectués par CB →</a>
+                    </div>
+                </div>
+                
+                <div class="tarifs-feature">
+                    <div class="tarifs-feature-icon">🎰</div>
+                    <div class="tarifs-feature-content">
+                        <strong>5 distributeurs automatiques</strong>
+                        <p>À proximité des principaux arrêts : Périgueux (Tourny, Taillefer, gare SNCF), Marsac-sur-l'Isle (ZAE), Boulazac-Isle-Manoire (Marcel Paul).</p>
+                        <p class="tarifs-small">Ces distributeurs permettent d'acheter un ticket Modalis rechargeable, de charger ma carte, d'imprimer un justificatif et de consulter le solde.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section Fraudes et amendes -->
+    <div class="tarifs-card tarifs-card-warning">
+        <h2 class="tarifs-section-title">
+            <span class="tarifs-icon">⚠️</span>
+            Fraudes et amendes
+        </h2>
+        <div class="tarifs-content">
+            <h3 class="tarifs-subtitle">Voyager en règle</h3>
+            <p>La <strong>validation est systématique et obligatoire</strong> à chaque montée dans le bus, même en correspondance et quel que soit le titre de transport utilisé, y compris pour les abonnés.</p>
+            <p>Lors d'un contrôle, si je suis en infraction, je suis redevable d'une indemnité forfaitaire dont le montant varie en fonction de l'infraction commise.</p>
+            
+            <h3 class="tarifs-subtitle">Régler une amende</h3>
+            <p>Le règlement doit s'effectuer dans un <strong>délai de 3 mois maximum</strong> après l'infraction. Au-delà, le dossier est transmis à l'Officier du Ministère Public.</p>
+            
+            <div class="tarifs-amende-options">
+                <p><strong>Je règle l'amende de plusieurs façons :</strong></p>
+                <ul>
+                    <li>Auprès de l'agent verbalisateur (espèces, chèque ou carte bleue)</li>
+                    <li>Auprès du service Périmouv' : 11 rue du Président Wilson à Périgueux (muni du PV)</li>
+                    <li>Par courrier à l'ordre de Epic Périmouv', avec photocopie du PV : Périmouv', 11 rue du Président Wilson 24000 Périgueux</li>
+                </ul>
+            </div>
+            
+            <div class="tarifs-mediation">
+                <h3 class="tarifs-subtitle">🔄 Transformer l'amende en Pass Médiation</h3>
+                <p>J'ai reçu une amende de <strong>45€</strong> ?</p>
+                <ul>
+                    <li>Soit je règle l'amende</li>
+                    <li>Soit je transforme cette amende en <strong>Pass Médiation</strong> (abonnement de 45€ d'une durée de 3 mois)</li>
+                </ul>
+                <p class="tarifs-small">Pour acheter le Pass Médiation, rendez-vous au service Périmouv' muni de votre PV, dans les <strong>7 jours</strong> suivant la contravention. Sans carte Modalis : frais supplémentaires de 3€. Photo d'identité et pièce d'identité requises.</p>
+            </div>
+            
+            <a href="data/fichehoraire/grandperigueux_peribus_depliant_tarifs_bus_2025.pdf" target="_blank" class="tarifs-download-btn tarifs-download-warning">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Télécharger le dépliant complet (Tarifs + Amendes)
+            </a>
         </div>
     </div>
 </div>

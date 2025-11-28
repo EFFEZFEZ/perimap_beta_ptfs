@@ -1121,26 +1121,6 @@ async function showTarifsView() {
             });
         }
         
-        // Injecter le contenu tarifaire (placeholder pour l'instant)
-        const tarifsContent = document.getElementById('tarifs-content');
-        if (tarifsContent) {
-            tarifsContent.innerHTML = `
-                <h2>Tickets à l'unité</h2>
-                <p>Retrouvez ci-dessous les tarifs en vigueur sur le réseau Péribus.</p>
-                
-                <div class="tarifs-note">
-                    <p><strong>💡 Information :</strong> Le contenu détaillé des tarifs sera ajouté prochainement. Consultez le site officiel du Grand Périgueux pour les informations à jour.</p>
-                </div>
-                
-                <p style="text-align: center; margin-top: 2rem;">
-                    <a href="https://www.grandperigueux.fr/mon-quotidien/transports-mobilite/se-deplacer-en-bus-car/reseau-peribus/" target="_blank" rel="noopener" class="btn btn-primary">
-                        Voir les tarifs sur le site officiel
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    </a>
-                </p>
-            `;
-        }
-        
         // Scroll en haut
         window.scrollTo(0, 0);
         
