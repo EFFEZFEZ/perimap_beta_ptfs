@@ -3755,12 +3755,30 @@ body.dark-theme .real-select option {
         height: 5px;
         border-radius: 999px;
         background: var(--border);
-        margin: 10px auto 4px;
+        margin: 12px auto 8px;
         cursor: grab;
         touch-action: none;
+        /* V60: Zone de touch plus grande */
+        padding: 12px 40px;
+        background-clip: content-box;
     }
     #detail-bottom-sheet.is-dragging .panel-handle {
         cursor: grabbing;
+        background: var(--primary);
+    }
+    
+    /* V60: Indicateur visuel pour dire de drag vers le haut */
+    #detail-bottom-sheet:not(.is-expanded)::after {
+        content: 'Glissez vers le haut pour voir plus';
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        opacity: 0.6;
+        pointer-events: none;
+        white-space: nowrap;
     }
 
     /* Style du header de la carte */
@@ -3803,12 +3821,19 @@ body.dark-theme .real-select option {
         width: 100%;
         min-height: 0;
         overflow-y: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
         touch-action: pan-y;
         padding-top: 0.5rem;
         position: relative;
         background: var(--bg-main);
+    }
+    
+    /* V60: Bloquer le scroll quand le sheet n'est pas expanded */
+    #detail-bottom-sheet:not(.is-expanded) #detail-panel-wrapper {
+        overflow: hidden;
+        touch-action: none;
     }
 
     #detail-panel-content {

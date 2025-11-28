@@ -54,7 +54,7 @@ let ARRIVAL_PAGE_SIZE = 5; // Limite initiale / pagination (surchargée par conf
 
 let geolocationManager = null;
 
-const BOTTOM_SHEET_LEVELS = [0.4, 0.6, 0.8];
+const BOTTOM_SHEET_LEVELS = [0.4, 0.8]; // Seulement 2 niveaux: peek (40%) et expanded (80%)
 import { getAppConfig } from './config.js';
 import { deduplicateItineraries, rankArrivalItineraries, rankDepartureItineraries, filterExpiredDepartures, filterLateArrivals } from './itinerary/ranking.js';
 import { normalizeStopNameForLookup, resolveStopCoordinates } from './utils/geo.js';
@@ -65,8 +65,10 @@ const APP_CONFIG = getAppConfig();
 const GOOGLE_API_KEY = APP_CONFIG.googleApiKey; // dynamique (config.js), jamais hardcodé ici
 ARRIVAL_PAGE_SIZE = APP_CONFIG.arrivalPageSize || ARRIVAL_PAGE_SIZE; // surcharge si fourni
 const BOTTOM_SHEET_SCROLL_UNLOCK_THRESHOLD = 4; // px tolerance before locking drag
+const BOTTOM_SHEET_EXPANDED_LEVEL_INDEX = 1; // Index du niveau expanded (80%)
 const BOTTOM_SHEET_VELOCITY_THRESHOLD = 0.35; // px per ms
 const BOTTOM_SHEET_MIN_DRAG_DISTANCE_PX = 45; // px delta before forcing next snap
+const BOTTOM_SHEET_DRAG_BUFFER_PX = 20; // Zone au-dessus du sheet où on peut commencer le drag
 let currentBottomSheetLevelIndex = BOTTOM_SHEET_DEFAULT_INDEX;
 let bottomSheetDragState = null;
 let bottomSheetControlsInitialized = false;
@@ -773,6 +775,18 @@ function applyBottomSheetLevel(index, { immediate = false } = {}) {
         detailBottomSheet.classList.add('sheet-height-no-transition');
     }
     detailBottomSheet.style.setProperty('--sheet-height', `${targetPx}px`);
+    
+    // V60: Ajouter/retirer la classe is-expanded selon le niveau
+    if (targetIndex >= BOTTOM_SHEET_EXPANDED_LEVEL_INDEX) {
+        detailBottomSheet.classList.add('is-expanded');
+    } else {
+        detailBottomSheet.classList.remove('is-expanded');
+        // Reset le scroll quand on réduit le sheet
+        if (detailPanelWrapper) {
+            detailPanelWrapper.scrollTop = 0;
+        }
+    }
+    
     if (immediate) {
         requestAnimationFrame(() => detailBottomSheet?.classList.remove('sheet-height-no-transition'));
     }
@@ -833,15 +847,23 @@ function cancelBottomSheetDrag() {
 function onBottomSheetPointerDown(event) {
     if (!isMobileDetailViewport() || !detailBottomSheet || !itineraryDetailContainer?.classList.contains('is-active')) return;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    
     const isHandle = Boolean(event.target.closest('.panel-handle'));
     const inDragRegion = isPointerWithinBottomSheetDragRegion(event);
-    const wrapperScroll = detailPanelWrapper ? detailPanelWrapper.scrollTop : 0;
     const inSheetContent = Boolean(event.target.closest('#detail-panel-wrapper'));
-    const canUseContentDrag = inSheetContent && wrapperScroll <= BOTTOM_SHEET_SCROLL_UNLOCK_THRESHOLD;
-    if (!isHandle && !inDragRegion && !canUseContentDrag) return;
-    if (!isHandle && !canUseContentDrag && wrapperScroll > BOTTOM_SHEET_SCROLL_UNLOCK_THRESHOLD) {
-        return; // let the content scroll if we are not on the handle/drag zone
+    const isExpanded = currentBottomSheetLevelIndex >= BOTTOM_SHEET_EXPANDED_LEVEL_INDEX;
+    const wrapperScroll = detailPanelWrapper ? detailPanelWrapper.scrollTop : 0;
+    
+    // V60: Si pas expanded, on peut drag depuis n'importe où sur le sheet
+    if (!isExpanded) {
+        // Permettre le drag depuis la handle, la zone de drag, ou le contenu
+        if (!isHandle && !inDragRegion && !inSheetContent) return;
+    } else {
+        // Si expanded, on ne peut drag que depuis la handle ou si on est au top du scroll
+        const canUseContentDrag = inSheetContent && wrapperScroll <= BOTTOM_SHEET_SCROLL_UNLOCK_THRESHOLD;
+        if (!isHandle && !inDragRegion && !canUseContentDrag) return;
     }
+    
     event.preventDefault();
     bottomSheetDragState = {
         pointerId: event.pointerId,
@@ -953,8 +975,19 @@ function setupStaticEventListeners() {
 
     if (detailPanelWrapper && itineraryDetailContainer) {
         let touchStartY = 0;
-        detailPanelWrapper.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true }); 
+        
+        // V60: Bloquer le scroll du contenu tant qu'on n'est pas au niveau expanded (80%)
+        detailPanelWrapper.addEventListener('touchstart', (e) => { 
+            touchStartY = e.touches[0].clientY; 
+        }, { passive: true }); 
+        
         detailPanelWrapper.addEventListener('touchmove', (e) => {
+            // V60: Si on n'est pas au niveau max, bloquer le scroll et permettre le drag
+            if (currentBottomSheetLevelIndex < BOTTOM_SHEET_EXPANDED_LEVEL_INDEX) {
+                e.preventDefault();
+                return;
+            }
+            
             const currentTouchY = e.touches[0].clientY;
             const currentScrollTop = detailPanelWrapper.scrollTop;
             const deltaY = currentTouchY - touchStartY;
@@ -966,8 +999,16 @@ function setupStaticEventListeners() {
                 itineraryDetailContainer.classList.add('is-scrolled');
             }
         }, { passive: false }); 
+        
         detailPanelWrapper.addEventListener('wheel', handleDetailPanelWheel, { passive: false });
+        
         detailPanelWrapper.addEventListener('scroll', () => {
+            // V60: Ne pas gérer le scroll si on n'est pas au niveau max
+            if (currentBottomSheetLevelIndex < BOTTOM_SHEET_EXPANDED_LEVEL_INDEX) {
+                detailPanelWrapper.scrollTop = 0;
+                return;
+            }
+            
             const currentScrollTop = detailPanelWrapper.scrollTop;
             if (currentScrollTop > 10 && !itineraryDetailContainer.classList.contains('is-scrolled')) {
                 itineraryDetailContainer.classList.add('is-scrolled');
@@ -1328,12 +1369,7 @@ async function executeItinerarySearch(source, sourceElements) {
         if (resultsRenderer) resultsRenderer.render('ALL');
         if (allFetchedItineraries.length > 0) {
             drawRouteOnResultsMap(allFetchedItineraries[0]);
-            
-            // Afficher le bouton GO si des itinéraires bus sont disponibles
-            const hasBusItinerary = allFetchedItineraries.some(it => it.type === 'BUS' || it.type === 'TRANSIT');
-            if (hasBusItinerary && typeof CrowdsourcingManager !== 'undefined') {
-                CrowdsourcingManager.showGoButton();
-            }
+            // V60: Le bouton GO est maintenant intégré dans le bottom sheet de chaque itinéraire
         }
     } catch (error) {
         console.error("Échec de la recherche d'itinéraire:", error);
@@ -3047,8 +3083,35 @@ function renderItineraryDetail(itinerary) {
         }
     }).join('');
 
-    detailPanelContent.innerHTML = stepsHtml;
+    // Ajouter le bouton GO à la fin du contenu (uniquement pour les trajets bus)
+    const hasBusStep = itinerary.steps?.some(step => step.type === 'BUS');
+    const goButtonHtml = hasBusStep ? `
+        <div class="go-contribution-section">
+            <div class="go-contribution-divider"></div>
+            <div class="go-contribution-content">
+                <div class="go-contribution-icon">🚌</div>
+                <div class="go-contribution-text">
+                    <strong>Vous êtes dans ce bus ?</strong>
+                    <span>Aidez les autres usagers en partageant votre position en temps réel</span>
+                </div>
+                <button class="go-contribution-button" id="go-start-sharing-btn">
+                    <span class="go-btn-icon">GO</span>
+                    <span>Partager</span>
+                </button>
+            </div>
+        </div>
+    ` : '';
+
+    detailPanelContent.innerHTML = stepsHtml + goButtonHtml;
     resetDetailPanelScroll();
+
+    // Ajouter l'event listener pour le bouton GO
+    const goBtn = document.getElementById('go-start-sharing-btn');
+    if (goBtn && typeof CrowdsourcingManager !== 'undefined') {
+        goBtn.addEventListener('click', () => {
+            CrowdsourcingManager.startSharingFromItinerary(itinerary);
+        });
+    }
 
     // 2. Mettre à jour le résumé
     if(detailMapSummary) {

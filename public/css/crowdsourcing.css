@@ -1,9 +1,125 @@
 /* ============================================
    CROWDSOURCING GO MODE - Styles
+   V60: Bouton GO intégré au bottom sheet
    ============================================ */
 
-/* Container principal */
+/* ============================================
+   SECTION GO DANS LE BOTTOM SHEET
+   ============================================ */
+.go-contribution-section {
+    margin-top: 1.5rem;
+    padding-top: 0;
+}
+
+.go-contribution-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin-bottom: 1.5rem;
+}
+
+.go-contribution-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.08), rgba(76, 175, 80, 0.03));
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    border-radius: 16px;
+}
+
+.go-contribution-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.go-contribution-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.go-contribution-text strong {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.go-contribution-text span {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.3;
+}
+
+.go-contribution-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #4CAF50, #43A047);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.go-contribution-button:hover {
+    background: linear-gradient(135deg, #43A047, #388E3C);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.go-contribution-button:active {
+    transform: translateY(0);
+}
+
+.go-contribution-button .go-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+/* Dark mode */
+[data-theme="dark"] .go-contribution-content {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.12), rgba(76, 175, 80, 0.05));
+    border-color: rgba(76, 175, 80, 0.3);
+}
+
+/* Mobile: layout vertical */
+@media (max-width: 400px) {
+    .go-contribution-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .go-contribution-text {
+        align-items: center;
+    }
+    
+    .go-contribution-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ============================================
+   ANCIEN BOUTON FLOTTANT - Conservé pour compatibilité
+   mais caché par défaut (V60)
+   ============================================ */
+
+/* Container principal - CACHÉ par défaut */
 .go-container {
+    display: none; /* V60: Supprimé */
     position: fixed;
     bottom: 100px;
     right: 16px;

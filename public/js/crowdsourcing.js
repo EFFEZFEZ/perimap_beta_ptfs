@@ -113,41 +113,40 @@ const CrowdsourcingManager = (function() {
 
     /**
      * Configure l'interface utilisateur
+     * V60: Suppression du bouton GO flottant - maintenant intégré dans le bottom sheet
      */
     function setupUI() {
-        // Ajouter le bouton GO dans l'interface
-        const goButtonHTML = `
-            <div id="go-crowdsource-container" class="go-container hidden">
-                <button id="go-button" class="go-button" aria-label="Activer le mode GO">
-                    <span class="go-icon">GO</span>
-                    <span class="go-status">Partager ma position</span>
-                </button>
-                <div id="go-active-panel" class="go-panel hidden">
-                    <div class="go-trip-info">
-                        <span class="go-route-badge"></span>
-                        <span class="go-direction"></span>
-                    </div>
-                    <div class="go-stats">
-                        <span class="go-duration">0:00</span>
-                        <span class="go-points">+0 pts</span>
-                    </div>
-                    <button id="go-stop-button" class="go-stop-button">
-                        Arrêter
-                    </button>
-                </div>
-            </div>
-        `;
+        // Plus de bouton flottant - le GO est maintenant dans le bottom sheet
+        console.log('🚌 Crowdsourcing UI initialisé (mode intégré au bottom sheet)');
+    }
 
-        // Injecter dans le DOM si pas déjà présent
-        if (!document.getElementById('go-crowdsource-container')) {
-            const container = document.createElement('div');
-            container.innerHTML = goButtonHTML;
-            document.body.appendChild(container.firstElementChild);
-            
-            // Event listeners
-            document.getElementById('go-button')?.addEventListener('click', handleGoButtonClick);
-            document.getElementById('go-stop-button')?.addEventListener('click', stopSharing);
+    /**
+     * Démarre le partage depuis un itinéraire affiché
+     * V60: Nouvelle fonction pour démarrer depuis le bottom sheet
+     */
+    async function startSharingFromItinerary(itinerary) {
+        if (!itinerary || !itinerary.steps) {
+            console.warn('Itinéraire invalide pour le partage');
+            return;
         }
+
+        // Trouver le premier step de type BUS
+        const busStep = itinerary.steps.find(step => step.type === 'BUS');
+        if (!busStep) {
+            console.warn('Aucune étape bus trouvée dans cet itinéraire');
+            return;
+        }
+
+        // Extraire les infos du bus
+        const tripId = busStep.tripId || busStep.trip?.trip_id || `trip_${Date.now()}`;
+        const routeId = busStep.routeId || busStep.route?.route_id || '';
+        const routeName = busStep.routeShortName || busStep.routeName || 'Bus';
+        const direction = busStep.headsign || busStep.direction || busStep.instruction || '';
+
+        console.log('🚌 Démarrage GO depuis itinéraire:', { tripId, routeId, routeName, direction });
+
+        // Démarrer le partage
+        startSharing(tripId, routeId, routeName, direction);
     }
 
     /**
@@ -725,8 +724,9 @@ const CrowdsourcingManager = (function() {
         init,
         startSharing,
         stopSharing,
-        showGoButton,
-        hideGoButton,
+        startSharingFromItinerary, // V60: Nouvelle fonction
+        showGoButton: () => {}, // V60: Deprecated - ne fait plus rien
+        hideGoButton: () => {}, // V60: Deprecated - ne fait plus rien
         getUserStats,
         getUserLevel,
         getLatestPosition,
