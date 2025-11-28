@@ -515,6 +515,14 @@ async function initializeApp() {
         const locateError = geolocationManager?.handleGeolocationError || (() => {});
         mapRenderer.addLocateControl(locateSuccess, locateError);
 
+        // Exposer mapRenderer globalement pour le système de retards
+        window.mapRenderer = mapRenderer;
+        window.addDelayedBusMarker = (delayInfo) => {
+            if (mapRenderer && typeof mapRenderer.addDelayedBusMarker === 'function') {
+                mapRenderer.addDelayedBusMarker(delayInfo);
+            }
+        };
+
         detailMapRenderer = new MapRenderer('detail-map', dataManager, timeManager);
         detailMapRenderer.initializeMap(false);
         currentDetailMarkerLayer = L.layerGroup().addTo(detailMapRenderer.map);

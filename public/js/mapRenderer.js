@@ -847,4 +847,104 @@ export class MapRenderer {
             this.map.locate({ enableHighAccuracy: true, watch: false, setView: true });
         }
     }
+
+    /**
+     * Ajoute ou met à jour un marqueur de bus en retard sur la carte
+     * @param {object} delayInfo - Informations sur le retard
+     */
+    addDelayedBusMarker(delayInfo) {
+        if (!this.map || !delayInfo.position) return;
+
+        const { tripId, routeName, routeColor, delaySeconds, position, isMajorDelay } = delayInfo;
+        const markerId = `delay_${tripId}`;
+        const delayMinutes = Math.floor(delaySeconds / 60);
+
+        // Supprimer l'ancien marqueur si existant
+        if (this.delayedBusMarkers && this.delayedBusMarkers[markerId]) {
+            this.map.removeLayer(this.delayedBusMarkers[markerId]);
+        }
+
+        if (!this.delayedBusMarkers) {
+            this.delayedBusMarkers = {};
+        }
+
+        // Créer l'icône personnalisée avec point d'exclamation
+        const markerHtml = `
+            <div class="delayed-bus-marker ${isMajorDelay ? 'major-delay' : ''}">
+                <div class="bus-icon" style="--line-color: ${routeColor || '#1976D2'}">
+                    ${routeName}
+                </div>
+                <div class="delay-indicator">!</div>
+                <div class="delay-tooltip">
+                    ⚠️ ${routeName}: ~${delayMinutes} min de retard
+                </div>
+            </div>
+        `;
+
+        const delayIcon = L.divIcon({
+            className: 'delayed-bus-icon-wrapper',
+            html: markerHtml,
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
+        });
+
+        const marker = L.marker([position.lat, position.lng], {
+            icon: delayIcon,
+            zIndexOffset: 2000 // Au-dessus des autres marqueurs
+        });
+
+        marker.addTo(this.map);
+        this.delayedBusMarkers[markerId] = marker;
+
+        // Popup au clic
+        marker.on('click', () => {
+            const popupContent = `
+                <div class="delay-popup">
+                    <div class="delay-popup-header" style="background: ${routeColor || '#1976D2'}">
+                        <span class="route-name">${routeName}</span>
+                        <span class="delay-badge">⚠️ ~${delayMinutes} min</span>
+                    </div>
+                    <div class="delay-popup-body">
+                        <p><strong>Direction:</strong> ${delayInfo.headsign || 'N/A'}</p>
+                        <p><strong>Prochain arrêt:</strong> ${delayInfo.nextStopName || 'N/A'}</p>
+                        <p><strong>Prévu:</strong> <span class="original-time">${delayInfo.scheduledTime}</span></p>
+                        <p><strong>Estimé:</strong> <span class="delayed-time">${delayInfo.estimatedTime}</span></p>
+                        <p class="delay-note">
+                            ${delayInfo.isPeakHour ? '🚗 Heure de pointe - trafic dense' : ''}
+                        </p>
+                    </div>
+                </div>
+            `;
+            L.popup()
+                .setLatLng([position.lat, position.lng])
+                .setContent(popupContent)
+                .openOn(this.map);
+        });
+
+        console.log(`🚌 Marqueur retard ajouté: ${routeName} à [${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}]`);
+    }
+
+    /**
+     * Supprime un marqueur de bus en retard
+     * @param {string} tripId - ID du trip
+     */
+    removeDelayedBusMarker(tripId) {
+        const markerId = `delay_${tripId}`;
+        if (this.delayedBusMarkers && this.delayedBusMarkers[markerId]) {
+            this.map.removeLayer(this.delayedBusMarkers[markerId]);
+            delete this.delayedBusMarkers[markerId];
+        }
+    }
+
+    /**
+     * Supprime tous les marqueurs de bus en retard
+     */
+    clearDelayedBusMarkers() {
+        if (!this.delayedBusMarkers) return;
+        
+        for (const markerId in this.delayedBusMarkers) {
+            this.map.removeLayer(this.delayedBusMarkers[markerId]);
+        }
+        this.delayedBusMarkers = {};
+    }
 }
