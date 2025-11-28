@@ -739,7 +739,7 @@ body.view-is-locked {
     /* Le dashboard utilise le scroll naturel du body - AUCUNE règle overflow */
     overflow-y: visible; /* V59: Permettre le scroll */
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 80px; /* V59: Espace pour le footer et scroll complet */
+    padding-bottom: 0; /* Supprimé: le nouveau footer gère son propre espacement */
 }
 
 /* *** CORRECTION IDFM-STYLE *** */
@@ -4970,7 +4970,7 @@ body.view-is-locked #site-footer {
 .promo-banner,
 .stats-section {
     animation: slideUpFade 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    opacity: 0;
+    /* Visible par défaut au cas où l'animation ne joue pas */
 }
 
 .services-section { animation-delay: 0.15s; }
