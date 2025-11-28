@@ -801,11 +801,13 @@ function onBottomSheetPointerMove(event) {
 function onBottomSheetPointerUp() {
     if (!bottomSheetDragState) return;
     const viewportHeight = getViewportHeight();
+    let targetIndex = currentBottomSheetLevelIndex;
+    
     if (viewportHeight) {
         const appliedHeight = bottomSheetDragState.lastHeight ?? bottomSheetDragState.startHeight;
         const fraction = appliedHeight / viewportHeight;
         const closestIndex = getClosestSheetLevelIndex(fraction);
-        let targetIndex = closestIndex;
+        targetIndex = closestIndex;
         const velocity = bottomSheetDragState.velocity || 0;
         const deltaFromStart = appliedHeight - bottomSheetDragState.startHeight;
         const biasNeeded = closestIndex === bottomSheetDragState.startIndex;
@@ -816,9 +818,23 @@ function onBottomSheetPointerUp() {
             const direction = deltaFromStart > 0 ? 1 : -1;
             targetIndex = Math.max(0, Math.min(BOTTOM_SHEET_LEVELS.length - 1, bottomSheetDragState.startIndex + direction));
         }
-        applyBottomSheetLevel(targetIndex);
     }
-    cancelBottomSheetDrag();
+    
+    // 1. D'abord retirer is-dragging pour réactiver les transitions CSS
+    window.removeEventListener('pointermove', onBottomSheetPointerMove);
+    window.removeEventListener('pointerup', onBottomSheetPointerUp);
+    window.removeEventListener('pointercancel', onBottomSheetPointerUp);
+    if (detailBottomSheet && bottomSheetDragState.pointerId !== undefined) {
+        try { detailBottomSheet.releasePointerCapture(bottomSheetDragState.pointerId); } catch (_) { /* ignore */ }
+    }
+    detailBottomSheet?.classList.remove('is-dragging');
+    itineraryDetailContainer?.classList.remove('sheet-is-dragging');
+    bottomSheetDragState = null;
+    
+    // 2. Attendre un frame pour que le navigateur réactive les transitions
+    requestAnimationFrame(() => {
+        applyBottomSheetLevel(targetIndex);
+    });
 }
 
 function handleDetailPanelWheel(event) {

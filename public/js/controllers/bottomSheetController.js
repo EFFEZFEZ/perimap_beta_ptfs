@@ -300,11 +300,13 @@ function onBottomSheetPointerUp() {
     if (!dragState) return;
     
     const viewportHeight = getViewportHeight();
+    let targetIndex = currentLevelIndex;
+    
     if (viewportHeight) {
         const appliedHeight = dragState.lastHeight ?? dragState.startHeight;
         const fraction = appliedHeight / viewportHeight;
         const closestIndex = getClosestSheetLevelIndex(fraction);
-        let targetIndex = closestIndex;
+        targetIndex = closestIndex;
         
         const velocity = dragState.velocity || 0;
         const deltaFromStart = appliedHeight - dragState.startHeight;
@@ -317,11 +319,22 @@ function onBottomSheetPointerUp() {
             const direction = deltaFromStart > 0 ? 1 : -1;
             targetIndex = Math.max(0, Math.min(BOTTOM_SHEET_LEVELS.length - 1, dragState.startIndex + direction));
         }
-        
-        applyBottomSheetLevel(targetIndex);
     }
     
-    cancelBottomSheetDrag();
+    // 1. D'abord retirer is-dragging pour réactiver les transitions CSS
+    window.removeEventListener('pointermove', onBottomSheetPointerMove);
+    window.removeEventListener('pointerup', onBottomSheetPointerUp);
+    window.removeEventListener('pointercancel', onBottomSheetPointerUp);
+    if (detailBottomSheet && dragState.pointerId !== undefined) {
+        try { detailBottomSheet.releasePointerCapture(dragState.pointerId); } catch (_) { /* ignore */ }
+    }
+    detailBottomSheet?.classList.remove('is-dragging');
+    dragState = null;
+    
+    // 2. Attendre un frame pour que le navigateur réactive les transitions
+    requestAnimationFrame(() => {
+        applyBottomSheetLevel(targetIndex);
+    });
 }
 
 /**
