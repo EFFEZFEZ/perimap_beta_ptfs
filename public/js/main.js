@@ -302,7 +302,7 @@ let toPlaceId = null;
 
 // LINE_CATEGORIES est maintenant importée depuis config/routes.js
 
-const DETAIL_SHEET_TRANSITION_MS = 300;
+const DETAIL_SHEET_TRANSITION_MS = 380; // Doit être >= à la transition CSS (350ms + marge)
 
 // getCategoryForRoute est maintenant importée depuis config/routes.js
 
@@ -3634,13 +3634,20 @@ function showDetailView(routeLayer) { // ✅ V48: Accepte routeLayer en argument
 // *** NOUVELLE FONCTION V33 ***
 function hideDetailView() {
     if (!itineraryDetailContainer) return;
-    cancelBottomSheetDrag();
-    itineraryDetailContainer.classList.remove('is-active');
-    itineraryDetailContainer.classList.remove('is-scrolled');
+    
+    // 1. D'abord, lancer l'animation de fermeture du backdrop
     if (itineraryDetailBackdrop) {
         itineraryDetailBackdrop.classList.remove('is-active');
     }
-    // Cache après la fin de la transition
+    
+    // 2. Retirer is-active pour déclencher l'animation de fermeture du bottom sheet
+    itineraryDetailContainer.classList.remove('is-active');
+    itineraryDetailContainer.classList.remove('is-scrolled');
+    
+    // 3. Annuler tout drag en cours
+    cancelBottomSheetDrag();
+    
+    // 4. Attendre la fin de la transition CSS AVANT de cacher et reset
     setTimeout(() => {
         resetDetailViewState();
     }, DETAIL_SHEET_TRANSITION_MS);

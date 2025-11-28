@@ -4060,11 +4060,14 @@ body.dark-theme .real-select option {
         z-index: 1080;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.25s ease;
+        transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
     #itinerary-detail-backdrop.is-active {
         opacity: 1;
         pointer-events: auto;
+    }
+    #itinerary-detail-backdrop.hidden {
+        display: none !important;
     }
 
     #itinerary-detail-container {
@@ -4072,13 +4075,15 @@ body.dark-theme .real-select option {
         position: fixed;
         inset: 0;
         z-index: 1110;
-        transform: translateY(calc(100% + env(safe-area-inset-bottom)));
-        transition: transform 0.35s ease;
+        transform: translateY(0); /* Toujours visible, c'est le bottom sheet qui gère l'animation */
         pointer-events: none;
+        overflow: hidden; /* Bloquer tout scroll sur le container */
     }
     #itinerary-detail-container.is-active {
-        transform: translateY(0);
         pointer-events: auto;
+    }
+    #itinerary-detail-container.hidden {
+        display: none !important;
     }
 
     #detail-map {
@@ -4088,7 +4093,9 @@ body.dark-theme .real-select option {
         height: 100%;
         background: #e5e5e5;
         z-index: 0;
-        touch-action: pan-x pan-y;
+        touch-action: manipulation; /* Permet le pinch-to-zoom mais bloque le scroll natif */
+        overflow: hidden; /* Bloquer scroll natif */
+        -webkit-overflow-scrolling: auto;
     }
 
     /* Le fond de carte reste toujours interactif */
@@ -4103,8 +4110,8 @@ body.dark-theme .real-select option {
         box-shadow: 0 -25px 60px rgba(15, 23, 42, 0.45);
         height: var(--sheet-height, 40vh);
         padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
-        transform: translateY(calc(100% + env(safe-area-inset-bottom)));
-        transition: transform 0.3s ease-in-out, height 0.25s ease;
+        transform: translateY(100%);
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), height 0.25s ease;
         overflow: hidden;
         pointer-events: auto;
         display: flex;
@@ -4113,9 +4120,15 @@ body.dark-theme .real-select option {
         /* Bloquer tout overflow par défaut */
         overflow-y: hidden;
         overflow-x: hidden;
+        will-change: transform; /* Optimiser les performances de l'animation */
     }
     #itinerary-detail-container.is-active #detail-bottom-sheet {
         transform: translateY(0);
+    }
+    /* Transition fluide à la fermeture aussi */
+    #itinerary-detail-container:not(.is-active) #detail-bottom-sheet {
+        transform: translateY(100%);
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
     #detail-bottom-sheet.is-dragging {
         transition: none !important;
