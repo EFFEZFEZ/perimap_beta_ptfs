@@ -2,7 +2,7 @@
  * resultsRenderer.js
  * Rendu des itinéraires + pagination arrivée.
  */
-import { ICONS } from '../constants.js';
+import { ICONS } from '../config/icons.js';
 
 export function createResultsRenderer(deps) {
   const { resultsListContainer, resultsModeTabs, getAllItineraries, getArrivalState, setArrivalRenderedCount, onLoadMoreDepartures } = deps;

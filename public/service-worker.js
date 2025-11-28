@@ -10,7 +10,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v4'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT
+const CACHE_VERSION = 'v6'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 
 // Fichiers essentiels pour le mode hors-ligne
@@ -30,6 +30,24 @@ const OFFLINE_ASSETS = [
   '/js/apiManager.js',
   '/js/stopTimesStore.js',
   '/js/crowdsourcing.js',
+  '/js/uiManager.js',
+  '/js/viewLoader.js',
+  '/js/config.js',
+  '/js/constants.js',
+  // Modules refactorisés
+  '/js/config/icons.js',
+  '/js/config/routes.js',
+  '/js/utils/formatters.js',
+  '/js/utils/geo.js',
+  '/js/utils/polyline.js',
+  '/js/itinerary/ranking.js',
+  '/js/ui/resultsRenderer.js',
+  '/js/ui/detailRenderer.js',
+  '/js/ui/popoverManager.js',
+  '/js/controllers/bottomSheetController.js',
+  '/js/controllers/viewController.js',
+  '/js/state/appState.js',
+  '/js/modules/index.js',
   '/css/crowdsourcing.css',
   '/manifest.json'
 ];

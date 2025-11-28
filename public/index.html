@@ -72,22 +72,49 @@
 
     <!-- Preloader removed: instant load requested by user -->
 
-    <header id="main-header">
-    <div class="header-content">
-        <div class="logo">
-            <img src="https://i.ibb.co/99PZh9Zq/export6-removebg-preview.webp" alt="Logo PériMap" class="header-logo-img">
-            <div class="header-title-group">
-                <span class="brand-name">PériMap</span>
-                <span class="brand-sub">Assistant mobilité Grand Périgueux</span>
+    <!-- Barre supérieure (info/liens utiles) -->
+    <div id="top-info-bar">
+        <div class="top-info-content">
+            <div class="top-info-left">
+                <a href="https://www.grandperigueux.fr" target="_blank" rel="noopener" class="top-info-link">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    Grand Périgueux
+                </a>
+                <a href="https://www.peribus.fr" target="_blank" rel="noopener" class="top-info-link">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                    Site Officiel Péribus
+                </a>
+            </div>
+            <div class="top-info-right">
+                <span class="top-info-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Données temps réel
+                </span>
             </div>
         </div>
-        <nav class="header-nav">
-            <button id="theme-toggle-btn" class="btn-icon-round" aria-label="Basculer thème sombre" title="Thème sombre" aria-pressed="false">
-                <span id="theme-toggle-icon">🌙</span>
-            </button>
-        </nav>
     </div>
-</header>
+
+    <!-- Header principal -->
+    <header id="main-header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <img src="https://i.ibb.co/99PZh9Zq/export6-removebg-preview.webp" alt="Logo PériMap" class="header-logo-img">
+                <div class="header-title-group">
+                    <span class="brand-name">PériMap</span>
+                    <span class="brand-sub">Vos déplacements dans le Grand Périgueux</span>
+                </div>
+            </a>
+            <nav class="header-nav">
+                <a href="/about.html" class="header-nav-link">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    À propos
+                </a>
+                <button id="theme-toggle-btn" class="btn-icon-round" aria-label="Basculer thème sombre" title="Thème sombre" aria-pressed="false">
+                    <span id="theme-toggle-icon">🌙</span>
+                </button>
+            </nav>
+        </div>
+    </header>
 
     <div id="alert-banner" class="hidden">
         <div id="alert-banner-content"></div>
@@ -96,15 +123,49 @@
 
     <main id="app-view-root"></main>
 
-    <footer id="legal-strip">
-        <div class="legal-strip-content">
-            <span class="legal-pill">Application indépendante, non affiliée au Grand Périgueux.</span>
-            <span>Données © Grand Périgueux / Péribus — licence ODbL.</span>
-            <span>
-                Base dérivée <code>gtfs.bundle.json</code> partagée sur
-                <a href="https://github.com/EFFEZFEZ/p-rimap-sans-api-/tree/main/public/data/gtfs" target="_blank" rel="noopener">GitHub</a>.
-            </span>
-            <a class="legal-about-btn" href="/about.html">À propos</a>
+    <!-- Footer professionnel -->
+    <footer id="site-footer">
+        <div class="footer-content">
+            <div class="footer-main">
+                <div class="footer-brand">
+                    <img src="https://i.ibb.co/99PZh9Zq/export6-removebg-preview.webp" alt="PériMap" class="footer-logo">
+                    <div class="footer-brand-text">
+                        <span class="footer-brand-name">PériMap</span>
+                        <span class="footer-brand-tagline">Simplifiez vos déplacements dans le Grand Périgueux</span>
+                    </div>
+                </div>
+                
+                <div class="footer-links">
+                    <div class="footer-links-column">
+                        <h4>Navigation</h4>
+                        <a href="/">Accueil</a>
+                        <a href="/about.html">À propos</a>
+                        <a href="https://github.com/EFFEZFEZ/p-rimap-sans-api-" target="_blank" rel="noopener">GitHub</a>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Ressources</h4>
+                        <a href="/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf" target="_blank">Plan du réseau</a>
+                        <a href="https://www.peribus.fr" target="_blank" rel="noopener">Site Péribus</a>
+                        <a href="https://www.grandperigueux.fr" target="_blank" rel="noopener">Grand Périgueux</a>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Données</h4>
+                        <p class="footer-data-info">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            Données © Grand Périgueux / Péribus
+                        </p>
+                        <p class="footer-license">Licence ODbL</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p class="footer-independent">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    Application indépendante, non affiliée au Grand Périgueux ou Péribus.
+                </p>
+                <p class="footer-copyright">© 2025 PériMap · Fait avec ❤️ pour le Grand Périgueux</p>
+            </div>
         </div>
     </footer>
 

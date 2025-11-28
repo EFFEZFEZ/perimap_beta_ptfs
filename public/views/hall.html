@@ -5,6 +5,12 @@
             
             <div class="hero-section">
                 
+                <!-- Titre accrocheur IDFM-style -->
+                <div class="hero-headline">
+                    <h1>Vos trajets dans le <span class="highlight">Grand Périgueux</span></h1>
+                    <p class="hero-subtitle">Horaires, itinéraires et carte interactive du réseau Péribus</p>
+                </div>
+                
                 <div class="planner-block-wrapper">
                     <div class="planner-block">
                         <div class="planner-title-bar">
@@ -89,23 +95,64 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="main-nav-buttons-condensed">
-                    <button class="nav-button-condensed" data-view="horaires">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                        <span>Horaires & Lignes</span>
+
+            </div>
+            
+            <!-- Services Cards - Style IDFM -->
+            <div class="services-section">
+                <h2 class="section-title">Nos services</h2>
+                <div class="services-grid">
+                    <button class="service-card" data-view="horaires">
+                        <div class="service-card-icon service-card-icon--green">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        </div>
+                        <div class="service-card-content">
+                            <h3>Horaires & Lignes</h3>
+                            <p>Consultez les horaires de passage et téléchargez les fiches horaires de toutes les lignes</p>
+                        </div>
+                        <svg class="service-card-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
                     </button>
-                    <button class="nav-button-condensed" data-view="info-trafic">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        <span>État du Réseau</span>
+                    
+                    <button class="service-card" data-view="info-trafic">
+                        <div class="service-card-icon service-card-icon--orange">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                        <div class="service-card-content">
+                            <h3>État du Réseau</h3>
+                            <p>Suivez en temps réel les perturbations, retards et travaux sur le réseau Péribus</p>
+                        </div>
                         <span id="info-trafic-count" class="notification-badge hidden">0</span>
+                        <svg class="service-card-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
                     </button>
-                    <button id="btn-show-map" class="nav-button-condensed">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
-                        <span>Carte Interactive</span>
+                    
+                    <button id="btn-show-map" class="service-card">
+                        <div class="service-card-icon service-card-icon--blue">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                        </div>
+                        <div class="service-card-content">
+                            <h3>Carte Interactive</h3>
+                            <p>Explorez le réseau sur la carte, localisez les arrêts et suivez les bus en direct</p>
+                        </div>
+                        <svg class="service-card-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
                     </button>
                 </div>
-
+            </div>
+            
+            <!-- Bannière promotionnelle -->
+            <div class="promo-banner">
+                <div class="promo-banner-content">
+                    <div class="promo-banner-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    </div>
+                    <div class="promo-banner-text">
+                        <strong>Nouveau sur le réseau ?</strong>
+                        <span>Téléchargez le plan complet des lignes Péribus pour préparer vos trajets.</span>
+                    </div>
+                    <a href="/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf" target="_blank" rel="noopener noreferrer" class="promo-banner-btn">
+                        Télécharger
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v13m-7-7l7 7 7-7"/></svg>
+                    </a>
+                </div>
             </div>
             
             <!-- Widget des retards en temps réel -->
@@ -119,37 +166,31 @@
                 </div>
             </div>
             
-            <div class="bottom-content-wrapper">
-                <div class="bottom-grid">
-                    
-                    <div class="card key-figures-card">
-                        <h4>Notre réseau en chiffres</h4>
-                        <p>Un service de transport adapté à vos besoins quotidiens.</p>
-                        <div class="key-figures-grid">
-                            <div class="key-figure-item">
-                                <span class="key-figure-number">36</span>
-                                <span class="key-figure-label">Lignes</span>
-                            </div>
-                            <div class="key-figure-item">
-                                <span class="key-figure-number">222</span>
-                                <span class="key-figure-label">Kilomètres de lignes</span>
-                            </div>
-                            <div class="key-figure-item">
-                                <span class="key-figure-number">2.1M</span>
-                                <span class="key-figure-label">Voyageurs / an</span>
-                            </div>
+            <!-- Chiffres clés -->
+            <div class="stats-section">
+                <div class="stats-card">
+                    <div class="stats-header">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <h3>Le réseau Péribus en chiffres</h3>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-number">36</span>
+                            <span class="stat-label">Lignes</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">222</span>
+                            <span class="stat-label">km de lignes</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">2.1M</span>
+                            <span class="stat-label">Voyageurs/an</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">43</span>
+                            <span class="stat-label">Communes</span>
                         </div>
                     </div>
-
-                    <div class="card">
-                        <h4>Découvrez le réseau</h4>
-                        <p>Consultez le plan complet de toutes les lignes, arrêts et correspondances pour préparer votre voyage.</p>
-                        <a href="/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-block-link">
-                            Télécharger le plan
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13m-7-7l7 7 7-7"/></svg>
-                        </a>
-                    </div>
-
                 </div>
             </div>
 

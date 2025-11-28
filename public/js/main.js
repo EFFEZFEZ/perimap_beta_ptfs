@@ -1,15 +1,15 @@
-/**
- * main.js - V58 (Partie 1/2 : Optimisation GPS & Debounce)
+﻿/**
+ * main.js - V61 (Refactoring modulaire)
  *
- * *** MODIFICATION V58 (Optimisation GPS) ***
- * 1. Ajout de `lastGeocodeTime` et `lastGeocodePos` (gérés dans geolocationManager).
- * 2. Ajout de la fonction `getDistanceFromLatLonInM` pour calculer la distance en mètres.
- * 3. Réécriture de la logique de géolocalisation (gérée par geolocationManager) pour :
- * - Ignorer les mouvements < 10m (jitter GPS).
- * - Ne lancer le Reverse Geocoding (API payante) que si :
- * a) C'est la première fois.
- * b) On a bougé de > 200m.
+ * Version refactorisée avec modules séparés pour:
+ * - État centralisé (state/appState.js)
+ * - Formatage (utils/formatters.js)
+ * - Configuration (config/icons.js, config/routes.js)
+ * - Controllers (controllers/)
+ * - UI (ui/)
  */
+
+// === Imports des managers ===
 import { DataManager } from './dataManager.js';
 import { TimeManager } from './timeManager.js';
 import { TripScheduler } from './tripScheduler.js';
@@ -20,6 +20,27 @@ import { createRouterContext, encodePolyline, decodePolyline } from './router.js
 import { RouterWorkerClient } from './routerWorkerClient.js';
 import { UIManager } from './uiManager.js';
 import { createGeolocationManager } from './geolocationManager.js';
+
+// === Imports des modules refactorisés ===
+import { 
+    isMeaningfulTime, 
+    isMissingTextValue,
+    getSafeStopLabel, 
+    getSafeTimeLabel, 
+    getSafeRouteBadgeLabel,
+    hasStopMetadata,
+    parseTimeStringToMinutes,
+    formatMinutesToTimeString,
+    addSecondsToTimeString,
+    subtractSecondsFromTimeString,
+    computeTimeDifferenceMinutes,
+    formatGoogleTime,
+    formatGoogleDuration,
+    parseGoogleDuration
+} from './utils/formatters.js';
+
+import { getCategoryForRoute, LINE_CATEGORIES, PDF_FILENAME_MAP, ROUTE_LONG_NAME_MAP } from './config/routes.js';
+import { ICONS, getManeuverIcon, getAlertBannerIcon } from './config/icons.js';
 
 // Modules
 let dataManager;
@@ -80,31 +101,7 @@ let bottomSheetControlsInitialized = false;
 const isSheetAtMinLevel = () => currentBottomSheetLevelIndex === 0;
 const isSheetAtMaxLevel = () => currentBottomSheetLevelIndex === BOTTOM_SHEET_LEVELS.length - 1;
 
-// ICÔNES SVG
-// ICONS locaux (option A : conserver définition locale au lieu de constants.js)
-const ICONS = {
-    BUS: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="12" rx="3"/><path d="M4 10h16"/><path d="M6 15v2"/><path d="M18 15v2"/><circle cx="8" cy="19" r="1.5"/><circle cx="16" cy="19" r="1.5"/></svg>`,
-    busSmall: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="11" rx="2.5"/><path d="M5 10h14"/><path d="M7 15v2"/><path d="M17 15v2"/><circle cx="9" cy="19" r="1.2"/><circle cx="15" cy="19" r="1.2"/></svg>`,
-    statusTriangle: `<svg width="16" height="8" viewBox="0 0 16 8" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M8 0L16 8H0L8 0Z" /></svg>`,
-    statusWarning: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`,
-    statusError: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`,
-    BICYCLE: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3.2"/><circle cx="17.5" cy="17" r="3.2"/><path d="M6 17 10 8h3.5l2 5h3"/><path d="M12 8l1.8 9"/><path d="m14 13.5 4 3.5"/></svg>`,
-    WALK: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="m9 21 2.2-6.2-2.2-3.8 3-2 3 2 1.2-3.5"/><path d="M13 14.5 16 21"/></svg>`,
-    ALL: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z"/></svg>`,
-    LEAF_ICON: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-4-4 1.41-1.41L10 16.17l6.59-6.59L18 11l-8 8z" opacity=".3"/><path d="M17.8 7.29c-.39-.39-1.02-.39-1.41 0L10 13.17l-1.88-1.88c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l2.59 2.59c.39.39 1.02.39 1.41 0L17.8 8.7c.39-.39.39-1.02 0-1.41z" transform="translate(0, 0)" opacity=".1"/><path d="M12 4.14c-4.33 0-7.86 3.53-7.86 7.86s3.53 7.86 7.86 7.86 7.86-3.53 7.86-7.86S16.33 4.14 12 4.14zm5.8 4.57 c0 .28-.11.53-.29.71L12 15.01l-2.59-2.59c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l3.29 3.29c.39.39 1.02.39 1.41 0l6.29-6.29c.18-.18.29-.43.29-.71 0-1.04-1.2-1.57-2-1.57-.42 0-.8.13-1.1.33-.29.2-.6.4-.9.6z" fill="#1e8e3e"/></svg>`,
-    GEOLOCATE: `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5a6.5 6.5 0 0 0-6.5 6.5c0 4.9 6.5 12.5 6.5 12.5s6.5-7.6 6.5-12.5A6.5 6.5 0 0 0 12 2.5Zm0 9.3a2.8 2.8 0 1 1 0-5.6 2.8 2.8 0 0 1 0 5.6Z"/></svg>`,
-    GEOLOCATE_SPINNER: `<div class="spinner"></div>`,
-    MAP_LOCATE: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L7 12l10 0L12 2z"/><circle cx="12" cy="12" r="10"/></svg>`,
-    MANEUVER: {
-        STRAIGHT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>`,
-        TURN_LEFT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>`,
-        TURN_RIGHT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>`,
-        TURN_SLIGHT_LEFT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 5 9 13v7"></path><path d="m8 18 4-4"></path></svg>`,
-        ROUNDABOUT_LEFT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 9.5c.1-.4.5-.8.9-1s1-.3 1.5-.3c.7 0 1.3.1 1.9.4c.6.3 1.1.7 1.5 1.1c.4.5.7 1 .8 1.7c.1.6.1 1.3 0 1.9c-.2.7-.4 1.3-.8 1.8c-.4.5-1 1-1.6 1.3c-.6.3-1.3.5-2.1.5c-.6 0-1.1-.1-1.6-.2c-.5-.1-1-.4-1.4-.7c-.4-.3-.7-.7-.9-1.1"></path><path d="m7 9 3-3 3 3"></path><circle cx="12" cy="12" r="10"></circle></svg>`,
-        ROUNDABOUT_RIGHT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9.5c-.1-.4-.5-.8-.9-1s-1-.3-1.5-.3c-.7 0-1.3.1-1.9.4c-.6.3-1.1.7-1.5 1.1c-.4.5-.7 1-.8 1.7c-.1.6-.1 1.3 0 1.9c.2.7.4 1.3.8 1.8c.4.5 1 1 1.6 1.3c.6.3 1.3.5 2.1.5c.6 0 1.1-.1 1.6-.2c.5-.1 1-.4 1.4-.7c.4-.3.7-.7-.9-1.1"></path><path d="m17 9-3-3-3 3"></path><circle cx="12" cy="12" r="10"></circle></svg>`,
-        DEFAULT: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="m12 16 4-4-4-4"></path><path d="M8 12h8"></path></svg>`
-    }
-};
+// ICONS, ALERT_BANNER_ICONS, getManeuverIcon et getAlertBannerIcon sont importés depuis config/icons.js
 
 // normalizeStopNameForLookup & resolveStopCoordinates importés depuis utils/geo.js
 
@@ -132,47 +129,9 @@ function createStopDivIcon(role) {
     });
 }
 
-const ALERT_BANNER_ICONS = {
-    annulation: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
-    retard: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
-    default: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
-};
+// ALERT_BANNER_ICONS et getAlertBannerIcon sont importés depuis config/icons.js
 
-function getAlertBannerIcon(type) {
-    if (!type) {
-        return ALERT_BANNER_ICONS.default;
-    }
-    return ALERT_BANNER_ICONS[type] || ALERT_BANNER_ICONS.default;
-}
-
-const PLACEHOLDER_TEXT_VALUES = new Set(['undefined', 'null', '--', '--:--', '—', 'n/a', 'na']);
-
-const isMissingTextValue = (value) => {
-    if (value === undefined || value === null) return true;
-    if (typeof value === 'number') return false;
-    const trimmed = String(value).trim();
-    if (!trimmed) return true;
-    const normalized = trimmed.toLowerCase();
-    if (PLACEHOLDER_TEXT_VALUES.has(normalized)) return true;
-    if (/^[-–—\s:._]+$/.test(trimmed)) return true;
-    return normalized === 'inconnu' || normalized === 'unknown';
-};
-
-const getSafeStopLabel = (value, fallback = 'Arrêt à préciser') => {
-    return isMissingTextValue(value) ? fallback : value;
-};
-
-const getSafeTimeLabel = (value, fallback = '--:--') => {
-    return isMissingTextValue(value) ? fallback : value;
-};
-
-const hasStopMetadata = (stopName, timeValue) => {
-    return !isMissingTextValue(stopName) || !isMissingTextValue(timeValue);
-};
-
-const getSafeRouteBadgeLabel = (value, fallback = 'BUS') => {
-    return isMissingTextValue(value) ? fallback : value;
-};
+// isMissingTextValue, getSafeStopLabel, getSafeTimeLabel, getSafeRouteBadgeLabel, hasStopMetadata sont importées depuis utils/formatters.js
 
 const shouldSuppressBusStep = (step) => {
     if (!step || step.type !== 'BUS') return false;
@@ -187,14 +146,7 @@ const shouldSuppressBusStep = (step) => {
     return lacksIntermediateStops;
 };
 
-function computeTimeDifferenceMinutes(startTime, endTime) {
-    const startMinutes = parseTimeStringToMinutes(startTime);
-    const endMinutes = parseTimeStringToMinutes(endTime);
-    if (startMinutes === null || endMinutes === null) return null;
-    let diff = endMinutes - startMinutes;
-    if (diff < 0) diff += 24 * 60;
-    return diff;
-}
+// computeTimeDifferenceMinutes est maintenant importée depuis utils/formatters.js
 
 function getWaitStepPresentation(steps, index) {
     const step = steps?.[index] || {};
@@ -323,68 +275,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 registerServiceWorker();
 
-// Mappage des noms de fichiers PDF
-const PDF_FILENAME_MAP = {
-    'A': 'grandperigueux_fiche_horaires_ligne_A_sept_2025.pdf',
-    'B': 'grandperigueux_fiche_horaires_ligne_B_sept_2025.pdf',
-    'C': 'grandperigueux_fiche_horaires_ligne_C_sept_2025.pdf',
-    'D': 'grandperigueux_fiche_horaires_ligne_D_sept_2025.pdf',
-    'e1': 'grandperigueux_fiche_horaires_ligne_e1_sept_2025.pdf',
-    'e2': 'grandperigueux_fiche_horaires_ligne_e2_sept_2025.pdf',
-    'e4': 'grandperigueux_fiche_horaires_ligne_e4_sept_2025.pdf',
-    'e5': 'grandperigueux_fiche_horaires_ligne_e5_sept_2025.pdf',
-    'e6': 'grandperigueux_fiche_horaires_ligne_e6_sept_2025.pdf',
-    'e7': 'grandperigueux_fiche_horaires_ligne_e7_sept_2025.pdf',
-    'K1A': 'grandperigueux_fiche_horaires_ligne_K1A_sept_2025.pdf',
-    'K1B': 'grandperigueux_fiche_horaires_ligne_K1B_sept_2025.pdf',
-    'K2': 'grandperigueux_fiche_horaires_ligne_K2_sept_2025.pdf',
-    'K3A': 'grandperigueux_fiche_horaires_ligne_K3A_sept_2E025.pdf',
-    'K3B': 'grandperigueux_fiche_horaires_ligne_K3B_sept_2025.pdf',
-    'K4A': 'grandperigueux_fiche_horaires_ligne_K4A_sept_2025.pdf',
-    'K4B': 'grandperigueux_fiche_horaires_ligne_K4B_sept_2025.pdf',
-    'K5': 'grandperigueux_fiche_horaires_ligne_K5_sept_2025.pdf',
-    'K6': 'grandperigueux_fiche_horaires_ligne_K6_sept_2025.pdf',
-    'N': 'grandperigueux_fiche_horaires_ligne_N_sept_2025.pdf',
-    'N1': 'grandperigueux_fiche_horaires_ligne_N1_sept_2025.pdf',
-};
-
-// Mappage des noms longs
-const ROUTE_LONG_NAME_MAP = {
-    'A': 'ZAE Marsac <> Centre Hospitalier',
-    'B': 'Les Tournesols <> Gare SNCF',
-    'C': 'ZAE Marsac <> P+R Aquacap',
-    'D': 'P+R Charrieras <> Tourny',
-    'e1': 'ZAE Marsac <> P+R Aquacap',
-    'e2': 'Talleyrand Périgord <> Fromarsac',
-    'e4': 'Charrieras <> La Feuilleraie <> Tourny',
-    'e5': 'Les Tournesols <> PEM',
-    'e6': 'Créavallée <> Trésorerie municipale',
-    'e7': 'Notre-Dame de Sanilhac poste <> Les Lilas hôpital',
-    'K1A': 'Maison Rouge <> Tourny / La Rudeille <> Tourny',
-    'K1B': 'Le Lac <> Pôle universitaire Grenadière <> Taillefer',
-    'K2': 'Champcevinel bourg <> Tourny',
-    'K3A': 'La Feuilleraie <> Place du 8 mai',
-    'K3B': 'Pépinière <> Place du 8 mai',
-    'K4A': 'Sarrazi <> Dojo départemental <> Tourny',
-    'K4B': 'Coulounieix bourg <> Tourny',
-    'K5': 'Halte ferroviaire Boulazac <> La Feuilleraie',
-    'K6': 'Halte ferroviaire Marsac sur l’Isle',
-    'N': 'Tourny <> PEM',
-    'N1': 'Gare SNCF <> 8 mai <> Tourny <> Gare SNCF',
-};
-
-function getManeuverIcon(maneuver) {
-    switch(maneuver) {
-        case 'TURN_LEFT': return ICONS.MANEUVER.TURN_LEFT;
-        case 'TURN_RIGHT': return ICONS.MANEUVER.TURN_RIGHT;
-        case 'TURN_SLIGHT_LEFT': return ICONS.MANEUVER.TURN_SLIGHT_LEFT;
-        case 'TURN_SLIGHT_RIGHT': return ICONS.MANEUVER.TURN_SLIGHT_RIGHT;
-        case 'ROUNDABOUT_LEFT': return ICONS.MANEUVER.ROUNDABOUT_LEFT;
-        case 'ROUNDABOUT_RIGHT': return ICONS.MANEUVER.ROUNDABOUT_RIGHT;
-        case 'STRAIGHT': return ICONS.MANEUVER.STRAIGHT;
-        default: return ICONS.MANEUVER.DEFAULT;
-    }
-}
+// PDF_FILENAME_MAP et ROUTE_LONG_NAME_MAP sont maintenant importées depuis config/routes.js
+// getManeuverIcon est maintenant importée depuis config/icons.js
 
 // ÉLÉMENTS DOM
 let dashboardContainer, dashboardHall, dashboardContentView, btnBackToHall;
@@ -407,24 +299,11 @@ let installTipContainer, installTipCloseBtn;
 let fromPlaceId = null;
 let toPlaceId = null;
 
-const LINE_CATEGORIES = {
-    'majeures': { name: 'Lignes majeures', lines: ['A', 'B', 'C', 'D'], color: '#2563eb' },
-    'express': { name: 'Lignes express', lines: ['e1', 'e2', 'e4', 'e5', 'e6', 'e7'], color: '#dc2626' },
-    'quartier': { name: 'Lignes de quartier', lines: ['K1A', 'K1B', 'K2', 'K3A', 'K3B', 'K4A', 'K4B', 'K5', 'K6'], color: '#059669' },
-    'rabattement': { name: 'Lignes de rabattement', lines: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15'], color: '#7c3aed' },
-    'navettes': { name: 'Navettes', lines: ['N', 'N1'], color: '#f59e0b' }
-};
+// LINE_CATEGORIES est maintenant importée depuis config/routes.js
 
 const DETAIL_SHEET_TRANSITION_MS = 300;
 
-function getCategoryForRoute(routeShortName) {
-    for (const [categoryId, category] of Object.entries(LINE_CATEGORIES)) {
-        if (category.lines.includes(routeShortName)) {
-            return categoryId;
-        }
-    }
-    return 'autres';
-}
+// getCategoryForRoute est maintenant importée depuis config/routes.js
 
 async function initializeApp() {
     dashboardContainer = document.getElementById('dashboard-container');
@@ -638,8 +517,8 @@ function attachRobustBackHandlers() {
         });
     });
 
-    // Ensure condensed nav buttons are clickable
-    document.querySelectorAll('.main-nav-buttons-condensed .nav-button-condensed[data-view]').forEach(btn => {
+    // Ensure service cards are clickable (new IDFM-style design)
+    document.querySelectorAll('.service-card[data-view]').forEach(btn => {
         btn.style.pointerEvents = 'auto';
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -961,7 +840,7 @@ function setupStaticEventListeners() {
     try { apiManager.loadGoogleMapsAPI(); } catch (error) { console.error("Impossible de charger l'API Google:", error); }
     populateTimeSelects();
 
-    document.querySelectorAll('.main-nav-buttons-condensed .nav-button-condensed[data-view]').forEach(button => {
+    document.querySelectorAll('.service-card[data-view]').forEach(button => {
         button.addEventListener('click', (e) => {
             e.preventDefault();
             const view = button.dataset.view;
@@ -3287,100 +3166,10 @@ function renderItineraryDetail(itinerary) {
     return currentDetailRouteLayer;
 }
 
-
-/**
- * Helper pour formater le temps ISO de Google en HH:MM
- */
-function formatGoogleTime(isoTime) {
-    if (!isoTime) return "--:--";
-    try {
-        const date = new Date(isoTime);
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${hours}:${minutes}`;
-    } catch (e) {
-        return "--:--";
-    }
-}
-
-/**
- * Helper pour formater la durée de Google (ex: "1800s") en "30 min"
- */
-function formatGoogleDuration(durationString) {
-    if (!durationString) return "";
-    try {
-        // ✅ V46: Gérer le cas où la durée est déjà 0 ou invalide
-        const seconds = parseInt(durationString.slice(0, -1));
-        if (isNaN(seconds) || seconds < 1) return ""; // Ne pas afficher "0 min"
-        
-        const minutes = Math.round(seconds / 60);
-        if (minutes < 1) return "< 1 min";
-        if (minutes > 60) {
-            const h = Math.floor(minutes / 60);
-            const m = minutes % 60;
-            return m === 0 ? `${h}h` : `${h}h ${m}min`; // V46.1: Précision
-        }
-        return `${minutes} min`;
-    } catch (e) {
-        return "";
-    }
-}
-
-/**
- * NOUVEAU HELPER
- * Helper pour parser la durée de Google (ex: "1800s") en nombre (1800)
- */
-function parseGoogleDuration(durationString) {
-    if (!durationString) return 0;
-    try {
-        return parseInt(durationString.slice(0, -1)) || 0;
-    } catch (e) {
-        return 0;
-    }
-}
-
-const PLACEHOLDER_TIME_VALUES = new Set(['--:--', '~']);
-
-function isMeaningfulTime(value) {
-    if (typeof value !== 'string') return false;
-    const trimmed = value.trim();
-    if (trimmed.length === 0) return false;
-    return !PLACEHOLDER_TIME_VALUES.has(trimmed);
-}
-
-function parseTimeStringToMinutes(value) {
-    if (!isMeaningfulTime(value)) return null;
-    const match = value.match(/^(\d{1,2}):(\d{2})$/);
-    if (!match) return null;
-    const hours = Number.parseInt(match[1], 10);
-    const minutes = Number.parseInt(match[2], 10);
-    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
-    return hours * 60 + minutes;
-}
-
-function formatMinutesToTimeString(totalMinutes) {
-    if (!Number.isFinite(totalMinutes)) return null;
-    const dayMinutes = 24 * 60;
-    while (totalMinutes < 0) totalMinutes += dayMinutes;
-    const minutes = Math.abs(totalMinutes) % 60;
-    const hours = Math.floor(totalMinutes / 60);
-    const normalizedHours = hours;
-    return `${String(normalizedHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-}
-
-function addSecondsToTimeString(timeStr, seconds) {
-    const baseMinutes = parseTimeStringToMinutes(timeStr);
-    if (baseMinutes === null || !Number.isFinite(seconds)) return null;
-    const totalMinutes = baseMinutes + Math.round(seconds / 60);
-    return formatMinutesToTimeString(totalMinutes);
-}
-
-function subtractSecondsFromTimeString(timeStr, seconds) {
-    const baseMinutes = parseTimeStringToMinutes(timeStr);
-    if (baseMinutes === null || !Number.isFinite(seconds)) return null;
-    const totalMinutes = baseMinutes - Math.round(seconds / 60);
-    return formatMinutesToTimeString(totalMinutes);
-}
+// === Fonctions de formatage maintenant importées depuis utils/formatters.js ===
+// formatGoogleTime, formatGoogleDuration, parseGoogleDuration
+// isMeaningfulTime, parseTimeStringToMinutes, formatMinutesToTimeString
+// addSecondsToTimeString, subtractSecondsFromTimeString
 
 
 // --- Fonctions de l'application (logique métier GTFS) ---
