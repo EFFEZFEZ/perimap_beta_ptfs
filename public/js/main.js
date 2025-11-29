@@ -1070,8 +1070,28 @@ function setupNavigationDropdowns() {
     
     if (mobileMenuToggle && mobileMenu) {
         mobileMenuToggle.addEventListener('click', () => {
+            const isOpening = mobileMenu.classList.contains('hidden');
             mobileMenuToggle.classList.toggle('is-active');
             mobileMenu.classList.toggle('hidden');
+            
+            // Bloquer/débloquer le scroll de la page
+            if (isOpening) {
+                document.body.classList.add('mobile-menu-open');
+            } else {
+                document.body.classList.remove('mobile-menu-open');
+            }
+        });
+        
+        // Gestion des catégories dépliables (accordéon)
+        mobileMenu.querySelectorAll('.mobile-menu-category').forEach(category => {
+            category.addEventListener('click', () => {
+                const isExpanded = category.getAttribute('aria-expanded') === 'true';
+                const itemsContainer = category.nextElementSibling;
+                
+                // Toggle l'état
+                category.setAttribute('aria-expanded', !isExpanded);
+                itemsContainer.classList.toggle('is-expanded', !isExpanded);
+            });
         });
     }
     
@@ -1092,6 +1112,7 @@ function setupNavigationDropdowns() {
             // Fermer le menu mobile
             if (mobileMenuToggle) mobileMenuToggle.classList.remove('is-active');
             if (mobileMenu) mobileMenu.classList.add('hidden');
+            document.body.classList.remove('mobile-menu-open');
             handleNavigationAction(action);
         });
     });
@@ -1103,6 +1124,7 @@ function setupNavigationDropdowns() {
             if (!e.target.closest('#mobile-menu') && !e.target.closest('#mobile-menu-toggle')) {
                 mobileMenuToggle.classList.remove('is-active');
                 mobileMenu.classList.add('hidden');
+                document.body.classList.remove('mobile-menu-open');
             }
         }
     });

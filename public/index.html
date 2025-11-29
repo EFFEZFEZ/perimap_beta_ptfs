@@ -173,23 +173,38 @@
         <!-- Menu mobile -->
         <div id="mobile-menu" class="mobile-menu hidden">
             <div class="mobile-menu-section">
-                <h4>Me déplacer</h4>
-                <a href="#" class="mobile-menu-item" data-action="itineraire">Itinéraire</a>
-                <a href="#" class="mobile-menu-item" data-action="horaires">Horaires des lignes</a>
-                <a href="#" class="mobile-menu-item" data-action="info-trafic">État du réseau</a>
-                <a href="#" class="mobile-menu-item" data-action="carte">Carte interactive</a>
-                <a href="/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf" target="_blank" class="mobile-menu-item">Plan du réseau (PDF)</a>
+                <button class="mobile-menu-category" aria-expanded="true">
+                    <span>Me déplacer</span>
+                    <svg class="mobile-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="mobile-menu-items is-expanded">
+                    <a href="#" class="mobile-menu-item" data-action="itineraire">Itinéraire</a>
+                    <a href="#" class="mobile-menu-item" data-action="horaires">Horaires des lignes</a>
+                    <a href="#" class="mobile-menu-item" data-action="info-trafic">État du réseau</a>
+                    <a href="#" class="mobile-menu-item" data-action="carte">Carte interactive</a>
+                    <a href="/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf" target="_blank" class="mobile-menu-item">Plan du réseau (PDF)</a>
+                </div>
             </div>
             <div class="mobile-menu-section">
-                <h4>Tarifs</h4>
-                <a href="#" class="mobile-menu-item" data-action="tarifs-grille">Grille tarifaire</a>
-                <a href="#" class="mobile-menu-item" data-action="tarifs-achat">Où acheter ?</a>
-                <a href="#" class="mobile-menu-item" data-action="tarifs-billettique">Billettique</a>
-                <a href="#" class="mobile-menu-item" data-action="tarifs-amendes">Fraudes & amendes</a>
+                <button class="mobile-menu-category" aria-expanded="false">
+                    <span>Tarifs</span>
+                    <svg class="mobile-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="mobile-menu-items">
+                    <a href="#" class="mobile-menu-item" data-action="tarifs-grille">Grille tarifaire</a>
+                    <a href="#" class="mobile-menu-item" data-action="tarifs-achat">Où acheter ?</a>
+                    <a href="#" class="mobile-menu-item" data-action="tarifs-billettique">Billettique</a>
+                    <a href="#" class="mobile-menu-item" data-action="tarifs-amendes">Fraudes & amendes</a>
+                </div>
             </div>
             <div class="mobile-menu-section">
-                <h4>Services</h4>
-                <span class="mobile-menu-item mobile-menu-item--disabled">En développement <span class="nav-badge">Bientôt</span></span>
+                <button class="mobile-menu-category" aria-expanded="false">
+                    <span>Services</span>
+                    <svg class="mobile-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="mobile-menu-items">
+                    <span class="mobile-menu-item mobile-menu-item--disabled">En développement <span class="nav-badge">Bientôt</span></span>
+                </div>
             </div>
         </div>
     </header>
