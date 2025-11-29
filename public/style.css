@@ -5738,9 +5738,11 @@ body:not(.view-is-locked) {
     justify-content: space-between;
     width: 100%;
     padding: 0.75rem 0.5rem;
-    background: transparent;
+    background: transparent !important;
+    background-color: transparent !important;
     border: none;
-    outline: none; /* Retire le cadre bleu de focus */
+    outline: none !important;
+    box-shadow: none !important;
     font-size: 0.8rem;
     font-weight: 700;
     color: var(--text-secondary);
@@ -5748,14 +5750,19 @@ body:not(.view-is-locked) {
     letter-spacing: 0.05em;
     cursor: pointer;
     transition: color var(--transition-fast);
-    -webkit-tap-highlight-color: transparent; /* Retire le highlight sur mobile */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
 
-.mobile-menu-category:focus-visible {
-    /* Garde un indicateur de focus pour l'accessibilité clavier uniquement */
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
-    border-radius: var(--radius-sm);
+.mobile-menu-category:focus,
+.mobile-menu-category:active,
+.mobile-menu-category:hover {
+    background: transparent !important;
+    background-color: transparent !important;
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 .mobile-menu-category:hover {
