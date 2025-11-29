@@ -1103,21 +1103,25 @@ body.view-is-locked #legal-strip {
     max-width: 600px;
     margin: 0 auto;
     padding: 1.5rem 1rem;
+    position: relative;
+    overflow-x: visible;
 }
 
 /* =========================================
  * DESIGN MINIMALISTE STYLE VITALIS
  * ========================================= */
 
-/* Hero Backdrop avec image de Périgueux */
+/* Hero Backdrop avec image de Périgueux - PLEINE LARGEUR */
 .hero-backdrop {
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
     height: 380px;
     background: url('https://www.voyageavecvue.com/wp-content/uploads/2023/11/perigueux.png') center top / cover no-repeat;
     z-index: 0;
+    pointer-events: none;
 }
 
 .hero-overlay {
@@ -1132,6 +1136,7 @@ body.view-is-locked #legal-strip {
 
 #dashboard-hall {
     position: relative;
+    z-index: 1;
     min-height: 100%;
 }
 
