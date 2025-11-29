@@ -871,11 +871,11 @@ function setupStaticEventListeners() {
         });
     });
 
-    btnShowMap.addEventListener('click', showMapView); 
-    btnBackToDashboardFromMap.addEventListener('click', showDashboardHall);
-    btnBackToDashboardFromResults.addEventListener('click', showDashboardHall); 
-    btnBackToHall.addEventListener('click', showDashboardHall);
-    btnBackToResults.addEventListener('click', hideDetailView);
+    if (btnShowMap) btnShowMap.addEventListener('click', showMapView); 
+    if (btnBackToDashboardFromMap) btnBackToDashboardFromMap.addEventListener('click', showDashboardHall);
+    if (btnBackToDashboardFromResults) btnBackToDashboardFromResults.addEventListener('click', showDashboardHall); 
+    if (btnBackToHall) btnBackToHall.addEventListener('click', showDashboardHall);
+    if (btnBackToResults) btnBackToResults.addEventListener('click', hideDetailView);
     if (itineraryDetailBackdrop) {
         itineraryDetailBackdrop.addEventListener('click', hideDetailView);
     }
@@ -930,7 +930,9 @@ function setupStaticEventListeners() {
         });
     }
 
-    alertBannerClose.addEventListener('click', () => alertBanner.classList.add('hidden'));
+    if (alertBannerClose && alertBanner) {
+        alertBannerClose.addEventListener('click', () => alertBanner.classList.add('hidden'));
+    }
     
     document.querySelectorAll('.tabs .tab').forEach(tab => {
         tab.addEventListener('click', () => {
@@ -943,40 +945,62 @@ function setupStaticEventListeners() {
         });
     });
 
-    document.getElementById('close-instructions').addEventListener('click', () => {
-        document.getElementById('instructions').classList.add('hidden');
-        localStorage.setItem('gtfsInstructionsShown', 'true');
-    });
-    document.getElementById('btn-toggle-filter').addEventListener('click', () => {
-        document.getElementById('route-filter-panel').classList.toggle('hidden');
-    });
-    document.getElementById('close-filter').addEventListener('click', () => {
-        document.getElementById('route-filter-panel').classList.add('hidden');
-    });
-    const panelHandle = document.querySelector('#route-filter-panel .panel-handle');
-    if (panelHandle) {
-        panelHandle.addEventListener('click', () => {
-            document.getElementById('route-filter-panel').classList.add('hidden');
+    const closeInstructionsBtn = document.getElementById('close-instructions');
+    if (closeInstructionsBtn) {
+        closeInstructionsBtn.addEventListener('click', () => {
+            const instructions = document.getElementById('instructions');
+            if (instructions) instructions.classList.add('hidden');
+            localStorage.setItem('gtfsInstructionsShown', 'true');
         });
     }
-    document.getElementById('select-all-routes').addEventListener('click', () => {
-        if (dataManager) {
-            dataManager.routes.forEach(route => {
-                const checkbox = document.getElementById(`route-${route.route_id}`);
-                if (checkbox) checkbox.checked = true;
-            });
-            handleRouteFilterChange();
-        }
-    });
-    document.getElementById('deselect-all-routes').addEventListener('click', () => {
-        if (dataManager) {
-            dataManager.routes.forEach(route => {
-                const checkbox = document.getElementById(`route-${route.route_id}`);
-                if (checkbox) checkbox.checked = false;
-            });
-            handleRouteFilterChange();
-        }
-    });
+    
+    const btnToggleFilter = document.getElementById('btn-toggle-filter');
+    const routeFilterPanel = document.getElementById('route-filter-panel');
+    if (btnToggleFilter && routeFilterPanel) {
+        btnToggleFilter.addEventListener('click', () => {
+            routeFilterPanel.classList.toggle('hidden');
+        });
+    }
+    
+    const closeFilterBtn = document.getElementById('close-filter');
+    if (closeFilterBtn && routeFilterPanel) {
+        closeFilterBtn.addEventListener('click', () => {
+            routeFilterPanel.classList.add('hidden');
+        });
+    }
+    
+    const panelHandle = document.querySelector('#route-filter-panel .panel-handle');
+    if (panelHandle && routeFilterPanel) {
+        panelHandle.addEventListener('click', () => {
+            routeFilterPanel.classList.add('hidden');
+        });
+    }
+    
+    const selectAllRoutesBtn = document.getElementById('select-all-routes');
+    if (selectAllRoutesBtn) {
+        selectAllRoutesBtn.addEventListener('click', () => {
+            if (dataManager) {
+                dataManager.routes.forEach(route => {
+                    const checkbox = document.getElementById(`route-${route.route_id}`);
+                    if (checkbox) checkbox.checked = true;
+                });
+                handleRouteFilterChange();
+            }
+        });
+    }
+    
+    const deselectAllRoutesBtn = document.getElementById('deselect-all-routes');
+    if (deselectAllRoutesBtn) {
+        deselectAllRoutesBtn.addEventListener('click', () => {
+            if (dataManager) {
+                dataManager.routes.forEach(route => {
+                    const checkbox = document.getElementById(`route-${route.route_id}`);
+                    if (checkbox) checkbox.checked = false;
+                });
+                handleRouteFilterChange();
+            }
+        });
+    }
 
     if (installTipCloseBtn) {
         installTipCloseBtn.addEventListener('click', hideInstallTip);
