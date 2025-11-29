@@ -61,6 +61,32 @@
     --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* =========================================
+ * OPTIMISATIONS PERFORMANCE CSS
+ * ========================================= */
+/* GPU acceleration pour les éléments animés */
+.card, .btn, .nav-dropdown-menu, .bottom-sheet, .modal {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+}
+
+/* Optimiser le rendu des sections hors écran */
+#map-view, #itinerary-view, #detail-panel, .tarifs-container {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 500px;
+}
+
+/* Réduire le reflow sur les éléments fixes */
+#main-header {
+    contain: layout style;
+}
+
+/* Optimiser le scroll */
+.results-list, .bottom-sheet-content, .tarifs-card-body {
+    contain: content;
+    overflow-anchor: none;
+}
+
 /* Dark theme variables - applied by toggling `body.dark-theme` */
 body.dark-theme {
     --bg-main: #0b1220;

@@ -9,12 +9,17 @@ import { StopTimesStore } from './stopTimesStore.js';
  */
 
 const GTFS_CACHE_KEY = 'peribus_gtfs_cache_v2';
-const GTFS_CACHE_VERSION = '2.9.0';  // Fix: hubs respectent le sens des trips (départ→hub, hub→arrivée)
-const GTFS_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 heures
+const GTFS_CACHE_VERSION = '2.9.1';  // Optimisation: chargement parallèle et cache amélioré
+const GTFS_CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 heures (augmenté pour moins de rechargements)
 const GTFS_CACHE_META_KEY = 'peribus_gtfs_cache_meta';
 const GTFS_CACHE_DB = 'peribus_gtfs_cache_db';
 const GTFS_CACHE_STORE = 'datasets';
 const REMOTE_GTFS_BASE_URL = 'https://raw.githubusercontent.com/EFFEZFEZ/p-rimap-sans-api-/main/public/data/gtfs';
+
+// Performance: requestIdleCallback polyfill pour navigateurs anciens
+const scheduleIdleTask = typeof requestIdleCallback !== 'undefined' 
+    ? requestIdleCallback 
+    : (fn) => setTimeout(fn, 1);
 export class DataManager {
     constructor() {
         this.routes = [];
@@ -57,30 +62,38 @@ export class DataManager {
     }
 
     async loadAllData(onProgress) {
+        const startTime = performance.now();
         try {
+            // Tenter de restaurer depuis le cache en premier (instantané)
             const cached = await this.restoreCache();
             if (cached) {
-                console.log('⚡ GTFS cache utilisé, données prêtes instantanément.');
+                const cacheTime = performance.now() - startTime;
+                console.log(`⚡ GTFS cache utilisé en ${cacheTime.toFixed(0)}ms`);
                 this.applyLoadedData(cached);
                 this.isLoaded = true;
                 return true;
             }
 
+            // Chargement via Worker (plus rapide, ne bloque pas le thread principal)
             if (typeof Worker !== 'undefined') {
                 try {
                     const workerPayload = await this.loadViaWorker(onProgress);
                     this.applyLoadedData(workerPayload);
-                    await this.saveCache(workerPayload);
+                    // Sauvegarder le cache en arrière-plan (non-bloquant)
+                    scheduleIdleTask(() => this.saveCache(workerPayload));
                     this.isLoaded = true;
+                    const totalTime = performance.now() - startTime;
+                    console.log(`✅ GTFS chargé via Worker en ${totalTime.toFixed(0)}ms`);
                     return true;
                 } catch (workerError) {
                     console.warn('GTFS worker indisponible, fallback inline.', workerError);
                 }
             }
 
+            // Fallback: chargement inline
             const freshPayload = await this.loadInline(onProgress);
             this.applyLoadedData(freshPayload);
-            await this.saveCache(freshPayload);
+            scheduleIdleTask(() => this.saveCache(freshPayload));
             this.isLoaded = true;
         } catch (error) {
             console.error('❌ Erreur fatale:', error);
@@ -368,27 +381,33 @@ export class DataManager {
 
     async restoreCache() {
         try {
+            // Vérification rapide du meta en localStorage (synchrone)
             const meta = this.getCacheMeta();
             if (!meta) return null;
+            
+            // Vérification version et expiration avant d'accéder à IndexedDB
             if (meta.version !== this.cacheVersion) {
                 console.info('GTFS cache version mismatch, purge.');
-                await this.clearCacheStorage();
+                // Purge en arrière-plan
+                scheduleIdleTask(() => this.clearCacheStorage());
                 return null;
             }
             if ((Date.now() - meta.timestamp) > this.cacheTtlMs) {
                 console.info('GTFS cache expiré, purge.');
-                await this.clearCacheStorage();
+                scheduleIdleTask(() => this.clearCacheStorage());
                 return null;
             }
+            
+            // Cache valide, lecture depuis IndexedDB
             const payload = await this.readCacheFromIndexedDb();
             if (!payload) {
-                await this.clearCacheStorage();
+                scheduleIdleTask(() => this.clearCacheStorage());
                 return null;
             }
             return payload;
         } catch (error) {
             console.warn('restoreCache failed', error);
-            await this.clearCacheStorage();
+            scheduleIdleTask(() => this.clearCacheStorage());
             return null;
         }
     }

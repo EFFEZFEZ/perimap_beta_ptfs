@@ -1,24 +1,30 @@
 /**
- * Service Worker - Stratégie "Stale-While-Revalidate"
+ * Service Worker - Stratégie optimisée pour performance
  * 
- * FONCTIONNEMENT:
- * 1. Sert immédiatement depuis le cache (rapide)
- * 2. EN PARALLÈLE, récupère la nouvelle version du réseau
- * 3. Met à jour le cache avec la nouvelle version
- * 4. Au prochain chargement, l'utilisateur a automatiquement la dernière version
+ * STRATÉGIES:
+ * - Cache-First pour assets statiques (CSS, JS, images)
+ * - Stale-While-Revalidate pour données GTFS
+ * - Network-First pour APIs externes
  * 
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v49'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT
+const CACHE_VERSION = 'v51'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
+const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
+const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
 
-// Fichiers essentiels pour le mode hors-ligne
-const OFFLINE_ASSETS = [
+// Assets critiques à pré-cacher (chargés immédiatement)
+const CRITICAL_ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/js/app.js',
+  '/manifest.json'
+];
+
+// Assets secondaires (chargés en arrière-plan)
+const SECONDARY_ASSETS = [
   '/js/main.js',
   '/js/dataManager.js',
   '/js/mapRenderer.js',
@@ -34,128 +40,158 @@ const OFFLINE_ASSETS = [
   '/js/uiManager.js',
   '/js/viewLoader.js',
   '/js/config.js',
-  // Modules refactorisés
   '/js/config/icons.js',
   '/js/config/routes.js',
   '/js/utils/formatters.js',
   '/js/utils/geo.js',
   '/js/utils/polyline.js',
   '/js/utils/logger.js',
+  '/js/utils/performance.js',
+  '/js/utils/gtfsProcessor.js',
+  '/js/utils/theme.js',
   '/js/itinerary/ranking.js',
   '/js/ui/resultsRenderer.js',
   '/js/ui/detailRenderer.js',
   '/js/ui/popoverManager.js',
+  '/js/ui/trafficInfo.js',
   '/js/controllers/bottomSheetController.js',
   '/js/controllers/viewController.js',
   '/js/state/appState.js',
   '/js/modules/index.js',
+  '/js/search/googleRoutesProcessor.js',
+  '/js/workers/gtfsWorker.js',
+  '/js/workers/routerWorker.js',
   '/css/crowdsourcing.css',
-  '/manifest.json'
+  '/views/hall.html',
+  '/views/horaires.html',
+  '/views/carte.html',
+  '/views/itineraire.html',
+  '/views/trafic.html'
 ];
 
-// Fichiers à toujours récupérer du réseau (jamais en cache)
-const NETWORK_ONLY = [
-  '/api/',
-  'google',
-  'googleapis'
-];
+// Patterns pour Network-Only
+const NETWORK_ONLY = ['/api/', 'google', 'googleapis', 'ibb.co'];
+
+// Patterns pour données GTFS (cache long terme)
+const GTFS_PATTERNS = ['/data/gtfs/', '.json', '.txt'];
 
 /**
- * Installation: Pré-cache les assets essentiels
- * skipWaiting() force l'activation immédiate
+ * Installation: Pré-cache les assets critiques, puis secondaires
  */
 self.addEventListener('install', (event) => {
   console.log('[SW] Installation version', CACHE_VERSION);
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(OFFLINE_ASSETS))
-      .then(() => self.skipWaiting()) // ✅ Active immédiatement le nouveau SW
-      .catch((error) => {
-        console.warn('[SW] Erreur installation cache:', error);
-      })
+    (async () => {
+      // Cache critique en priorité
+      const staticCache = await caches.open(STATIC_CACHE);
+      await staticCache.addAll(CRITICAL_ASSETS);
+      console.log('[SW] Assets critiques cachés');
+      
+      // Cache secondaire en arrière-plan (non-bloquant)
+      staticCache.addAll(SECONDARY_ASSETS).catch(err => {
+        console.warn('[SW] Certains assets secondaires non cachés:', err);
+      });
+      
+      await self.skipWaiting();
+    })()
   );
 });
 
 /**
- * Activation: Nettoie les anciens caches et prend le contrôle
- * clients.claim() applique le nouveau SW à tous les onglets ouverts
+ * Activation: Nettoie les anciens caches
  */
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activation version', CACHE_VERSION);
   event.waitUntil(
-    caches.keys()
-      .then((keys) => {
-        return Promise.all(
-          keys.map((key) => {
-            // Supprime TOUS les anciens caches
-            if (key !== CACHE_NAME) {
-              console.log('[SW] Suppression ancien cache:', key);
-              return caches.delete(key);
-            }
-            return null;
-          })
-        );
-      })
-      .then(() => self.clients.claim()) // ✅ Prend le contrôle immédiatement
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.map(key => {
+          if (!key.includes(CACHE_VERSION)) {
+            console.log('[SW] Suppression cache obsolète:', key);
+            return caches.delete(key);
+          }
+        })
+      );
+      await self.clients.claim();
+    })()
   );
 });
 
 /**
- * Fetch: Stratégie "Stale-While-Revalidate"
- * - Retourne le cache immédiatement (si disponible)
- * - Met à jour le cache en arrière-plan avec la version réseau
+ * Fetch: Stratégies différenciées selon le type de ressource
  */
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Ignorer les requêtes non-GET
+  // Ignorer non-GET
   if (request.method !== 'GET') return;
   
-  // Ignorer les requêtes externes
-  if (url.origin !== self.location.origin) return;
-  
-  // Network-only pour les APIs et services externes
-  if (NETWORK_ONLY.some(pattern => request.url.includes(pattern))) {
-    event.respondWith(fetch(request));
+  // Network-only pour APIs externes
+  if (NETWORK_ONLY.some(p => request.url.includes(p))) {
+    event.respondWith(fetch(request).catch(() => new Response('', { status: 503 })));
     return;
   }
-
-  // Stratégie Stale-While-Revalidate
-  event.respondWith(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.match(request).then((cachedResponse) => {
-        // Fetch réseau en arrière-plan (toujours, même si cache existe)
-        const networkFetch = fetch(request)
-          .then((networkResponse) => {
-            // Mettre à jour le cache avec la nouvelle version
-            if (networkResponse.ok) {
-              cache.put(request, networkResponse.clone());
-            }
-            return networkResponse;
-          })
-          .catch((err) => {
-            console.warn('[SW] Erreur réseau pour:', request.url);
-            return null;
-          });
-
-        // Retourner le cache immédiatement, ou attendre le réseau
-        return cachedResponse || networkFetch || caches.match('/index.html');
-      });
-    })
-  );
+  
+  // Cache-First pour assets statiques (JS, CSS, HTML)
+  if (url.origin === self.location.origin && 
+      (request.url.endsWith('.js') || request.url.endsWith('.css') || request.url.endsWith('.html'))) {
+    event.respondWith(cacheFirst(request, STATIC_CACHE));
+    return;
+  }
+  
+  // Stale-While-Revalidate pour données GTFS
+  if (GTFS_PATTERNS.some(p => request.url.includes(p))) {
+    event.respondWith(staleWhileRevalidate(request, DATA_CACHE));
+    return;
+  }
+  
+  // Par défaut: Stale-While-Revalidate
+  event.respondWith(staleWhileRevalidate(request, CACHE_NAME));
 });
+
+/**
+ * Cache-First: Retourne le cache, sinon réseau
+ */
+async function cacheFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  
+  try {
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch {
+    return caches.match('/index.html');
+  }
+}
+
+/**
+ * Stale-While-Revalidate: Retourne le cache, met à jour en arrière-plan
+ */
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  
+  // Revalidation en arrière-plan
+  const networkPromise = fetch(request)
+    .then(response => {
+      if (response.ok) cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => null);
+  
+  return cached || networkPromise || caches.match('/index.html');
+}
 
 /**
  * Message: Permet de forcer une mise à jour depuis l'app
  */
 self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') {
-    self.skipWaiting();
-  }
+  if (event.data === 'skipWaiting') self.skipWaiting();
   if (event.data === 'clearCache') {
-    caches.keys().then((keys) => {
-      keys.forEach((key) => caches.delete(key));
-    });
+    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
   }
 });
