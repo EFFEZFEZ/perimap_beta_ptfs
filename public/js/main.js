@@ -1064,16 +1064,87 @@ function setupStaticEventListeners() {
 
 // Nouvelle fonction pour gérer les menus dropdown
 function setupNavigationDropdowns() {
-    // Mobile menu toggle
+    // Mobile menu drawer IDFM
     const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
     const mobileMenu = document.getElementById('mobile-menu');
+    const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+    const mobileMenuClose = document.getElementById('mobile-menu-close');
     
-    if (mobileMenuToggle && mobileMenu) {
+    // Fonction pour ouvrir le menu
+    function openMobileMenu() {
+        if (mobileMenu && mobileMenuOverlay) {
+            mobileMenu.classList.remove('hidden');
+            mobileMenuOverlay.classList.remove('hidden');
+            // Attendre un tick pour déclencher les animations
+            requestAnimationFrame(() => {
+                mobileMenu.classList.add('is-active');
+                mobileMenuOverlay.classList.add('is-active');
+                if (mobileMenuToggle) mobileMenuToggle.classList.add('is-active');
+            });
+            // Empêcher le scroll du body
+            document.body.style.overflow = 'hidden';
+        }
+    }
+    
+    // Fonction pour fermer le menu
+    function closeMobileMenu() {
+        if (mobileMenu && mobileMenuOverlay) {
+            mobileMenu.classList.remove('is-active');
+            mobileMenuOverlay.classList.remove('is-active');
+            if (mobileMenuToggle) mobileMenuToggle.classList.remove('is-active');
+            // Restaurer le scroll du body
+            document.body.style.overflow = '';
+            // Attendre la fin de l'animation pour cacher
+            setTimeout(() => {
+                mobileMenu.classList.add('hidden');
+                mobileMenuOverlay.classList.add('hidden');
+            }, 350);
+        }
+    }
+    
+    // Toggle du menu burger
+    if (mobileMenuToggle) {
         mobileMenuToggle.addEventListener('click', () => {
-            mobileMenuToggle.classList.toggle('is-active');
-            mobileMenu.classList.toggle('hidden');
+            if (mobileMenu && mobileMenu.classList.contains('is-active')) {
+                closeMobileMenu();
+            } else {
+                openMobileMenu();
+            }
         });
     }
+    
+    // Bouton fermer
+    if (mobileMenuClose) {
+        mobileMenuClose.addEventListener('click', closeMobileMenu);
+    }
+    
+    // Fermer en cliquant sur l'overlay
+    if (mobileMenuOverlay) {
+        mobileMenuOverlay.addEventListener('click', closeMobileMenu);
+    }
+    
+    // Gestion des accordéons
+    document.querySelectorAll('.mobile-menu-accordion-trigger').forEach(trigger => {
+        trigger.addEventListener('click', () => {
+            const accordionId = trigger.dataset.accordion;
+            const content = document.getElementById(`accordion-${accordionId}`);
+            const isOpen = trigger.classList.contains('is-open');
+            
+            // Fermer tous les autres accordéons
+            document.querySelectorAll('.mobile-menu-accordion-trigger').forEach(t => {
+                t.classList.remove('is-open');
+            });
+            document.querySelectorAll('.mobile-menu-accordion-content').forEach(c => {
+                c.classList.remove('is-open');
+            });
+            
+            // Ouvrir celui-ci si il était fermé
+            if (!isOpen && content) {
+                trigger.classList.add('is-open');
+                content.classList.add('is-open');
+            }
+        });
+    });
     
     // Gestion des actions de navigation (desktop dropdown items)
     document.querySelectorAll('.nav-dropdown-item[data-action]').forEach(item => {
@@ -1090,21 +1161,12 @@ function setupNavigationDropdowns() {
             e.preventDefault();
             const action = item.dataset.action;
             // Fermer le menu mobile
-            if (mobileMenuToggle) mobileMenuToggle.classList.remove('is-active');
-            if (mobileMenu) mobileMenu.classList.add('hidden');
-            handleNavigationAction(action);
+            closeMobileMenu();
+            // Petit délai pour l'animation
+            setTimeout(() => {
+                handleNavigationAction(action);
+            }, 100);
         });
-    });
-    
-    // Fermer les menus au clic ailleurs
-    document.addEventListener('click', (e) => {
-        // Fermer le menu mobile si on clique ailleurs
-        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
-            if (!e.target.closest('#mobile-menu') && !e.target.closest('#mobile-menu-toggle')) {
-                mobileMenuToggle.classList.remove('is-active');
-                mobileMenu.classList.add('hidden');
-            }
-        }
     });
 }
 
