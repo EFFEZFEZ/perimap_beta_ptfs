@@ -3,6 +3,8 @@
  * Logique de déduplication, tri et filtrage pour les itinéraires.
  */
 
+import { parseTimeStringToMinutes } from '../utils/formatters.js';
+
 /**
  * Déduplique les itinéraires par structure de trajet (même séquence bus/arrêts).
  * En mode "partir", garde le premier départ.
@@ -77,14 +79,16 @@ function normalizeStopName(name) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]/g, '')
-    .slice(0, 20); // Limiter pour éviter les variations mineures
+    .slice(0, 20);
 }
 
+/**
+ * Parse une chaîne de temps en minutes (wrapper pour compatibilité)
+ */
 function parseTimeToMinutes(timeStr) {
   if (!timeStr || typeof timeStr !== 'string') return Infinity;
-  const m = timeStr.match(/(\d{1,2}):(\d{2})/);
-  if (!m) return Infinity;
-  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  const result = parseTimeStringToMinutes(timeStr);
+  return result !== null ? result : Infinity;
 }
 
 /**

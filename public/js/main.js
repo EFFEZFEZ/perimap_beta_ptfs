@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
 });
 
-registerServiceWorker();
+// Service Worker est enregistré dans app.js
 
 // PDF_FILENAME_MAP et ROUTE_LONG_NAME_MAP sont maintenant importées depuis config/routes.js
 // getManeuverIcon est maintenant importée depuis config/icons.js
@@ -591,17 +591,6 @@ function animateValue(obj, start, end, duration, suffix = "") {
         }
     };
     window.requestAnimationFrame(step);
-}
-
-function registerServiceWorker() {
-    if (!('serviceWorker' in navigator)) {
-        return;
-    }
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js').catch((error) => {
-            console.warn('Service worker registration failed:', error);
-        });
-    });
 }
 
 function populateTimeSelects() {

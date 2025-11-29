@@ -6,10 +6,10 @@
  */
 
 // === État ===
-export { AppState } from './state/appState.js';
+export { AppState } from '../state/appState.js';
 
 // === Configuration ===
-export { ICONS, getManeuverIcon, getAlertBannerIcon } from './config/icons.js';
+export { ICONS, getManeuverIcon, getAlertBannerIcon } from '../config/icons.js';
 export { 
     LINE_CATEGORIES, 
     PDF_FILENAME_MAP, 
@@ -19,7 +19,7 @@ export {
     getPdfPath,
     getRouteLongName,
     isDisplayableInTraffic
-} from './config/routes.js';
+} from '../config/routes.js';
 
 // === Utilitaires ===
 export {
@@ -40,7 +40,7 @@ export {
     formatSecondsToClockString,
     formatDateShort,
     formatDateLabel
-} from './utils/formatters.js';
+} from '../utils/formatters.js';
 
 export {
     decodePolyline,
@@ -50,7 +50,18 @@ export {
     isWaitStep,
     extractStepPolylines,
     getLeafletStyleForStep
-} from './utils/polyline.js';
+} from '../utils/polyline.js';
+
+// === Logger ===
+export {
+    debug,
+    info,
+    warn,
+    error,
+    timing,
+    setDebug,
+    isDebug
+} from '../utils/logger.js';
 
 // === Controllers ===
 export {
@@ -65,7 +76,7 @@ export {
     initBottomSheetControls,
     resetBottomSheetState,
     setupDetailPanelScrollHandlers
-} from './controllers/bottomSheetController.js';
+} from '../controllers/bottomSheetController.js';
 
 export {
     init as initViewController,
@@ -79,7 +90,7 @@ export {
     resetDetailViewState,
     isMobileViewport,
     isViewActive
-} from './controllers/viewController.js';
+} from '../controllers/viewController.js';
 
 // === UI ===
 export {
@@ -91,7 +102,7 @@ export {
     updatePopoverPosition,
     createIntermediateStopsHtml,
     cleanup as cleanupPopover
-} from './ui/popoverManager.js';
+} from '../ui/popoverManager.js';
 
 export {
     STOP_ROLE_PRIORITY,
@@ -100,7 +111,7 @@ export {
     getManeuverIcon as getDetailManeuverIcon,
     renderItineraryStepsHTML,
     renderItinerarySummaryHTML
-} from './ui/detailRenderer.js';
+} from '../ui/detailRenderer.js';
 
 // === Constantes partagées ===
 export const DETAIL_SHEET_TRANSITION_MS = 300;

@@ -10,7 +10,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v48'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT
+const CACHE_VERSION = 'v49'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 
 // Fichiers essentiels pour le mode hors-ligne
@@ -18,6 +18,7 @@ const OFFLINE_ASSETS = [
   '/',
   '/index.html',
   '/style.css',
+  '/js/app.js',
   '/js/main.js',
   '/js/dataManager.js',
   '/js/mapRenderer.js',
@@ -33,13 +34,13 @@ const OFFLINE_ASSETS = [
   '/js/uiManager.js',
   '/js/viewLoader.js',
   '/js/config.js',
-  '/js/constants.js',
   // Modules refactorisés
   '/js/config/icons.js',
   '/js/config/routes.js',
   '/js/utils/formatters.js',
   '/js/utils/geo.js',
   '/js/utils/polyline.js',
+  '/js/utils/logger.js',
   '/js/itinerary/ranking.js',
   '/js/ui/resultsRenderer.js',
   '/js/ui/detailRenderer.js',
