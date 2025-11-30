@@ -1378,13 +1378,34 @@ async function executeItinerarySearch(source, sourceElements) {
     try {
         let fromCoords = null;
         let toCoords = null;
+        let fromGtfsStops = null; // V49: Arrêts GTFS forcés pour les pôles multimodaux (tableau de stop_id)
+        let toGtfsStops = null;
+        
         try {
-            fromCoords = await apiManager.getPlaceCoords(fromPlaceId);
+            const fromResult = await apiManager.getPlaceCoords(fromPlaceId);
+            if (fromResult) {
+                fromCoords = { lat: fromResult.lat, lng: fromResult.lng };
+                // V49: Récupérer les arrêts du pôle si c'est un alias multimodal
+                if (fromResult.isMultiStop && fromResult.gtfsStops) {
+                    // Extraire uniquement les stopId pour le router
+                    fromGtfsStops = fromResult.gtfsStops.map(s => s.stopId);
+                    console.log(`🎓 Pôle multimodal origine: ${fromGtfsStops.length} arrêts -`, fromGtfsStops);
+                }
+            }
         } catch (e) {
             console.warn('Impossible de récupérer les coordonnées départ (place_id):', e);
         }
         try {
-            toCoords = await apiManager.getPlaceCoords(toPlaceId);
+            const toResult = await apiManager.getPlaceCoords(toPlaceId);
+            if (toResult) {
+                toCoords = { lat: toResult.lat, lng: toResult.lng };
+                // V49: Récupérer les arrêts du pôle si c'est un alias multimodal
+                if (toResult.isMultiStop && toResult.gtfsStops) {
+                    // Extraire uniquement les stopId pour le router
+                    toGtfsStops = toResult.gtfsStops.map(s => s.stopId);
+                    console.log(`🎓 Pôle multimodal destination: ${toGtfsStops.length} arrêts -`, toGtfsStops);
+                }
+            }
         } catch (e) {
             console.warn('Impossible de récupérer les coordonnées arrivée (place_id):', e);
         }
@@ -1401,7 +1422,12 @@ async function executeItinerarySearch(source, sourceElements) {
                         fromCoords,
                         toCoords,
                         searchTime,
-                        labels: { fromLabel, toLabel }
+                        labels: { fromLabel, toLabel },
+                        // V49: Passer les arrêts des pôles multimodaux
+                        forcedStops: {
+                            from: fromGtfsStops,
+                            to: toGtfsStops
+                        }
                     });
                 } catch (error) {
                     console.warn('Router worker indisponible, fallback main thread.', error);
@@ -1411,7 +1437,14 @@ async function executeItinerarySearch(source, sourceElements) {
 
             if ((!hybridItins || !hybridItins.length) && routerContext) {
                 try {
-                    hybridItins = await routerContext.computeHybridItinerary(fromCoords, toCoords, searchTime, { fromLabel, toLabel });
+                    hybridItins = await routerContext.computeHybridItinerary(
+                        fromCoords, 
+                        toCoords, 
+                        searchTime, 
+                        { fromLabel, toLabel },
+                        // V49: Passer les arrêts des pôles multimodaux
+                        { from: fromGtfsStops, to: toGtfsStops }
+                    );
                 } catch (e) {
                     console.warn('Erreur lors de la construction hybride :', e);
                 }

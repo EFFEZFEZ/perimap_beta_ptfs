@@ -1,4 +1,4 @@
-const GTFS_TRIPS_CACHE_TTL_MS = 60 * 1000; // 60s cache
+﻿const GTFS_TRIPS_CACHE_TTL_MS = 60 * 1000; // 60s cache
 
 export const HYBRID_ROUTING_CONFIG = Object.freeze({
     STOP_SEARCH_RADIUS_M: 600,         // Augmenté de 500 à 600 pour inclure plus d'arrêts
@@ -25,7 +25,7 @@ export function createRouterContext({ dataManager, apiManager, icons }) {
         getCachedTripsBetweenStopsInternal({ dataManager, gtfsTripsCache }, startIds, endIds, reqDate, windowStartSec, windowEndSec);
 
     return {
-        computeHybridItinerary: (fromCoordsRaw, toCoordsRaw, searchTime, labels = {}) =>
+        computeHybridItinerary: (fromCoordsRaw, toCoordsRaw, searchTime, labels = {}, forcedStops = {}) =>
             computeHybridItineraryInternal({
                 dataManager,
                 icons,
@@ -34,7 +34,7 @@ export function createRouterContext({ dataManager, apiManager, icons }) {
                 getCachedTripsBetweenStops,
                 encodePolyline,
                 computeWalkDurationSeconds
-            }, fromCoordsRaw, toCoordsRaw, searchTime, labels)
+            }, fromCoordsRaw, toCoordsRaw, searchTime, labels, forcedStops)
     };
 }
 
@@ -183,7 +183,7 @@ function getCachedTripsBetweenStopsInternal(context, startIds, endIds, reqDate, 
     }
 }
 
-async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRaw, searchTime, labels = {}) {
+async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRaw, searchTime, labels = {}, forcedStops = {}) {
     // Réinitialiser les flags de debug pour chaque nouvelle recherche
     globalThis._transferHubsLogged = false;
     globalThis._hubDebugLogged = false;
@@ -198,6 +198,10 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
     const getCachedTripsBetweenStops = context.getCachedTripsBetweenStops;
     const encodePolyline = context.encodePolyline;
     const computeWalkDurationSeconds = context.computeWalkDurationSeconds;
+    
+    // V49: Arrêts forcés pour pôles multimodaux (ex: Campus = Campus + Grenadière)
+    const forcedOriginStops = forcedStops?.from || null;
+    const forcedDestinationStops = forcedStops?.to || null;
 
     if (!dataManager || !dataManager.isLoaded) return [];
 
@@ -273,14 +277,30 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         return fallback;
     };
 
-    const collectStopsWithinRadius = (point, label, nameHint) => {
+    const collectStopsWithinRadius = (point, label, nameHint, forcedStopIds = null) => {
         const candidates = [];
         const seenIds = new Set();
-        const addCandidate = (stop, distance) => {
+        const addCandidate = (stop, distance, isForced = false) => {
             if (!stop || seenIds.has(stop.stop_id)) return;
             seenIds.add(stop.stop_id);
-            candidates.push({ stop, distance: Number.isFinite(distance) ? distance : null });
+            candidates.push({ stop, distance: Number.isFinite(distance) ? distance : null, isForced });
         };
+
+        // V49: Ajouter d'abord les arrêts forcés (pôles multimodaux) avec priorité maximale
+        if (forcedStopIds && Array.isArray(forcedStopIds)) {
+            for (const stopId of forcedStopIds) {
+                const stop = dataManager.getStop(stopId);
+                if (stop) {
+                    const lat = parseFloat(stop.stop_lat);
+                    const lon = parseFloat(stop.stop_lon);
+                    const dist = point && !Number.isNaN(lat) && !Number.isNaN(lon) 
+                        ? dataManager.calculateDistance(point.lat, point.lon, lat, lon)
+                        : 0;
+                    addCandidate(stop, dist, true);
+                    console.log(`📍 Pôle multimodal: arrêt forcé ${stop.stop_name || stopId} ajouté`);
+                }
+            }
+        }
 
         // Collecter TOUS les arrêts dans le rayon (pas de limite prématurée)
         if (point) {
@@ -315,8 +335,12 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
             return [];
         }
 
-        // Trier par: 1) Quays (location_type != '1') en premier, 2) distance
+        // Trier par: 1) Arrêts forcés (pôles multimodaux), 2) Quays, 3) distance
         candidates.sort((a, b) => {
+            // V49: Prioriser les arrêts forcés (pôles multimodaux)
+            if (a.isForced !== b.isForced) {
+                return a.isForced ? -1 : 1;  // Forced stops first
+            }
             // Prioriser les Quays (arrêts avec horaires) sur les StopPlaces (stations)
             const isQuayA = a.stop.location_type !== '1';
             const isQuayB = b.stop.location_type !== '1';
@@ -361,8 +385,9 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         }
     };
 
-    const originCandidates = collectStopsWithinRadius(origin, 'l’origine', labels?.fromLabel || labels?.fromName);
-    const destCandidates = collectStopsWithinRadius(destination, 'la destination', labels?.toLabel || labels?.toName);
+    // V49: Passer les arrêts forcés des pôles multimodaux
+    const originCandidates = collectStopsWithinRadius(origin, 'l’origine', labels?.fromLabel || labels?.fromName, forcedOriginStops);
+    const destCandidates = collectStopsWithinRadius(destination, 'la destination', labels?.toLabel || labels?.toName, forcedDestinationStops);
     if (!originCandidates.length || !destCandidates.length) return [];
 
     const reqDate = buildRequestedDate();
@@ -1253,3 +1278,4 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
 
     return itineraries;
 }
+

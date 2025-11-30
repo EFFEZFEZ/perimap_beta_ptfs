@@ -27,8 +27,9 @@ self.addEventListener('message', async (event) => {
             return;
         }
         try {
-            const { fromCoords, toCoords, searchTime, labels } = payload || {};
-            const itineraries = await routerContext.computeHybridItinerary(fromCoords, toCoords, searchTime, labels);
+            // V49: Accepter les arrêts forcés des pôles multimodaux
+            const { fromCoords, toCoords, searchTime, labels, forcedStops } = payload || {};
+            const itineraries = await routerContext.computeHybridItinerary(fromCoords, toCoords, searchTime, labels, forcedStops || {});
             self.postMessage({ type: 'result', requestId, payload: itineraries });
         } catch (error) {
             console.error('routerWorker compute error', error);

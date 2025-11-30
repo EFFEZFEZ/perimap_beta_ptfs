@@ -49,15 +49,25 @@ export class ApiManager {
         this.googleAuthFailureMessage = '';
         this.clientOrigin = (typeof window !== 'undefined' && window.location) ? window.location.origin : '';
         
-        // ✅ V48: Alias de lieux - Fusion d'arrêts équivalents
+        // ✅ V49: Alias de lieux - Fusion d'arrêts équivalents (pôles multimodaux)
         // Quand l'utilisateur cherche un de ces termes, on lui propose le lieu canonique
+        // ET le routeur considère TOUS les arrêts du pôle comme équivalents
         this.placeAliases = {
-            // Campus universitaire de Périgueux
+            // Campus universitaire de Périgueux - PÔLE MULTIMODAL
+            // Regroupe l'arrêt "Campus" (K1A) et "Pôle Universitaire Grenadière" (K1B)
             'campus': {
-                canonicalName: 'Pôle Universitaire Grenadière, Périgueux',
-                aliases: ['campus', 'campus périgueux', 'fac', 'fac périgueux', 'université', 'université périgueux', 'iut', 'iut périgueux', 'grenadière', 'pole universitaire', 'pôle universitaire'],
-                coordinates: { lat: 45.194477, lng: 0.720215 },
-                description: 'Campus universitaire (Pôle Grenadière)'
+                canonicalName: 'Campus Universitaire, Périgueux',
+                aliases: ['campus', 'campus périgueux', 'fac', 'fac périgueux', 'université', 'université périgueux', 'iut', 'iut périgueux', 'grenadière', 'pole universitaire', 'pôle universitaire', 'la grenadière'],
+                // Coordonnées centrales (entre les deux arrêts)
+                coordinates: { lat: 45.1958, lng: 0.7192 },
+                description: 'Campus universitaire (arrêts Campus + Pôle Grenadière)',
+                // ✅ V49: Liste des arrêts GTFS qui desservent ce pôle
+                gtfsStops: [
+                    { stopId: 'MOBIITI:StopPlace:77309', name: 'Campus', lat: 45.197113, lng: 0.718130 },
+                    { stopId: 'MOBIITI:StopPlace:77314', name: 'Pôle Universitaire Grenadière', lat: 45.194477, lng: 0.720215 }
+                ],
+                // Rayon de recherche autour du centre (en mètres)
+                searchRadius: 400
             }
         };
     }
@@ -421,18 +431,25 @@ export class ApiManager {
 
     /**
      * Récupère les coordonnées {lat,lng} pour un place_id en utilisant le Geocoder
-     * ✅ V48: Gère aussi les alias (ALIAS_CAMPUS, etc.)
+     * ✅ V49: Gère les alias avec pôles multimodaux (retourne aussi les arrêts GTFS)
      * @param {string} placeId
-     * @returns {Promise<{lat:number,lng:number}|null>}
+     * @returns {Promise<{lat:number, lng:number, gtfsStops?:Array, searchRadius?:number}|null>}
      */
     async getPlaceCoords(placeId) {
-        // ✅ V48: Vérifier si c'est un alias
+        // ✅ V49: Vérifier si c'est un alias avec pôle multimodal
         if (placeId && placeId.startsWith('ALIAS_')) {
             const aliasKey = placeId.replace('ALIAS_', '').toLowerCase();
             const aliasData = this.placeAliases[aliasKey];
             if (aliasData && aliasData.coordinates) {
                 console.log(`🎓 Résolution alias coords: ${placeId} → ${JSON.stringify(aliasData.coordinates)}`);
-                return aliasData.coordinates;
+                // Retourner les coordonnées ET les infos du pôle multimodal
+                return {
+                    lat: aliasData.coordinates.lat,
+                    lng: aliasData.coordinates.lng,
+                    gtfsStops: aliasData.gtfsStops || null,
+                    searchRadius: aliasData.searchRadius || 300,
+                    isMultiStop: Array.isArray(aliasData.gtfsStops) && aliasData.gtfsStops.length > 1
+                };
             }
         }
         
