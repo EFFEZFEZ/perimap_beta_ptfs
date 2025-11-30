@@ -523,9 +523,9 @@ export class MapRenderer {
         const icon = L.divIcon({
             className: `${iconClassName} ${statusClass}`,
             html: `<div style="background-color: ${routeColor}; color: ${textColor};">${routeShortName}</div>`,
-            iconSize: [40, 24],
-            iconAnchor: [20, 12],
-            popupAnchor: [0, -12] // Gardé pour info, mais plus de popup lié
+            iconSize: [32, 32],    // Dimensions carrées pour cercle parfait
+            iconAnchor: [16, 16],  // Centre du cercle
+            popupAnchor: [0, -16]
         });
 
         const marker = L.marker([lat, lon], { icon });

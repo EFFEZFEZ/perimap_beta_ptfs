@@ -3147,9 +3147,9 @@ body.dark-theme .install-tip-steps section {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: 50%; /* Cercle parfait */
     font-weight: 700;
-    font-size: 12px;
+    font-size: 11px; /* Légèrement réduit pour le cercle */
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     box-sizing: border-box;
 }

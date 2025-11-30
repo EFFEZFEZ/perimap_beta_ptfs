@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v56'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - Pôles multimodaux Campus/Grenadière
+const CACHE_VERSION = 'v57'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - Marqueurs bus circulaires
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
