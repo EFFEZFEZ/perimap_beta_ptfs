@@ -453,12 +453,20 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         const busPolylineEncoded = encodePolyline(busPolylineLatLngs);
 
         const durationSeconds = Math.max(0, segment.arrivalSeconds - segment.departureSeconds);
+        
+        // V62: Inclure les coordonnées des arrêts intermédiaires
         const intermediateStops = (segment.stopTimes || [])
             .slice(1, -1)
             .map(st => {
                 const stopObj = dataManager.getStop(st.stop_id);
-                return getStopDisplayName(stopObj) || st.stop_id;
-            });
+                return {
+                    name: getStopDisplayName(stopObj) || st.stop_id,
+                    stop_id: st.stop_id,
+                    lat: stopObj ? parseFloat(stopObj.stop_lat) : null,
+                    lng: stopObj ? parseFloat(stopObj.stop_lon) : null
+                };
+            })
+            .filter(s => s.name); // Filtrer les arrêts sans nom
         const route = segment.route || dataManager.getRoute(segment.routeId);
         const busStep = {
             type: 'BUS',

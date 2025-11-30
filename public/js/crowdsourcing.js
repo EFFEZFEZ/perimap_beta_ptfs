@@ -2,10 +2,17 @@
  * Crowdsourcing Module - Système de partage de position des bus
  * Inspiré de Transit App "GO" mode
  * 
- * V61 - Version fonctionnelle complète
+ * V62 - Détection automatique de fin de trajet
  * 
  * Permet aux utilisateurs de partager leur position GPS quand ils sont dans un bus,
  * ce qui améliore le suivi en temps réel pour tous les autres utilisateurs.
+ * 
+ * DÉTECTION AUTOMATIQUE D'ARRÊT:
+ * - Immobilité prolongée (> 3 min sans mouvement significatif)
+ * - Vitesse de marche détectée (< 2 m/s pendant > 1 min)
+ * - Sortie de zone du trajet (> 500m de l'itinéraire prévu)
+ * - Fermeture de l'application/onglet
+ * - Arrivée à destination (proche du dernier arrêt)
  */
 
 const CrowdsourcingManager = (function() {
@@ -33,7 +40,27 @@ const CrowdsourcingManager = (function() {
         
         // Points de contribution
         POINTS_PER_MINUTE: 1,
-        POINTS_BONUS_PEAK_HOUR: 2
+        POINTS_BONUS_PEAK_HOUR: 2,
+
+        // === DÉTECTION AUTOMATIQUE D'ARRÊT ===
+        
+        // Durée d'immobilité avant auto-stop (en ms) - 3 minutes
+        IMMOBILITY_TIMEOUT: 3 * 60 * 1000,
+        
+        // Vitesse max considérée comme "marche" (en m/s) - environ 7 km/h
+        WALKING_SPEED_THRESHOLD: 2.0,
+        
+        // Durée de marche avant auto-stop (en ms) - 1 minute
+        WALKING_TIMEOUT: 60 * 1000,
+        
+        // Distance max du trajet prévu avant alerte (en mètres)
+        OFF_ROUTE_THRESHOLD: 500,
+        
+        // Distance du dernier arrêt pour considérer arrivée (en mètres)
+        ARRIVAL_THRESHOLD: 100,
+        
+        // Intervalle de vérification des conditions d'arrêt (en ms)
+        CHECK_INTERVAL: 10000 // 10 secondes
     };
 
     // État
@@ -45,11 +72,19 @@ const CrowdsourcingManager = (function() {
         currentDirection: '',
         watchId: null,
         intervalId: null,
+        checkIntervalId: null, // Nouveau: vérification auto-stop
         sessionStart: null,
         lastPosition: null,
+        lastMovementTime: null, // Nouveau: timestamp du dernier mouvement
+        walkingStartTime: null, // Nouveau: début de détection marche
         positionHistory: [],
-        contributors: new Map(), // tripId -> [{lat, lng, timestamp, accuracy}]
+        contributors: new Map(),
         animationFrameId: null,
+        
+        // Infos du trajet pour détection
+        destinationStop: null,
+        routeStops: [],
+        
         userStats: {
             totalMinutes: 0,
             totalTrips: 0,
@@ -58,7 +93,7 @@ const CrowdsourcingManager = (function() {
         }
     };
 
-    // Référence au dataManager (sera injectée)
+    // Référence au dataManager
     let dataManagerRef = null;
 
     // Niveaux de contribution
@@ -157,6 +192,35 @@ const CrowdsourcingManager = (function() {
         const direction = busStep.headsign || busStep.direction || busStep.instruction || 'Direction inconnue';
         const routeColor = busStep.routeColor || busStep.route?.route_color || '#1976D2';
 
+        // ======== EXTRACTION DES DONNÉES POUR DÉTECTION AUTOMATIQUE ========
+        // Stocker la destination (dernier arrêt du trajet bus)
+        if (busStep.endLocation || busStep.to) {
+            const dest = busStep.endLocation || busStep.to;
+            state.destinationStop = {
+                lat: dest.lat || dest.latitude,
+                lng: dest.lng || dest.longitude,
+                name: dest.name || dest.stopName || 'Destination'
+            };
+            console.log('🎯 Destination enregistrée:', state.destinationStop.name);
+        }
+        
+        // Stocker les arrêts intermédiaires si disponibles
+        if (busStep.stops && Array.isArray(busStep.stops)) {
+            state.routeStops = busStep.stops.map(s => ({
+                lat: s.lat || s.stop_lat,
+                lng: s.lng || s.stop_lon,
+                name: s.name || s.stop_name
+            })).filter(s => s.lat && s.lng);
+            console.log(`🚏 ${state.routeStops.length} arrêts enregistrés pour détection`);
+        } else if (busStep.polyline || busStep.path) {
+            // Utiliser les points du polyline comme approximation
+            const points = busStep.path || [];
+            state.routeStops = points.filter((_, i) => i % 5 === 0).map(p => ({
+                lat: p.lat || p[0],
+                lng: p.lng || p[1]
+            }));
+        }
+
         console.log('🚌 Démarrage GO depuis itinéraire:', { tripId, routeId, routeName, direction });
 
         // Démarrer le partage
@@ -210,9 +274,22 @@ const CrowdsourcingManager = (function() {
         setTimeout(() => {
             if (state.isActive) {
                 console.log('⏱️ Session GO auto-stoppée après 2h');
-                stopSharing();
+                stopSharing('timeout');
             }
         }, CONFIG.MAX_SESSION_DURATION);
+
+        // ======== DÉTECTION AUTOMATIQUE D'ARRÊT ========
+        // Initialiser les timestamps de détection
+        state.lastMovementTime = Date.now();
+        state.walkingStartTime = null;
+        
+        // Démarrer la vérification périodique des conditions d'arrêt
+        state.checkIntervalId = setInterval(checkAutoStopConditions, CONFIG.CHECK_INTERVAL);
+        
+        // Écouter la fermeture de l'onglet/app
+        window.addEventListener('beforeunload', handlePageUnload);
+        window.addEventListener('pagehide', handlePageUnload);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         // Notification
         showToast(`GO activé sur ligne ${routeName}`, 'success');
@@ -221,18 +298,174 @@ const CrowdsourcingManager = (function() {
     }
 
     /**
-     * Arrête le partage de position
+     * Vérifie les conditions d'arrêt automatique
+     * Appelé toutes les 10 secondes
      */
-    function stopSharing() {
+    function checkAutoStopConditions() {
         if (!state.isActive) return;
 
-        console.log('🛑 GO Mode désactivé');
+        const now = Date.now();
+        const history = state.positionHistory;
+        
+        // 1. DÉTECTION D'IMMOBILITÉ
+        if (state.lastMovementTime && (now - state.lastMovementTime) > CONFIG.IMMOBILITY_TIMEOUT) {
+            console.log('🛑 Auto-stop: Immobilité détectée (> 3 min sans mouvement)');
+            showToast('Vous semblez être descendu du bus', 'info');
+            stopSharing('immobility');
+            return;
+        }
+
+        // 2. DÉTECTION DE MARCHE (vitesse faible prolongée)
+        if (history.length >= 3) {
+            const recentPositions = history.slice(-6); // Dernière minute environ
+            const avgSpeed = calculateAverageSpeed(recentPositions);
+            
+            if (avgSpeed > 0 && avgSpeed < CONFIG.WALKING_SPEED_THRESHOLD) {
+                // Vitesse de marche détectée
+                if (!state.walkingStartTime) {
+                    state.walkingStartTime = now;
+                    console.log('👟 Vitesse de marche détectée, surveillance...');
+                } else if ((now - state.walkingStartTime) > CONFIG.WALKING_TIMEOUT) {
+                    console.log('🛑 Auto-stop: Marche détectée (vitesse < 2 m/s pendant > 1 min)');
+                    showToast('Vous semblez marcher, arrêt du partage', 'info');
+                    stopSharing('walking');
+                    return;
+                }
+            } else {
+                // Vitesse normale, réinitialiser
+                state.walkingStartTime = null;
+            }
+        }
+
+        // 3. DÉTECTION D'ARRIVÉE À DESTINATION
+        if (state.destinationStop && state.lastPosition) {
+            const distToDestination = haversineDistance(
+                state.lastPosition.lat, state.lastPosition.lng,
+                state.destinationStop.lat, state.destinationStop.lng
+            );
+            
+            if (distToDestination < CONFIG.ARRIVAL_THRESHOLD) {
+                console.log('🎯 Auto-stop: Arrivée à destination détectée');
+                showToast('Arrivée à destination !', 'success');
+                stopSharing('arrival');
+                return;
+            }
+        }
+
+        // 4. DÉTECTION DE SORTIE DE ZONE (trop loin du trajet)
+        if (state.routeStops.length > 0 && state.lastPosition) {
+            const minDistToRoute = findMinDistanceToRoute(state.lastPosition);
+            
+            if (minDistToRoute > CONFIG.OFF_ROUTE_THRESHOLD) {
+                console.log('🛑 Auto-stop: Sortie de zone (> 500m du trajet)');
+                showToast('Vous semblez avoir quitté le bus', 'info');
+                stopSharing('off_route');
+                return;
+            }
+        }
+    }
+
+    /**
+     * Calcule la vitesse moyenne à partir de positions récentes
+     */
+    function calculateAverageSpeed(positions) {
+        if (positions.length < 2) return 0;
+        
+        let totalSpeed = 0;
+        let validCount = 0;
+        
+        for (let i = 1; i < positions.length; i++) {
+            const prev = positions[i - 1];
+            const curr = positions[i];
+            
+            const distance = haversineDistance(prev.lat, prev.lng, curr.lat, curr.lng);
+            const timeDiff = (curr.timestamp - prev.timestamp) / 1000; // en secondes
+            
+            if (timeDiff > 0) {
+                const speed = distance / timeDiff;
+                // Utiliser la vitesse GPS si disponible et valide
+                if (curr.speed > 0) {
+                    totalSpeed += curr.speed;
+                } else {
+                    totalSpeed += speed;
+                }
+                validCount++;
+            }
+        }
+        
+        return validCount > 0 ? totalSpeed / validCount : 0;
+    }
+
+    /**
+     * Trouve la distance minimale entre la position actuelle et le trajet
+     */
+    function findMinDistanceToRoute(position) {
+        if (!state.routeStops || state.routeStops.length === 0) {
+            return 0; // Pas de données, on ne peut pas vérifier
+        }
+        
+        let minDist = Infinity;
+        
+        for (const stop of state.routeStops) {
+            const dist = haversineDistance(
+                position.lat, position.lng,
+                stop.lat, stop.lng
+            );
+            if (dist < minDist) {
+                minDist = dist;
+            }
+        }
+        
+        return minDist;
+    }
+
+    /**
+     * Gère la fermeture de page/onglet
+     */
+    function handlePageUnload(event) {
+        if (state.isActive) {
+            console.log('🛑 Auto-stop: Fermeture de page détectée');
+            stopSharing('page_close');
+        }
+    }
+
+    /**
+     * Gère le changement de visibilité (app en arrière-plan)
+     */
+    function handleVisibilityChange() {
+        if (document.hidden && state.isActive) {
+            // App passée en arrière-plan - on continue mais on note
+            console.log('📱 App en arrière-plan, GO mode continue...');
+            // On pourrait aussi arrêter si l'app reste en arrière-plan trop longtemps
+        }
+    }
+
+    /**
+     * Arrête le partage de position
+     * @param {string} reason - Raison de l'arrêt (optionnel pour logging)
+     */
+    function stopSharing(reason = 'manual') {
+        if (!state.isActive) return;
+
+        console.log(`🛑 GO Mode désactivé (raison: ${reason})`);
 
         // Arrêter l'animation
         if (state.animationFrameId) {
             cancelAnimationFrame(state.animationFrameId);
             state.animationFrameId = null;
         }
+
+        // ======== NETTOYAGE DÉTECTION AUTOMATIQUE ========
+        // Arrêter la vérification périodique
+        if (state.checkIntervalId) {
+            clearInterval(state.checkIntervalId);
+            state.checkIntervalId = null;
+        }
+        
+        // Retirer les listeners
+        window.removeEventListener('beforeunload', handlePageUnload);
+        window.removeEventListener('pagehide', handlePageUnload);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
 
         // Calculer les points gagnés
         const durationMinutes = Math.floor((Date.now() - state.sessionStart) / 60000);
@@ -268,6 +501,12 @@ const CrowdsourcingManager = (function() {
         state.sessionStart = null;
         state.lastPosition = null;
         state.positionHistory = [];
+        
+        // Réinitialiser les données de détection automatique
+        state.lastMovementTime = null;
+        state.walkingStartTime = null;
+        state.destinationStop = null;
+        state.routeStops = [];
 
         // Mettre à jour l'UI du bouton
         updateButtonUI(false);
@@ -359,6 +598,13 @@ const CrowdsourcingManager = (function() {
             if (distance < CONFIG.MIN_MOVEMENT) {
                 return; // Pas assez de mouvement
             }
+            
+            // ======== DÉTECTION DE MOUVEMENT ========
+            // Mouvement significatif détecté, mettre à jour le timestamp
+            state.lastMovementTime = Date.now();
+        } else {
+            // Première position, initialiser le timestamp
+            state.lastMovementTime = Date.now();
         }
 
         const positionData = {
@@ -378,7 +624,7 @@ const CrowdsourcingManager = (function() {
             state.positionHistory.shift();
         }
 
-        console.log(`📍 Position: ${latitude.toFixed(5)}, ${longitude.toFixed(5)} (±${Math.round(accuracy)}m)`);
+        console.log(`📍 Position: ${latitude.toFixed(5)}, ${longitude.toFixed(5)} (±${Math.round(accuracy)}m, ${speed ? (speed * 3.6).toFixed(1) + ' km/h' : 'vitesse N/A'})`);
     }
 
     /**

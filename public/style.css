@@ -3218,22 +3218,31 @@ body.dark-theme .install-tip-steps section {
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    border: 2px solid #fff;
-    background: var(--text-secondary);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
+
+/* Début du trajet - Rond vert avec bordure blanche */
 .itinerary-stop-marker.boarding span {
-    background: var(--primary);
+    background: #4CAF50;
+    border: 3px solid #fff;
 }
+
+/* Fin du trajet - Rond rouge avec bordure blanche */
 .itinerary-stop-marker.alighting span {
-    background: var(--secondary);
+    background: #f44336;
+    border: 3px solid #fff;
 }
+
+/* Correspondance - Rond jaune/orange */
 .itinerary-stop-marker.transfer span {
-    background: var(--color-orange, #f97316);
+    background: #FFC107;
+    border: 3px solid #fff;
 }
+
+/* Arrêts intermédiaires - Petits ronds blancs avec bordure grise */
 .itinerary-stop-marker.intermediate span {
-    background: var(--text-secondary);
-    opacity: 0.9;
+    background: #ffffff;
+    border: 2px solid #9e9e9e;
 }
 
 /* ✅ V57: NOUVEAU - Marqueur de position utilisateur */

@@ -2904,8 +2904,11 @@ function extractStepPolylines(step) {
 }
 
 /**
- * ✅ NOUVELLE FONCTION V46
- * Ajoute les marqueurs de Début, Fin et Correspondance sur une carte
+ * ✅ V62: AMÉLIORATION - Ajoute les marqueurs de Début, Fin, Correspondance et Arrêts intermédiaires
+ * - Ronds verts pour le début
+ * - Ronds rouges pour la fin
+ * - Ronds jaunes pour les correspondances
+ * - Petits ronds blancs pour les arrêts intermédiaires
  */
 function addItineraryMarkers(itinerary, map, markerLayer) {
     if (!itinerary || !Array.isArray(itinerary.steps) || !map || !markerLayer) return;
@@ -2925,25 +2928,68 @@ function addItineraryMarkers(itinerary, map, markerLayer) {
         const isLastBus = index === busSteps.length - 1;
         const stepStops = [];
 
+        // Arrêt de départ
         if (step.departureStop) {
             stepStops.push({ name: step.departureStop, role: isFirstBus ? 'boarding' : 'transfer' });
         }
 
-        if (Array.isArray(step.intermediateStops)) {
-            step.intermediateStops.forEach((stopName) => {
-                if (stopName) {
-                    stepStops.push({ name: stopName, role: 'intermediate' });
-                }
+        // Arrêts intermédiaires - Essayer plusieurs sources
+        let intermediateStopsData = [];
+        
+        // Source 1: intermediateStops du step (noms)
+        if (Array.isArray(step.intermediateStops) && step.intermediateStops.length > 0) {
+            intermediateStopsData = step.intermediateStops.map(stopName => ({
+                name: typeof stopName === 'string' ? stopName : (stopName?.name || stopName?.stop_name || ''),
+                lat: stopName?.lat || stopName?.stop_lat || null,
+                lng: stopName?.lng || stopName?.stop_lon || null
+            }));
+        }
+        
+        // Source 2: Si le step contient les stopTimes avec coordonnées (du router local)
+        if (intermediateStopsData.length === 0 && Array.isArray(step.stopTimes)) {
+            intermediateStopsData = step.stopTimes.slice(1, -1).map(st => {
+                const stopObj = dataManager?.getStop?.(st.stop_id);
+                return {
+                    name: stopObj?.stop_name || st.stop_id,
+                    lat: parseFloat(stopObj?.stop_lat) || null,
+                    lng: parseFloat(stopObj?.stop_lon) || null
+                };
             });
         }
+        
+        // Ajouter les arrêts intermédiaires
+        intermediateStopsData.forEach(stop => {
+            if (stop.name) {
+                stepStops.push({ 
+                    name: stop.name, 
+                    role: 'intermediate',
+                    directLat: stop.lat,
+                    directLng: stop.lng
+                });
+            }
+        });
 
+        // Arrêt d'arrivée
         if (step.arrivalStop) {
             stepStops.push({ name: step.arrivalStop, role: isLastBus ? 'alighting' : 'transfer' });
         }
 
+        // Résoudre les coordonnées pour chaque arrêt
         stepStops.forEach(stop => {
-            const coords = resolveStopCoordinates(stop.name, dataManager);
-            if (!coords) return;
+            let coords = null;
+            
+            // Utiliser les coordonnées directes si disponibles
+            if (stop.directLat && stop.directLng) {
+                coords = { lat: stop.directLat, lng: stop.directLng };
+            } else {
+                // Sinon, résoudre via le dataManager
+                coords = resolveStopCoordinates(stop.name, dataManager);
+            }
+            
+            if (!coords) {
+                console.log(`⚠️ Coordonnées non trouvées pour: ${stop.name}`);
+                return;
+            }
 
             const key = `${coords.lat.toFixed(5)}-${coords.lng.toFixed(5)}`;
             const existing = stopPoints.find(point => point.key === key);
@@ -2972,15 +3018,27 @@ function addItineraryMarkers(itinerary, map, markerLayer) {
         return;
     }
 
+    // Créer les marqueurs avec z-index approprié
     stopPoints.forEach(point => {
         const icon = createStopDivIcon(point.role);
         if (!icon) return;
+        
+        // Z-index: boarding/alighting > transfer > intermediate
+        let zIndex = 800;
+        if (point.role === 'boarding' || point.role === 'alighting') {
+            zIndex = 1200;
+        } else if (point.role === 'transfer') {
+            zIndex = 1000;
+        }
+        
         const marker = L.marker([point.lat, point.lng], {
             icon,
-            zIndexOffset: (point.role === 'boarding' || point.role === 'alighting') ? 1200 : 900
+            zIndexOffset: zIndex
         });
         markerLayer.addLayer(marker);
     });
+    
+    console.log(`📍 ${stopPoints.length} marqueurs ajoutés (${stopPoints.filter(p => p.role === 'intermediate').length} arrêts intermédiaires)`);
 }
 
 function addFallbackItineraryMarkers(itinerary, markerLayer) {
@@ -3183,7 +3241,10 @@ function renderItineraryDetailHTML(itinerary) {
                             </summary>
                             ${hasIntermediateStops ? `
                             <ul class="intermediate-stops-list" style="--line-color: ${lineColor};">
-                                ${step.intermediateStops.map(stopName => `<li>${stopName}</li>`).join('')}
+                                ${step.intermediateStops.map(stop => {
+                                    const name = typeof stop === 'string' ? stop : (stop?.name || stop?.stop_name || 'Arrêt');
+                                    return `<li>${name}</li>`;
+                                }).join('')}
                             </ul>
                             ` : `<ul class="intermediate-stops-list" style="--line-color: ${lineColor};"><li>(La liste détaillée des arrêts n'est pas disponible)</li></ul>`}
                         </details>
@@ -3312,7 +3373,10 @@ function renderItineraryDetail(itinerary) {
                             </summary>
                             ${hasIntermediateStops ? `
                             <ul class="intermediate-stops-list" style="--line-color: ${lineColor};">
-                                ${step.intermediateStops.map(stopName => `<li>${stopName}</li>`).join('')}
+                                ${step.intermediateStops.map(stop => {
+                                    const name = typeof stop === 'string' ? stop : (stop?.name || stop?.stop_name || 'Arrêt');
+                                    return `<li>${name}</li>`;
+                                }).join('')}
                             </ul>
                             ` : `<ul class="intermediate-stops-list" style="--line-color: ${lineColor};"><li>(La liste détaillée des arrêts n'est pas disponible)</li></ul>`}
                         </details>

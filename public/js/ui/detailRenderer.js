@@ -225,7 +225,11 @@ function renderBusStep(step, { icons, lineColor }) {
                     </summary>
                     ${hasIntermediateStops ? `
                     <ul class="intermediate-stops-list" style="--line-color: ${lineColor};">
-                        ${step.intermediateStops.map(stopName => `<li>${stopName}</li>`).join('')}
+                        ${step.intermediateStops.map(stop => {
+                            // Supporter les deux formats: string ou objet {name, lat, lng}
+                            const stopName = typeof stop === 'string' ? stop : (stop?.name || stop?.stop_name || 'Arrêt');
+                            return `<li>${stopName}</li>`;
+                        }).join('')}
                     </ul>
                     ` : `<ul class="intermediate-stops-list" style="--line-color: ${lineColor};"><li>(La liste détaillée des arrêts n'est pas disponible)</li></ul>`}
                 </details>
