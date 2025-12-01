@@ -2587,9 +2587,10 @@ details[open] .accordion-content {
     #map-container #map-view #top-bar > #btn-toggle-filter {
         top: auto;
         left: auto;
-        /* *** CORRECTION V29 (V27) *** */
+        /* V71: Repositionné à gauche pour éviter collision avec contrôles Leaflet */
         bottom: calc(30px + env(safe-area-inset-bottom));
-        right: 20px;
+        left: 20px;
+        right: auto;
         width: 56px;
         height: 56px;
         border-radius: 50%;
