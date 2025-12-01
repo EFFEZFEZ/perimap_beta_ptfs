@@ -219,6 +219,50 @@ export function rankArrivalItineraries(itineraries, searchTime) {
  * Trie les itinéraires pour le mode "partir".
  * Priorité: premier départ (>= heure demandée), moins de correspondances, durée totale plus courte.
  */
+/**
+ * V64: Limite les trajets vélo et piéton à un seul de chaque.
+ * Ces modes n'ont pas d'horaires (on peut partir quand on veut),
+ * donc avoir plusieurs résultats est inutile.
+ */
+export function limitBikeWalkItineraries(itineraries) {
+  if (!Array.isArray(itineraries)) return [];
+  
+  const busItineraries = [];
+  let firstBike = null;
+  let firstWalk = null;
+  
+  for (const it of itineraries) {
+    const type = it?.type || 'BUS';
+    
+    if (type === 'BIKE' || it?._isBike) {
+      if (!firstBike) {
+        firstBike = it;
+      }
+      // Ignorer les doublons vélo
+    } else if (type === 'WALK' || it?._isWalk) {
+      if (!firstWalk) {
+        firstWalk = it;
+      }
+      // Ignorer les doublons piéton
+    } else {
+      // Bus/Transit : garder tous
+      busItineraries.push(it);
+    }
+  }
+  
+  // Reconstruire la liste : BUS d'abord, puis vélo, puis piéton
+  const result = [...busItineraries];
+  if (firstBike) result.push(firstBike);
+  if (firstWalk) result.push(firstWalk);
+  
+  const removed = itineraries.length - result.length;
+  if (removed > 0) {
+    console.log(`🚴 V64: ${removed} trajet(s) vélo/piéton en double supprimé(s)`);
+  }
+  
+  return result;
+}
+
 export function rankDepartureItineraries(itineraries) {
   if (!Array.isArray(itineraries) || !itineraries.length) return itineraries;
   

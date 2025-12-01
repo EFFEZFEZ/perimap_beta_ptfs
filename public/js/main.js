@@ -86,7 +86,7 @@ let geolocationManager = null;
 
 const BOTTOM_SHEET_LEVELS = [0.4, 0.8]; // Seulement 2 niveaux: peek (40%) et expanded (80%)
 import { getAppConfig } from './config.js';
-import { deduplicateItineraries, rankArrivalItineraries, rankDepartureItineraries, filterExpiredDepartures, filterLateArrivals } from './itinerary/ranking.js';
+import { deduplicateItineraries, rankArrivalItineraries, rankDepartureItineraries, filterExpiredDepartures, filterLateArrivals, limitBikeWalkItineraries } from './itinerary/ranking.js';
 import { normalizeStopNameForLookup, resolveStopCoordinates } from './utils/geo.js';
 import { createResultsRenderer } from './ui/resultsRenderer.js';
 const BOTTOM_SHEET_DEFAULT_INDEX = 0;
@@ -1490,6 +1490,10 @@ async function executeItinerarySearch(source, sourceElements) {
             const targetMinute = parseInt(searchTime.minute) || 0;
             allFetchedItineraries = filterLateArrivals(allFetchedItineraries, targetHour, targetMinute);
         }
+        
+        // V64: Limiter vélo et piéton à un seul trajet de chaque
+        // Ces modes n'ont pas d'horaires, un seul résultat suffit
+        allFetchedItineraries = limitBikeWalkItineraries(allFetchedItineraries);
 
         // Debug: après filtrage
         console.log('📋 Après filtrage:', {
