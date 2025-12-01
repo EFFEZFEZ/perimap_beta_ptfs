@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v61'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - GTFS router désactivé
+const CACHE_VERSION = 'v65'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V65: UI fixes + prochains départs GTFS
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;

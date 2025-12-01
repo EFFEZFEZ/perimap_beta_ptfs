@@ -1,5 +1,5 @@
 ﻿/**
- * main.js - V61 (Refactoring modulaire)
+ * main.js - V65 (UI fixes + prochains départs GTFS + limite vélo/piéton)
  *
  * Version refactorisée avec modules séparés pour:
  * - État centralisé (state/appState.js)

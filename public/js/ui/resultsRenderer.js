@@ -1,7 +1,7 @@
 /**
  * resultsRenderer.js
  * Rendu des itinéraires + pagination arrivée.
- * V64: Enrichissement GTFS - trouve les prochains départs réels depuis les données locales
+ * V65: Enrichissement GTFS - trouve les prochains départs réels depuis les données locales
  */
 import { ICONS } from '../config/icons.js';
 
