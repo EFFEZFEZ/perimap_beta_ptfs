@@ -332,11 +332,16 @@ body.dark-theme #top-bar {
 }
 body.dark-theme #map-container #map-view #top-bar > #btn-back-to-dashboard-from-map,
 body.dark-theme #map-container #map-view #top-bar > #clock,
-body.dark-theme #map-container #map-view #top-bar > #status-info,
-body.dark-theme #map-container #map-view #top-bar > #btn-toggle-filter {
+body.dark-theme #map-container #map-view #top-bar > #status-info {
     background: rgba(6, 12, 20, 0.92);
     border-color: rgba(255,255,255,0.08);
     color: var(--text-primary);
+}
+/* V72: Style dark mode séparé pour le bouton filtrer */
+body.dark-theme #map-container #map-view #top-bar > #btn-toggle-filter {
+    background: rgba(15, 23, 42, 0.95) !important;
+    border-color: rgba(255,255,255,0.1) !important;
+    color: #f1f5f9 !important;
 }
 body.dark-theme #route-filter-panel {
     background: rgba(4, 10, 18, 0.95);
@@ -2585,19 +2590,27 @@ details[open] .accordion-content {
     #map-container #map-view #top-bar > #status-info #data-status { display: none; }
     
     #map-container #map-view #top-bar > #btn-toggle-filter {
-        top: auto;
-        left: auto;
-        /* V71: Repositionné à gauche pour éviter collision avec contrôles Leaflet */
-        bottom: calc(30px + env(safe-area-inset-bottom));
-        left: 20px;
-        right: auto;
+        /* V72: Fix position et visibilité du bouton filtrer */
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: fixed !important;
+        top: auto !important;
+        bottom: calc(30px + env(safe-area-inset-bottom)) !important;
+        left: 20px !important;
+        right: auto !important;
         width: 56px;
         height: 56px;
         border-radius: 50%;
         padding: 0;
         justify-content: center;
+        align-items: center;
         color: var(--text-primary);
-        z-index: 1501; 
+        z-index: 9999 !important; /* Z-index très élevé pour être sûr */
+        background: rgba(255, 255, 255, 0.95) !important;
+        border: 1px solid var(--border) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        pointer-events: auto !important;
     }
     #map-container #map-view #top-bar > #btn-toggle-filter span { display: none; }
     #map-container #map-view #top-bar > #btn-toggle-filter svg { margin: 0; width: 20px; height: 20px; }
