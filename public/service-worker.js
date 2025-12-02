@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v83'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V83: Système statuts lignes JSON
+const CACHE_VERSION = 'v84'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V84: Bandeau alerte intégré dans dashboard
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;

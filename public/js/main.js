@@ -3957,7 +3957,11 @@ function showDashboardView(viewName) {
     // de préserver l'en-tête et le scroll.
     document.body.classList.remove('view-map-locked');
     document.body.classList.remove('view-is-locked');
-    try { if (typeof renderAlertBanner === 'function' && dataManager) renderAlertBanner(); } catch(e) { /* non bloquant */ }
+    
+    // V84: Masquer le bandeau d'alerte sur les sous-vues pour ne pas bloquer le bouton retour
+    if (alertBanner) {
+        alertBanner.classList.add('hidden');
+    }
 
     document.querySelectorAll('#dashboard-content-view .card').forEach(card => {
         card.classList.remove('view-active');
