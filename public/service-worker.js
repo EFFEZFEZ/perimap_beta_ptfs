@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v86'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V86: Admin panel gestion trafic dans About
+const CACHE_VERSION = 'v87'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V87: Lien À propos dans menus
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
