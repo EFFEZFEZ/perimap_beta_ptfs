@@ -676,18 +676,17 @@ export class MapRenderer {
 
     /**
      * Formate le contenu HTML pour le popup d'un arrêt
-     * V101: Design épuré, fond opaque, structure simple
+     * V102: Design style SNCF Connect - groupé par ligne puis par destination
      */
     createStopPopupContent(masterStop, departuresByLine, currentSeconds, isNextDayDepartures = false, firstDepartureTime = null) {
-        let html = `<div class="stop-popup-v101">`;
+        let html = `<div class="stop-popup-sncf">`;
         
-        // Header avec nom de l'arrêt
-        html += `<div class="stop-popup-header">
-                    <span class="stop-popup-name">${masterStop.stop_name}</span>
-                    ${isNextDayDepartures && firstDepartureTime ? 
-                        `<span class="stop-popup-notice">Premiers départs dès ${firstDepartureTime.substring(0, 5)}</span>` : 
-                        ''}
-                 </div>`;
+        // Notice si premiers départs
+        if (isNextDayDepartures && firstDepartureTime) {
+            html += `<div class="stop-popup-notice">
+                        Ces horaires sont prévisionnels et peuvent changer en cas de perturbation.
+                     </div>`;
+        }
 
         const lineKeys = Object.keys(departuresByLine);
         
@@ -697,51 +696,66 @@ export class MapRenderer {
                         <span>Aucun passage prévu</span>
                      </div>`;
         } else {
-            // Trier les lignes par premier départ
-            lineKeys.sort((a, b) => {
-                const firstA = departuresByLine[a].departures[0]?.departureSeconds || Infinity;
-                const firstB = departuresByLine[b].departures[0]?.departureSeconds || Infinity;
-                return firstA - firstB;
-            });
-
-            html += `<div class="stop-popup-lines">`;
+            // Regrouper par ligne (route_short_name)
+            const lineGroups = {};
             lineKeys.forEach(lineKey => {
                 const line = departuresByLine[lineKey];
+                const routeName = line.routeShortName;
+                if (!lineGroups[routeName]) {
+                    lineGroups[routeName] = {
+                        routeShortName: line.routeShortName,
+                        routeColor: line.routeColor,
+                        routeTextColor: line.routeTextColor,
+                        destinations: []
+                    };
+                }
+                lineGroups[routeName].destinations.push({
+                    destination: line.destination,
+                    departures: line.departures
+                });
+            });
+
+            // Trier les lignes par nom
+            const sortedLines = Object.keys(lineGroups).sort((a, b) => 
+                a.localeCompare(b, undefined, {numeric: true})
+            );
+
+            html += `<div class="stop-popup-lines">`;
+            
+            sortedLines.forEach(routeName => {
+                const lineGroup = lineGroups[routeName];
                 
-                html += `<div class="stop-line-group">`;
+                html += `<div class="sncf-line-card">`;
                 
-                // Badge ligne + destination
-                html += `<div class="stop-line-header">
-                            <span class="stop-line-badge" style="background:#${line.routeColor};color:#${line.routeTextColor};">${line.routeShortName}</span>
-                            <span class="stop-line-dest">${line.destination}</span>
+                // En-tête de la ligne avec badge et nom de l'arrêt
+                html += `<div class="sncf-line-header">
+                            <span class="sncf-bus-icon">
+                                <span class="material-symbols-rounded">directions_bus</span>
+                            </span>
+                            <span class="sncf-line-badge" style="background:#${lineGroup.routeColor};color:#${lineGroup.routeTextColor};">${lineGroup.routeShortName}</span>
+                            <span class="sncf-stop-name">${masterStop.stop_name}</span>
                          </div>`;
                 
-                // Horaires
-                html += `<div class="stop-times-row">`;
-                line.departures.slice(0, 4).forEach(dep => {
-                    const waitSeconds = dep.departureSeconds - currentSeconds;
-                    const waitMinutes = Math.floor(waitSeconds / 60);
+                // Liste des destinations pour cette ligne
+                lineGroup.destinations.forEach(dest => {
+                    html += `<div class="sncf-destination">`;
+                    html += `<div class="sncf-dest-name">${dest.destination}</div>`;
+                    html += `<div class="sncf-times">`;
                     
-                    let waitLabel;
-                    let chipClass = '';
+                    dest.departures.slice(0, 4).forEach(dep => {
+                        html += `<span class="sncf-time">${dep.time.substring(0, 5)}</span>`;
+                    });
                     
-                    if (waitMinutes <= 0) {
-                        waitLabel = 'Imminent';
-                        chipClass = 'imminent';
-                    } else if (waitMinutes < 60) {
-                        waitLabel = `${waitMinutes} min`;
-                        if (waitMinutes <= 5) chipClass = 'soon';
-                    } else {
-                        const h = Math.floor(waitMinutes / 60);
-                        const m = waitMinutes % 60;
-                        waitLabel = m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
-                    }
-                    
-                    html += `<div class="stop-time-chip ${chipClass}">
-                                <span class="time">${dep.time.substring(0, 5)}</span>
-                                <span class="wait">${waitLabel}</span>
-                             </div>`;
+                    html += `</div>`;
+                    html += `</div>`;
                 });
+                
+                html += `</div>`;
+            });
+            
+            html += `</div>`;
+        }
+
         html += `</div>`;
         return html;
     }
