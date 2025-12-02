@@ -1,0 +1,34 @@
+{
+  "lastUpdate": "2025-12-02T20:00:00",
+  "globalMessage": "",
+  "lines": {
+    "A": { "status": "normal", "message": "" },
+    "B": { "status": "normal", "message": "" },
+    "C": { "status": "normal", "message": "" },
+    "D": { "status": "normal", "message": "" },
+    "e1": { "status": "normal", "message": "" },
+    "e2": { "status": "normal", "message": "" },
+    "e3": { "status": "normal", "message": "" },
+    "e4": { "status": "normal", "message": "" },
+    "e5": { "status": "normal", "message": "" },
+    "K1": { "status": "normal", "message": "" },
+    "K2": { "status": "normal", "message": "" },
+    "K3": { "status": "normal", "message": "" },
+    "N2": { "status": "normal", "message": "" },
+    "N3": { "status": "normal", "message": "" }
+  },
+  "_documentation": {
+    "status_values": [
+      "normal - Trafic normal",
+      "perturbation - Perturbation en cours",
+      "retard - Retards sur la ligne",
+      "annulation - Service annulé",
+      "travaux - Travaux en cours"
+    ],
+    "example": {
+      "A": { "status": "perturbation", "message": "Déviation rue de la République jusqu'au 15/12" },
+      "B": { "status": "retard", "message": "Retards de 5-10 min suite à un incident" },
+      "C": { "status": "annulation", "message": "Service suspendu aujourd'hui" }
+    }
+  }
+}

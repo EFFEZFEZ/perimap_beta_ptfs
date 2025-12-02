@@ -578,11 +578,58 @@ function attachRobustBackHandlers() {
 }
 
 function setupDashboardContent() {
+    // Initialiser tous les statuts à "normal" par défaut
     dataManager.routes.forEach(route => {
         lineStatuses[route.route_id] = { status: 'normal', message: '' };
     });
-    renderInfoTraficCard();
+    
+    // Charger les statuts depuis le fichier JSON de configuration
+    loadLineStatuses().then(() => {
+        renderInfoTraficCard();
+        renderAlertBanner();
+    });
+    
     buildFicheHoraireList();
+}
+
+/**
+ * V82: Charge les statuts des lignes depuis /data/line-status.json
+ * Ce fichier peut être modifié facilement pour mettre à jour l'état des lignes
+ */
+async function loadLineStatuses() {
+    try {
+        const response = await fetch('/data/line-status.json?t=' + Date.now()); // Cache-bust
+        if (!response.ok) {
+            console.warn('[LineStatus] Fichier line-status.json non trouvé, utilisation des statuts par défaut');
+            return;
+        }
+        
+        const data = await response.json();
+        console.log('[LineStatus] Chargement des statuts:', data.lastUpdate);
+        
+        // Mapper les statuts du JSON vers lineStatuses
+        if (data.lines) {
+            for (const [shortName, statusInfo] of Object.entries(data.lines)) {
+                // Trouver le route_id correspondant au short_name
+                const route = dataManager.routes.find(r => r.route_short_name === shortName);
+                if (route && statusInfo.status !== 'normal') {
+                    lineStatuses[route.route_id] = {
+                        status: statusInfo.status,
+                        message: statusInfo.message || ''
+                    };
+                    console.log(`[LineStatus] Ligne ${shortName}: ${statusInfo.status} - ${statusInfo.message}`);
+                }
+            }
+        }
+        
+        // Message global (pour les alertes générales)
+        if (data.globalMessage) {
+            console.log('[LineStatus] Message global:', data.globalMessage);
+        }
+        
+    } catch (error) {
+        console.warn('[LineStatus] Erreur chargement statuts:', error);
+    }
 }
 
 // Fonction d'animation générique (DÉPLACÉE EN DEHORS)

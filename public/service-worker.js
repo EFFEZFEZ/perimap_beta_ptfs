@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v82'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V82: Fix marge vue itinéraire
+const CACHE_VERSION = 'v83'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V83: Système statuts lignes JSON
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
@@ -70,7 +70,7 @@ const SECONDARY_ASSETS = [
 ];
 
 // Patterns pour Network-Only
-const NETWORK_ONLY = ['/api/', 'google', 'googleapis', 'ibb.co'];
+const NETWORK_ONLY = ['/api/', 'google', 'googleapis', 'ibb.co', 'line-status.json'];
 
 // Patterns pour données GTFS (cache long terme)
 const GTFS_PATTERNS = ['/data/gtfs/', '.json', '.txt'];
