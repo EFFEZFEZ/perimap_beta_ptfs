@@ -676,23 +676,22 @@ export class MapRenderer {
 
     /**
      * Formate le contenu HTML pour le popup d'un arrêt
-     * V102: Design style SNCF Connect - groupé par ligne puis par destination
+     * V104: Design harmonisé avec la DA de l'app (dark mode)
      */
     createStopPopupContent(masterStop, departuresByLine, currentSeconds, isNextDayDepartures = false, firstDepartureTime = null) {
-        let html = `<div class="stop-popup-sncf">`;
+        let html = `<div class="stop-popup-v104">`;
         
-        // Notice si premiers départs
-        if (isNextDayDepartures && firstDepartureTime) {
-            html += `<div class="stop-popup-notice">
-                        Ces horaires sont prévisionnels et peuvent changer en cas de perturbation.
-                     </div>`;
-        }
+        // Header avec nom de l'arrêt
+        html += `<div class="popup-header">
+                    <span class="popup-title">${masterStop.stop_name}</span>
+                    ${isNextDayDepartures ? `<span class="popup-subtitle">Premiers départs</span>` : ''}
+                 </div>`;
 
         const lineKeys = Object.keys(departuresByLine);
         
         if (lineKeys.length === 0) {
-            html += `<div class="stop-popup-empty">
-                        <span class="material-symbols-rounded">bedtime</span>
+            html += `<div class="popup-empty">
+                        <span class="popup-empty-icon">🌙</span>
                         <span>Aucun passage prévu</span>
                      </div>`;
         } else {
@@ -720,33 +719,31 @@ export class MapRenderer {
                 a.localeCompare(b, undefined, {numeric: true})
             );
 
-            html += `<div class="stop-popup-lines">`;
+            html += `<div class="popup-lines">`;
             
             sortedLines.forEach(routeName => {
                 const lineGroup = lineGroups[routeName];
                 
-                html += `<div class="sncf-line-card">`;
-                
-                // En-tête de la ligne avec badge et nom de l'arrêt
-                html += `<div class="sncf-line-header">
-                            <span class="sncf-bus-icon">
-                                <span class="material-symbols-rounded">directions_bus</span>
-                            </span>
-                            <span class="sncf-line-badge" style="background:#${lineGroup.routeColor};color:#${lineGroup.routeTextColor};">${lineGroup.routeShortName}</span>
-                            <span class="sncf-stop-name">${masterStop.stop_name}</span>
-                         </div>`;
+                // Carte par ligne
+                html += `<div class="popup-line-card">`;
                 
                 // Liste des destinations pour cette ligne
                 lineGroup.destinations.forEach(dest => {
-                    html += `<div class="sncf-destination">`;
-                    html += `<div class="sncf-dest-name">${dest.destination}</div>`;
-                    html += `<div class="sncf-times">`;
+                    html += `<div class="popup-destination">`;
                     
+                    // Header : badge + destination
+                    html += `<div class="popup-dest-header">
+                                <span class="popup-badge" style="background:#${lineGroup.routeColor};color:#${lineGroup.routeTextColor};">${lineGroup.routeShortName}</span>
+                                <span class="popup-dest-name">${dest.destination}</span>
+                             </div>`;
+                    
+                    // Horaires en ligne
+                    html += `<div class="popup-times">`;
                     dest.departures.slice(0, 4).forEach(dep => {
-                        html += `<span class="sncf-time">${dep.time.substring(0, 5)}</span>`;
+                        html += `<span class="popup-time">${dep.time.substring(0, 5)}</span>`;
                     });
-                    
                     html += `</div>`;
+                    
                     html += `</div>`;
                 });
                 

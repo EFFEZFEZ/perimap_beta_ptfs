@@ -3647,218 +3647,169 @@ body.dark-theme .install-tip-steps section {
 }
 
 /* =========================================
- * POPUP ARRÊT V102 - Style SNCF Connect
+ * POPUP ARRÊT V104 - Harmonisé avec la DA
  * ========================================= */
 .stop-schedule-popup .leaflet-popup-content-wrapper {
-    background: white !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
-    border: none !important;
+    background: var(--bg-primary) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25) !important;
+    border: 1px solid var(--border) !important;
     overflow: hidden;
 }
 .stop-schedule-popup .leaflet-popup-tip {
-    background: white !important;
-    border: none !important;
+    background: var(--bg-primary) !important;
+    border: 1px solid var(--border) !important;
+    border-top: none !important;
+    border-left: none !important;
 }
 .stop-schedule-popup .leaflet-popup-content {
     margin: 0;
-    min-width: 300px;
-    max-width: 360px;
+    min-width: 280px;
+    max-width: 340px;
 }
 .stop-schedule-popup .leaflet-popup-close-button {
-    color: #666 !important;
-    font-size: 22px !important;
-    top: 6px !important;
-    right: 8px !important;
+    color: var(--text-secondary) !important;
+    font-size: 20px !important;
+    top: 10px !important;
+    right: 12px !important;
+    width: 24px !important;
+    height: 24px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
 }
 .stop-schedule-popup .leaflet-popup-close-button:hover {
-    color: #333 !important;
+    color: var(--text-primary) !important;
 }
 
-/* Structure principale SNCF */
-.stop-popup-sncf {
-    color: #1a1a1a;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+/* Structure V104 */
+.stop-popup-v104 {
+    color: var(--text-primary);
 }
 
-/* Notice en haut */
-.stop-popup-notice {
-    padding: 10px 16px;
-    background: #f0f4ff;
-    color: #5c6bc0;
+/* Header */
+.stop-popup-v104 .popup-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+}
+.stop-popup-v104 .popup-title {
+    display: block;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.stop-popup-v104 .popup-subtitle {
+    display: block;
     font-size: 0.75rem;
-    line-height: 1.4;
-    border-bottom: 1px solid #e0e0e0;
+    color: var(--primary-color);
+    font-weight: 500;
+    margin-top: 2px;
 }
 
-/* Liste des lignes scrollable */
-.stop-popup-lines {
-    max-height: 350px;
+/* Liste des lignes */
+.stop-popup-v104 .popup-lines {
+    max-height: 300px;
     overflow-y: auto;
 }
 
 /* Carte par ligne */
-.sncf-line-card {
-    border-bottom: 1px solid #e8e8e8;
-    padding: 0;
+.stop-popup-v104 .popup-line-card {
+    border-bottom: 1px solid var(--border);
 }
-.sncf-line-card:last-child {
+.stop-popup-v104 .popup-line-card:last-child {
     border-bottom: none;
 }
 
-/* Header de ligne : icône bus + badge + nom arrêt */
-.sncf-line-header {
+/* Destination */
+.stop-popup-v104 .popup-destination {
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.05));
+}
+.stop-popup-v104 .popup-destination:last-child {
+    border-bottom: none;
+}
+
+/* Header destination : badge + nom */
+.stop-popup-v104 .popup-dest-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 16px 8px;
-    background: #fafafa;
-    border-bottom: 1px solid #f0f0f0;
+    gap: 0.625rem;
+    margin-bottom: 0.625rem;
 }
-.sncf-bus-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    color: #666;
-}
-.sncf-bus-icon .material-symbols-rounded {
-    font-size: 20px;
-}
-.sncf-line-badge {
+.stop-popup-v104 .popup-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 32px;
+    min-width: 36px;
     height: 24px;
-    padding: 0 8px;
+    padding: 0 0.5rem;
     font-size: 0.8125rem;
     font-weight: 700;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
 }
-.sncf-stop-name {
-    font-size: 0.9375rem;
+.stop-popup-v104 .popup-dest-name {
+    font-size: 0.875rem;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Destination + horaires */
-.sncf-destination {
-    padding: 10px 16px 12px;
-    padding-left: 48px; /* Aligné sous le badge */
-}
-.sncf-dest-name {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 8px;
-}
-.sncf-times {
+/* Horaires */
+.stop-popup-v104 .popup-times {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 0.5rem;
 }
-.sncf-time {
+.stop-popup-v104 .popup-time {
     display: inline-block;
-    padding: 6px 12px;
-    background: #f5f5f5;
-    border-radius: 6px;
+    padding: 0.375rem 0.75rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
     font-size: 0.875rem;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--text-primary);
     font-variant-numeric: tabular-nums;
 }
 
 /* Empty state */
-.stop-popup-empty {
+.stop-popup-v104 .popup-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 40px 20px;
-    color: #999;
+    gap: 0.5rem;
+    padding: 2.5rem 1.5rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
 }
-.stop-popup-empty .material-symbols-rounded {
-    font-size: 40px;
-    opacity: 0.5;
+.stop-popup-v104 .popup-empty-icon {
+    font-size: 2rem;
 }
 
 /* Scrollbar */
-.stop-popup-lines::-webkit-scrollbar {
-    width: 6px;
+.stop-popup-v104 .popup-lines::-webkit-scrollbar {
+    width: 5px;
 }
-.stop-popup-lines::-webkit-scrollbar-track {
+.stop-popup-v104 .popup-lines::-webkit-scrollbar-track {
     background: transparent;
 }
-.stop-popup-lines::-webkit-scrollbar-thumb {
-    background: #ddd;
+.stop-popup-v104 .popup-lines::-webkit-scrollbar-thumb {
+    background: var(--border);
     border-radius: 3px;
 }
-.stop-popup-lines::-webkit-scrollbar-thumb:hover {
-    background: #ccc;
-}
-
-/* Dark mode */
-[data-theme="dark"] .stop-schedule-popup .leaflet-popup-content-wrapper {
-    background: #1e1e2d !important;
-}
-[data-theme="dark"] .stop-schedule-popup .leaflet-popup-tip {
-    background: #1e1e2d !important;
-}
-[data-theme="dark"] .stop-schedule-popup .leaflet-popup-close-button {
-    color: rgba(255,255,255,0.6) !important;
-}
-[data-theme="dark"] .stop-schedule-popup .leaflet-popup-close-button:hover {
-    color: white !important;
-}
-[data-theme="dark"] .stop-popup-sncf {
-    color: white;
-}
-[data-theme="dark"] .stop-popup-notice {
-    background: rgba(92, 107, 192, 0.15);
-    color: #8b9eff;
-    border-color: rgba(255,255,255,0.1);
-}
-[data-theme="dark"] .sncf-line-card {
-    border-color: rgba(255,255,255,0.08);
-}
-[data-theme="dark"] .sncf-line-header {
-    background: rgba(255,255,255,0.03);
-    border-color: rgba(255,255,255,0.05);
-}
-[data-theme="dark"] .sncf-bus-icon {
-    color: rgba(255,255,255,0.6);
-}
-[data-theme="dark"] .sncf-stop-name {
-    color: white;
-}
-[data-theme="dark"] .sncf-dest-name {
-    color: rgba(255,255,255,0.9);
-}
-[data-theme="dark"] .sncf-time {
-    background: rgba(255,255,255,0.08);
-    color: white;
-}
-[data-theme="dark"] .stop-popup-empty {
-    color: rgba(255,255,255,0.5);
-}
-[data-theme="dark"] .stop-popup-lines::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.2);
-}
-[data-theme="dark"] .stop-popup-lines::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.3);
-}
-.stop-popup-lines::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.3);
-}
+.stop-popup-v104 .popup-lines::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
 }
 
 
 /* =========================================
  * STYLES PLANIFICATEUR (GÉNÉRAL)
- * ========================================= */
+ * ========================================= */ */
 .planner-block .form-group label,
 .itinerary-edit-form .form-group label {
     font-size: 0.75rem; 

@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v103'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V103: Fix apostrophe syntax error
+const CACHE_VERSION = 'v104'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V104: Popup arrêts harmonisé avec la DA
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
