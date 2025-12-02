@@ -675,30 +675,28 @@ export class MapRenderer {
     }
 
     /**
-     * Formate le contenu HTML pour le popup d'un arrêt (style TBM - 1h par ligne)
-     * V99: Gère l'affichage des premiers départs quand il n'y en a pas dans l'heure
+     * Formate le contenu HTML pour le popup d'un arrêt
+     * V101: Design épuré, fond opaque, structure simple
      */
     createStopPopupContent(masterStop, departuresByLine, currentSeconds, isNextDayDepartures = false, firstDepartureTime = null) {
-        let html = `<div class="info-popup-content stop-popup">`;
-        html += `<div class="info-popup-header">${masterStop.stop_name}</div>`;
-        html += `<div class="info-popup-body">`;
+        let html = `<div class="stop-popup-v101">`;
+        
+        // Header avec nom de l'arrêt
+        html += `<div class="stop-popup-header">
+                    <span class="stop-popup-name">${masterStop.stop_name}</span>
+                    ${isNextDayDepartures && firstDepartureTime ? 
+                        `<span class="stop-popup-notice">Premiers départs dès ${firstDepartureTime.substring(0, 5)}</span>` : 
+                        ''}
+                 </div>`;
 
         const lineKeys = Object.keys(departuresByLine);
         
         if (lineKeys.length === 0) {
-            html += `<div class="departure-item empty">
-                        <span class="material-symbols-rounded" style="font-size: 24px; opacity: 0.5;">bedtime</span>
-                        <span>Aucun passage prévu aujourd'hui</span>
+            html += `<div class="stop-popup-empty">
+                        <span class="material-symbols-rounded">bedtime</span>
+                        <span>Aucun passage prévu</span>
                      </div>`;
         } else {
-            // V99: Message d'information si ce sont les premiers départs
-            if (isNextDayDepartures && firstDepartureTime) {
-                html += `<div class="next-day-notice">
-                            <span class="material-symbols-rounded">schedule</span>
-                            <span>Premiers départs à partir de ${firstDepartureTime.substring(0, 5)}</span>
-                         </div>`;
-            }
-            
             // Trier les lignes par premier départ
             lineKeys.sort((a, b) => {
                 const firstA = departuresByLine[a].departures[0]?.departureSeconds || Infinity;
@@ -706,53 +704,45 @@ export class MapRenderer {
                 return firstA - firstB;
             });
 
+            html += `<div class="stop-popup-lines">`;
             lineKeys.forEach(lineKey => {
                 const line = departuresByLine[lineKey];
                 
-                html += `<div class="line-departures-group">`;
+                html += `<div class="stop-line-group">`;
                 
-                // En-tête de la ligne
-                html += `<div class="line-header">`;
-                html += `<span class="departure-badge" style="background-color: #${line.routeColor}; color: #${line.routeTextColor};">
-                            ${line.routeShortName}
-                         </span>`;
-                html += `<span class="departure-dest">${line.destination}</span>`;
-                html += `</div>`;
+                // Badge ligne + destination
+                html += `<div class="stop-line-header">
+                            <span class="stop-line-badge" style="background:#${line.routeColor};color:#${line.routeTextColor};">${line.routeShortName}</span>
+                            <span class="stop-line-dest">${line.destination}</span>
+                         </div>`;
                 
-                // Liste des horaires
-                html += `<div class="departure-times-list">`;
-                line.departures.forEach((dep, index) => {
+                // Horaires
+                html += `<div class="stop-times-row">`;
+                line.departures.slice(0, 4).forEach(dep => {
                     const waitSeconds = dep.departureSeconds - currentSeconds;
                     const waitMinutes = Math.floor(waitSeconds / 60);
                     
-                    let timeClass = '';
-                    let waitLabel = '';
+                    let waitLabel;
+                    let chipClass = '';
                     
                     if (waitMinutes <= 0) {
-                        timeClass = 'imminent';
-                        waitLabel = 'Imm.';
+                        waitLabel = 'Imminent';
+                        chipClass = 'imminent';
                     } else if (waitMinutes < 60) {
-                        timeClass = waitMinutes <= 5 ? 'soon' : '';
                         waitLabel = `${waitMinutes} min`;
+                        if (waitMinutes <= 5) chipClass = 'soon';
                     } else {
-                        // Format heures + minutes (ex: 2h40)
-                        const hours = Math.floor(waitMinutes / 60);
-                        const mins = waitMinutes % 60;
-                        waitLabel = mins > 0 ? `${hours}h${String(mins).padStart(2, '0')}` : `${hours}h`;
+                        const h = Math.floor(waitMinutes / 60);
+                        const m = waitMinutes % 60;
+                        waitLabel = m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
                     }
                     
-                    html += `<span class="departure-time-chip ${timeClass}">
-                                <span class="chip-time">${dep.time.substring(0, 5)}</span>
-                                <span class="chip-wait">${waitLabel}</span>
-                             </span>`;
+                    html += `<div class="stop-time-chip ${chipClass}">
+                                <span class="time">${dep.time.substring(0, 5)}</span>
+                                <span class="wait">${waitLabel}</span>
+                             </div>`;
                 });
-                html += `</div>`;
-                
-                html += `</div>`;
-            });
-        }
-
-        html += `</div></div>`;
+        html += `</div>`;
         return html;
     }
 

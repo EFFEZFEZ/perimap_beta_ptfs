@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v100'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V100: Popup arrêts opaque + temps format 2h40
+const CACHE_VERSION = 'v101'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V101: Popup arrêts redesign complet opaque
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
