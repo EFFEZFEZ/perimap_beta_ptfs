@@ -8013,3 +8013,577 @@ body.dark-theme .tarifs-choice {
 }
 
 
+/* =========================================
+ * V90: AMÉLIORATIONS MOBILE COMPLÈTES
+ * ========================================= */
+
+/* === ÉCHELLE Z-INDEX COHÉRENTE ===
+ * Base elements: 1-10
+ * Fixed UI: 100-200
+ * Dropdowns/Tooltips: 500-600
+ * Modals/Overlays: 1000-1100
+ * Bottom sheets: 1200-1300
+ * Critical alerts: 1400+
+ */
+
+/* === 1. POPUP ARRÊT MOBILE OPTIMISÉ === */
+@media (max-width: 480px) {
+    .stop-schedule-popup .leaflet-popup-content {
+        min-width: 260px;
+        max-width: 300px;
+    }
+    
+    .line-departures-group {
+        padding: 0.625rem;
+    }
+    
+    .line-header .departure-badge {
+        min-width: 28px;
+        padding: 0.15rem 0.35rem;
+        font-size: 0.7rem;
+    }
+    
+    .line-header .departure-dest {
+        font-size: 0.75rem;
+    }
+    
+    .departure-times-list {
+        gap: 0.25rem;
+    }
+    
+    .departure-time-chip {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.75rem;
+        min-width: 44px;
+    }
+    
+    .departure-time-chip small {
+        font-size: 0.6rem;
+    }
+}
+
+/* === 2. ZONES TACTILES AGRANDIES (44px min) === */
+
+/* Bouton géolocalisation */
+.btn-geolocate {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    right: 0.375rem;
+}
+
+.btn-geolocate svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Accordéons horaires - zone cliquable agrandie */
+.accordion-group summary {
+    min-height: 52px;
+    padding: 1rem 1.25rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Feedback tactile sur les accordéons */
+.accordion-group summary:active {
+    background: var(--bg-tertiary);
+    transform: scale(0.995);
+}
+
+/* Quick actions - feedback tactile */
+.quick-action-card {
+    min-height: 80px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.quick-action-card:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Boutons généraux - feedback tactile */
+.btn:active,
+.btn-icon-round:active {
+    transform: scale(0.96);
+    transition: transform 0.1s ease;
+}
+
+/* Onglets (tabs) - zone tactile */
+.tab {
+    min-height: 44px;
+    padding: 0.75rem 1.25rem;
+}
+
+.tab:active {
+    background: var(--bg-tertiary);
+}
+
+/* News banner - zone cliquable */
+.news-banner-link {
+    min-height: 36px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* === 3. AUTOCOMPLÉTION MOBILE OPTIMISÉE === */
+@media (max-width: 768px) {
+    .autocomplete-suggestions,
+    #horaires-search-results,
+    #from-suggestions,
+    #to-suggestions,
+    #results-from-suggestions,
+    #results-to-suggestions {
+        max-height: 45vh;
+        border-radius: var(--radius-lg);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15), 0 8px 30px rgba(0, 0, 0, 0.2);
+    }
+    
+    .autocomplete-item,
+    .search-result-item {
+        min-height: 52px;
+        padding: 0.875rem 1rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .autocomplete-item:active,
+    .search-result-item:active {
+        background: var(--primary);
+        color: white;
+    }
+}
+
+/* === 4. NEWS BANNER MOBILE - Texte wrap === */
+@media (max-width: 480px) {
+    .news-banner {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .news-banner-content {
+        flex: 1 1 100%;
+        order: 2;
+    }
+    
+    .news-banner-icon {
+        order: 1;
+    }
+    
+    .news-banner-link {
+        order: 3;
+        margin-left: auto;
+    }
+    
+    .news-banner-text {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        line-height: 1.4;
+    }
+}
+
+/* === 5. BOTTOM SHEET APPLE-STYLE COMPLET === */
+
+/* Backdrop amélioré avec blur */
+#itinerary-detail-backdrop {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition: opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Bottom sheet principal - Apple-style */
+@media (max-width: 768px) {
+    #detail-bottom-sheet {
+        border-radius: 16px 16px 0 0;
+        box-shadow: 
+            0 -8px 32px rgba(0, 0, 0, 0.12),
+            0 -2px 8px rgba(0, 0, 0, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        transition: 
+            transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+            height 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+        will-change: transform, height;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Handle Apple-style */
+    #detail-bottom-sheet .panel-handle {
+        width: 36px;
+        height: 5px;
+        border-radius: 3px;
+        background: rgba(0, 0, 0, 0.2);
+        margin: 8px auto 4px;
+        padding: 10px 30px;
+        background-clip: content-box;
+        cursor: grab;
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
+    
+    #detail-bottom-sheet .panel-handle:active,
+    #detail-bottom-sheet.is-dragging .panel-handle {
+        background: rgba(0, 0, 0, 0.35);
+        background-clip: content-box;
+        cursor: grabbing;
+        transform: scaleX(1.2);
+    }
+    
+    /* Pendant le drag - pas de transition */
+    #detail-bottom-sheet.is-dragging {
+        transition: none !important;
+        will-change: transform, height;
+    }
+    
+    /* Animation d'entrée fluide */
+    #itinerary-detail-container.is-active #detail-bottom-sheet {
+        transform: translateY(0);
+        animation: bottomSheetSlideUp 0.45s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    }
+    
+    /* État expanded - scroll activé */
+    #detail-bottom-sheet.is-expanded {
+        border-radius: 12px 12px 0 0;
+    }
+    
+    #detail-bottom-sheet.is-expanded .panel-handle {
+        background: rgba(0, 0, 0, 0.12);
+        background-clip: content-box;
+    }
+    
+    /* Supprime le texte "Glissez vers le haut" - indicateur handle suffit */
+    #detail-bottom-sheet:not(.is-expanded)::after {
+        display: none;
+    }
+    
+    /* Panel wrapper avec scroll smooth */
+    #detail-panel-wrapper {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+        overscroll-behavior-y: contain;
+    }
+    
+    /* Indicateur de scroll en haut quand scrollé */
+    #itinerary-detail-container.is-scrolled #detail-bottom-sheet::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--border);
+        opacity: 0.5;
+    }
+}
+
+@keyframes bottomSheetSlideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0.8;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* === 6. DARK MODE COMPLET POUR BOTTOM SHEET === */
+body.dark-theme #itinerary-detail-backdrop {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+body.dark-theme #detail-bottom-sheet {
+    background: #0f172a;
+    box-shadow: 
+        0 -8px 32px rgba(0, 0, 0, 0.4),
+        0 -2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme #detail-bottom-sheet .panel-handle {
+    background: rgba(255, 255, 255, 0.25);
+    background-clip: content-box;
+}
+
+body.dark-theme #detail-bottom-sheet.is-dragging .panel-handle {
+    background: rgba(255, 255, 255, 0.4);
+    background-clip: content-box;
+}
+
+body.dark-theme #detail-panel-content {
+    background: #0f172a;
+}
+
+/* === 7. DARK MODE - COMPOSANTS MANQUANTS === */
+
+/* Accordéons horaires */
+body.dark-theme .accordion-group summary {
+    background: var(--bg-secondary);
+}
+
+body.dark-theme .accordion-group summary:hover,
+body.dark-theme .accordion-group summary:active {
+    background: var(--bg-tertiary);
+}
+
+body.dark-theme .accordion-group details[open] summary {
+    background: var(--bg-main);
+}
+
+body.dark-theme .accordion-content {
+    background: var(--bg-main);
+}
+
+/* News banner dark */
+body.dark-theme .news-banner {
+    background: rgba(15, 23, 42, 0.95);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .news-banner-icon {
+    background: rgba(42, 157, 143, 0.15);
+}
+
+body.dark-theme .news-banner-text {
+    color: var(--text-primary);
+}
+
+/* Autocomplétion dark */
+body.dark-theme .autocomplete-suggestions,
+body.dark-theme #horaires-search-results {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-theme .autocomplete-item:hover,
+body.dark-theme .search-result-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .autocomplete-item:active,
+body.dark-theme .search-result-item:active {
+    background: var(--primary);
+}
+
+/* Planner block dark */
+body.dark-theme .planner-block {
+    background: rgba(15, 23, 42, 0.95);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .planner-block input[type="text"] {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+body.dark-theme .planner-block input[type="text"]:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--primary);
+}
+
+body.dark-theme .planner-title {
+    color: var(--text-primary);
+}
+
+body.dark-theme .btn-swap-direction {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+}
+
+body.dark-theme .btn-swap-direction:hover {
+    background: rgba(42, 157, 143, 0.15);
+    border-color: #2a9d8f;
+    color: #2a9d8f;
+}
+
+body.dark-theme .swap-line {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Bouton "Partir maintenant" dark */
+body.dark-theme .btn-when {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+body.dark-theme .btn-when:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Popover options dark */
+body.dark-theme #planner-options-popover,
+body.dark-theme #results-planner-options-popover {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-theme .popover-tab {
+    color: var(--text-secondary);
+}
+
+body.dark-theme .popover-tab.active {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+body.dark-theme .real-select {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+/* Étapes itinéraire dark */
+body.dark-theme .step-detail {
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme .step-icon {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .step-walk-icon,
+body.dark-theme .step-destination-icon {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+}
+
+/* Route cards dark */
+body.dark-theme .route-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme .route-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .route-card.is-selected {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: var(--primary);
+}
+
+/* Filter panel dark mobile */
+@media (max-width: 768px) {
+    body.dark-theme #route-filter-panel {
+        background: #0a0f18;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+}
+
+/* Results side panel dark */
+body.dark-theme #results-side-panel {
+    background: #0f172a;
+}
+
+body.dark-theme .itinerary-edit-header {
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme .itinerary-edit-header h2 {
+    color: var(--text-primary);
+}
+
+/* Mode tabs dark */
+body.dark-theme .mode-tab {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+}
+
+body.dark-theme .mode-tab:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme .mode-tab.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* === 8. CORRECTIONS PLANNER MOBILE === */
+@media (max-width: 768px) {
+    .planner-block {
+        margin: 0 0 1rem;
+        border-radius: var(--radius-lg);
+    }
+    
+    .planner-block .form-group input[type="text"] {
+        min-height: 52px;
+        font-size: 1rem;
+    }
+    
+    /* Bouton rechercher plus grand sur mobile */
+    #planner-submit-btn,
+    #results-planner-submit-btn {
+        min-height: 52px;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+}
+
+/* === 9. AMÉLIORATION SCROLLBAR GLOBALE === */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme * {
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+body.dark-theme *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-theme *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* === 10. SAFE AREA IMPROVEMENTS === */
+@supports (padding: env(safe-area-inset-bottom)) {
+    @media (max-width: 768px) {
+        #detail-bottom-sheet {
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        }
+        
+        #route-filter-panel {
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+        }
+        
+        .results-list {
+            padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+        }
+        
+        .autocomplete-suggestions {
+            max-height: calc(45vh - env(safe-area-inset-bottom));
+        }
+    }
+}
+

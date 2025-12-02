@@ -1,20 +1,20 @@
 /**
- * bottomSheetController.js - Contrôleur du bottom sheet mobile
+ * bottomSheetController.js - Contrôleur du bottom sheet mobile (V90 Apple-style)
  * 
  * Ce module gère le comportement du bottom sheet dans la vue détail d'itinéraire :
- * - Niveaux de hauteur (25%, 50%, 80%)
- * - Drag & drop
- * - Gestion du scroll
- * - Resize responsive
+ * - Snap points avec animation fluide (iOS-style)
+ * - Drag avec vélocité et momentum
+ * - Rubber-band effect aux limites
+ * - Gestion du scroll intelligent
  */
 
 // === Constantes ===
 
 /**
  * Niveaux de hauteur du bottom sheet (pourcentage de la hauteur du viewport)
- * 0 = réduit, 1 = moyen, 2 = étendu
+ * 0 = réduit (peek), 1 = moyen (half), 2 = étendu (full)
  */
-export const BOTTOM_SHEET_LEVELS = [0.25, 0.50, 0.80];
+export const BOTTOM_SHEET_LEVELS = [0.25, 0.50, 0.85];
 
 /**
  * Index du niveau considéré comme "étendu" (permet le scroll du contenu)
@@ -24,12 +24,12 @@ export const BOTTOM_SHEET_EXPANDED_LEVEL_INDEX = 2;
 /**
  * Zone en pixels au-dessus du bord supérieur du sheet où le drag est permis
  */
-export const BOTTOM_SHEET_DRAG_BUFFER_PX = 20;
+export const BOTTOM_SHEET_DRAG_BUFFER_PX = 24;
 
 /**
  * Zone en pixels depuis le haut du sheet où le drag est toujours permis
  */
-export const BOTTOM_SHEET_DRAG_ZONE_PX = 60;
+export const BOTTOM_SHEET_DRAG_ZONE_PX = 80;
 
 /**
  * Seuil de scroll pour débloquer le drag depuis le contenu
@@ -37,14 +37,24 @@ export const BOTTOM_SHEET_DRAG_ZONE_PX = 60;
 export const BOTTOM_SHEET_SCROLL_UNLOCK_THRESHOLD = 5;
 
 /**
- * Seuil de vélocité pour déclencher un changement de niveau
+ * Seuil de vélocité pour déclencher un changement de niveau (px/ms)
  */
-export const BOTTOM_SHEET_VELOCITY_THRESHOLD = 0.3;
+export const BOTTOM_SHEET_VELOCITY_THRESHOLD = 0.4;
 
 /**
  * Distance minimale de drag pour déclencher un changement de niveau
  */
-export const BOTTOM_SHEET_MIN_DRAG_DISTANCE_PX = 40;
+export const BOTTOM_SHEET_MIN_DRAG_DISTANCE_PX = 50;
+
+/**
+ * Facteur de rubber-band quand on dépasse les limites
+ */
+export const RUBBER_BAND_FACTOR = 0.3;
+
+/**
+ * Décélération pour le momentum (friction)
+ */
+export const MOMENTUM_DECELERATION = 0.95;
 
 // === État du controller ===
 
@@ -262,7 +272,7 @@ function onBottomSheetPointerDown(event) {
 }
 
 /**
- * Handler pour le mouvement du drag (pointermove)
+ * Handler pour le mouvement du drag (pointermove) - V90 avec rubber-band
  */
 function onBottomSheetPointerMove(event) {
     if (!dragState || !detailBottomSheet) return;
@@ -275,14 +285,25 @@ function onBottomSheetPointerMove(event) {
     const minHeight = viewportHeight * BOTTOM_SHEET_LEVELS[0];
     const maxHeight = viewportHeight * BOTTOM_SHEET_LEVELS[BOTTOM_SHEET_LEVELS.length - 1];
     let nextHeight = dragState.startHeight + deltaY;
-    nextHeight = Math.max(minHeight, Math.min(maxHeight, nextHeight));
     
+    // Rubber-band effect aux limites (iOS-style)
+    if (nextHeight < minHeight) {
+        const overflow = minHeight - nextHeight;
+        nextHeight = minHeight - (overflow * RUBBER_BAND_FACTOR);
+    } else if (nextHeight > maxHeight) {
+        const overflow = nextHeight - maxHeight;
+        nextHeight = maxHeight + (overflow * RUBBER_BAND_FACTOR);
+    }
+    
+    // Calcul de la vélocité avec lissage
     const now = performance.now();
     if (dragState.lastHeight !== null) {
         const deltaHeight = nextHeight - dragState.lastHeight;
         const elapsed = now - (dragState.lastEventTime || now);
         if (elapsed > 0) {
-            dragState.velocity = deltaHeight / elapsed;
+            // Lissage de la vélocité pour éviter les à-coups
+            const instantVelocity = deltaHeight / elapsed;
+            dragState.velocity = dragState.velocity * 0.7 + instantVelocity * 0.3;
         }
     }
     

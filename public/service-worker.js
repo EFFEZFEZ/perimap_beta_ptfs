@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v89'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V89: Cacher footer sur vue carte desktop
+const CACHE_VERSION = 'v90'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V90: Améliorations mobile complètes (bottom sheet Apple-style, dark mode, zones tactiles, popups)
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
