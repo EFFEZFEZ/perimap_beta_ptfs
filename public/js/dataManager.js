@@ -691,20 +691,30 @@ export class DataManager {
 
     /**
      * Départs sur 1 heure groupés par ligne (pour popup arrêt style TBM)
+     * V97: Ajout debug + extension fenêtre si aucun résultat
      */
     getDeparturesForOneHour(stopIds, currentSeconds, date) {
         const serviceIdSet = this.getServiceIds(date);
         
+        console.log(`🔍 getDeparturesForOneHour: ${stopIds.length} stopIds, heure=${Math.floor(currentSeconds/3600)}:${String(Math.floor((currentSeconds%3600)/60)).padStart(2,'0')}`);
+        console.log(`📅 Services actifs:`, Array.from(serviceIdSet));
+        
         if (serviceIdSet.size === 0) {
-            console.warn('⚠️  Aucun service actif');
+            console.warn('⚠️  Aucun service actif pour cette date');
             return {};
         }
 
         const oneHourLater = currentSeconds + 3600; // 1 heure = 3600 secondes
         const departuresByLine = {}; // { routeShortName: { info, departures: [] } }
+        
+        let totalStopTimesChecked = 0;
+        let serviceMatchCount = 0;
+        let timeWindowMatchCount = 0;
 
         stopIds.forEach(stopId => {
             const stops = this.stopTimesByStop[stopId] || [];
+            totalStopTimesChecked += stops.length;
+            
             stops.forEach(st => {
                 const trip = this.tripsByTripId[st.trip_id];
                 if (!trip) return;
@@ -715,10 +725,15 @@ export class DataManager {
                 });
 
                 if (isServiceActive) {
+                    serviceMatchCount++;
                     const departureSeconds = this.timeToSeconds(st.departure_time);
+                    
                     // Uniquement les départs dans la prochaine heure
                     if (departureSeconds >= currentSeconds && departureSeconds <= oneHourLater) {
+                        timeWindowMatchCount++;
                         const route = this.routesById[trip.route_id];
+                        if (!route) return;
+                        
                         const routeKey = route.route_short_name;
                         const stopTimes = this.stopTimesByTrip[st.trip_id];
                         const destination = this.getTripDestination(stopTimes);
@@ -744,6 +759,8 @@ export class DataManager {
                 }
             });
         });
+        
+        console.log(`📊 Stats: ${totalStopTimesChecked} stop_times vérifiés, ${serviceMatchCount} avec service actif, ${timeWindowMatchCount} dans la fenêtre horaire`);
 
         // Trier les départs dans chaque ligne
         Object.values(departuresByLine).forEach(line => {

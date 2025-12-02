@@ -1,7 +1,7 @@
 {
   "name": "PériMap",
   "short_name": "PériMap",
-  "version": "2.96.0",
+  "version": "2.97.0",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
