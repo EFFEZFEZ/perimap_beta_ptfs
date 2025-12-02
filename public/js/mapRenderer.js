@@ -654,10 +654,24 @@ export class MapRenderer {
         const currentSeconds = this.timeManager.getCurrentSeconds();
         const currentDate = this.timeManager.getCurrentDate();
 
+        // V96: Debug pour comprendre pourquoi les horaires ne s'affichent pas
+        console.log(`🚏 Clic sur arrêt: ${masterStop.stop_name} (${masterStop.stop_id})`);
+        
         const associatedStopIds = this.dataManager.groupedStopMap[masterStop.stop_id] || [masterStop.stop_id];
+        console.log(`📍 Stop IDs associés:`, associatedStopIds);
+        
+        // Vérifier si ces stop_ids existent dans stopTimesByStop
+        const stbsKeys = Object.keys(this.dataManager.stopTimesByStop);
+        console.log(`📊 stopTimesByStop a ${stbsKeys.length} clés`);
+        
+        associatedStopIds.forEach(sid => {
+            const hasData = this.dataManager.stopTimesByStop[sid];
+            console.log(`   - ${sid}: ${hasData ? hasData.length + ' stop_times' : 'AUCUNE DONNÉE'}`);
+        });
 
         // Utiliser la nouvelle fonction pour 1h de départs groupés par ligne
         const departuresByLine = this.dataManager.getDeparturesForOneHour(associatedStopIds, currentSeconds, currentDate);
+        console.log(`🕐 Départs trouvés:`, Object.keys(departuresByLine).length, 'lignes');
 
         const popupContent = this.createStopPopupContent(masterStop, departuresByLine, currentSeconds);
         
