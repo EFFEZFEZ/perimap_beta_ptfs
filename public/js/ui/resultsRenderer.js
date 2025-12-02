@@ -107,7 +107,7 @@ export function createResultsRenderer(deps) {
   }
 
   /**
-   * V64: Formate les prochains départs en "+Xmin"
+   * V91: Formate les prochains départs en chips élégants style TBM
    * Utilise les données GTFS locales pour enrichir
    */
   function formatNextDepartures(allDepartures, maxShow = 4) {
@@ -119,13 +119,13 @@ export function createResultsRenderer(deps) {
     const formatted = nextOnes.map(dep => {
       const diffFromFirst = dep.depMinutes - allDepartures[0].depMinutes;
       if (diffFromFirst <= 0) return null;
-      return `+${diffFromFirst}min`;
+      return `<span class="next-departures-time">+${diffFromFirst}min</span>`;
     }).filter(Boolean);
     
     if (formatted.length === 0) return '';
     
     const moreCount = allDepartures.length - 1 - nextOnes.length;
-    let html = formatted.join(' • ');
+    let html = formatted.join(' ');
     if (moreCount > 0) {
       html += ` <span class="next-departures-more">+${moreCount} autres</span>`;
     }

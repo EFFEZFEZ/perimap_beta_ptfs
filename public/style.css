@@ -8587,3 +8587,529 @@ body.dark-theme *::-webkit-scrollbar-thumb:hover {
     }
 }
 
+
+/* =========================================
+ * V91: REDESIGN ITINÉRAIRES - STYLE TBM/SNCF/IDFM
+ * Design épuré, minimaliste et moderne
+ * ========================================= */
+
+/* === PANNEAU LATÉRAL ÉPURÉ === */
+#results-side-panel {
+    background: #f8fafc;
+}
+
+body.dark-theme #results-side-panel {
+    background: #0c1220;
+}
+
+/* === EN-TÊTE ITINÉRAIRES MINIMAL === */
+.itinerary-edit-header {
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: none;
+}
+
+.itinerary-edit-header h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* === PANNEAU DE RECHERCHE COMPACT === */
+#itinerary-edit-panel {
+    background: transparent;
+    padding: 0 1.25rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+body.dark-theme #itinerary-edit-panel {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Inputs minimalistes style TBM */
+.itinerary-edit-form .form-group input[type="text"],
+#results-planner-from,
+#results-planner-to {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    min-height: 44px;
+    box-shadow: none;
+}
+
+body.dark-theme .itinerary-edit-form .form-group input[type="text"],
+body.dark-theme #results-planner-from,
+body.dark-theme #results-planner-to {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.itinerary-edit-form .form-group input[type="text"]:focus,
+#results-planner-from:focus,
+#results-planner-to:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* Labels ultra discrets */
+.itinerary-edit-form .form-group label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* === ONGLETS MODE DE TRANSPORT - STYLE TBM === */
+#results-mode-tabs {
+    display: flex;
+    background: transparent;
+    padding: 0.75rem 1rem;
+    gap: 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+body.dark-theme #results-mode-tabs {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.mode-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.625rem 0.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.mode-tab::after {
+    content: '';
+    position: absolute;
+    bottom: -0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 3px;
+    background: #2563eb;
+    border-radius: 2px;
+    transition: width 0.2s ease;
+}
+
+.mode-tab:hover {
+    background: rgba(37, 99, 235, 0.04);
+}
+
+.mode-tab.active {
+    background: rgba(37, 99, 235, 0.08);
+}
+
+.mode-tab.active::after {
+    width: 24px;
+}
+
+.mode-tab svg {
+    width: 22px;
+    height: 22px;
+    color: #64748b;
+    transition: color 0.2s ease;
+}
+
+.mode-tab.active svg {
+    color: #2563eb;
+}
+
+.mode-tab-duration {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+body.dark-theme .mode-tab-duration {
+    color: #e2e8f0;
+}
+
+.mode-tab.active .mode-tab-duration {
+    color: #2563eb;
+}
+
+.mode-tab-duration.empty {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* === LISTE DES RÉSULTATS AÉRÉE === */
+.results-list {
+    padding: 0.75rem;
+    background: transparent;
+}
+
+/* === TITRES DE SECTION DISCRETS === */
+.route-option-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 1rem 0.5rem 0.5rem;
+    padding: 0;
+}
+
+body.dark-theme .route-option-title {
+    color: #94a3b8;
+}
+
+/* === CARTES ITINÉRAIRES - DESIGN TBM/IDFM === */
+.route-option {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.625rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    gap: 0.625rem;
+}
+
+.route-option:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.route-option.is-active {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+    background: #fafbff;
+}
+
+body.dark-theme .route-option {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme .route-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .route-option.is-active {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: #2563eb;
+}
+
+/* === LIGNE DE RÉSUMÉ - BADGES ÉLÉGANTS === */
+.route-summary-line {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+}
+
+/* Icône mode transport (bus/vélo/marche) */
+.route-summary-bus-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    border: none;
+    color: #64748b;
+    font-size: 0;
+    padding: 0;
+}
+
+.route-summary-bus-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+body.dark-theme .route-summary-bus-icon {
+    background: rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+}
+
+/* Icône marche inline */
+.route-summary-walk-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+}
+
+.route-summary-walk-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Séparateur point */
+.route-summary-dot {
+    color: #cbd5e1;
+    font-size: 0.5rem;
+    margin: 0 0.125rem;
+}
+
+body.dark-theme .route-summary-dot {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+/* === BADGES DE LIGNE - STYLE MODERNE TBM/SNCF === */
+.route-line-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    min-width: 36px;
+    height: 26px;
+    padding: 0 0.5rem;
+    box-shadow: none;
+    letter-spacing: 0.02em;
+}
+
+/* === FOOTER - HORAIRES ET DURÉE === */
+.route-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.25rem;
+}
+
+.route-time {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.01em;
+}
+
+body.dark-theme .route-time {
+    color: #f1f5f9;
+}
+
+.route-duration {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+body.dark-theme .route-duration {
+    color: #94a3b8;
+}
+
+/* Durée éco - vert TBM */
+.route-duration-eco {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: #059669;
+    font-weight: 700;
+}
+
+.route-duration-eco svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* === SECTION "AUSSI À" - TRÈS DISCRÈTE === */
+.route-next-departures {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+    padding-top: 0.625rem;
+    margin-top: 0.625rem;
+    border-top: 1px solid #f1f5f9;
+    font-size: 0.75rem;
+}
+
+body.dark-theme .route-next-departures {
+    border-top-color: rgba(255, 255, 255, 0.04);
+}
+
+.next-departures-label {
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+.next-departures-time {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.5rem;
+    background: #f1f5f9;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #475569;
+}
+
+body.dark-theme .next-departures-time {
+    background: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+}
+
+.next-departures-more {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* === BOUTONS ÉPURÉS === */
+.btn-full-width {
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: background 0.15s ease;
+}
+
+.btn-full-width:hover {
+    background: #1d4ed8;
+}
+
+/* Bouton "Charger plus" */
+.load-more-wrapper {
+    padding: 0.75rem;
+}
+
+.load-more-wrapper .btn,
+.load-more-departures .btn {
+    background: transparent;
+    border: 1px solid #e5e7eb;
+    color: #475569;
+    border-radius: 8px;
+    padding: 0.625rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    width: 100%;
+    justify-content: center;
+}
+
+.load-more-wrapper .btn:hover,
+.load-more-departures .btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+body.dark-theme .load-more-wrapper .btn,
+body.dark-theme .load-more-departures .btn {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+}
+
+body.dark-theme .load-more-wrapper .btn:hover,
+body.dark-theme .load-more-departures .btn:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* === BOUTON QUAND - STYLE SNCF === */
+.btn-when,
+.btn-when-inline {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-when:hover,
+.btn-when-inline:hover {
+    border-color: #cbd5e1;
+    background: #fafafa;
+}
+
+body.dark-theme .btn-when,
+body.dark-theme .btn-when-inline {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+}
+
+.btn-when svg,
+.btn-when-inline svg {
+    color: #94a3b8;
+    width: 18px;
+    height: 18px;
+}
+
+/* === MOBILE SPÉCIFIQUE === */
+@media (max-width: 768px) {
+    #results-side-panel {
+        background: #f8fafc;
+    }
+    
+    body.dark-theme #results-side-panel {
+        background: #0a0f18;
+    }
+    
+    .itinerary-edit-header {
+        padding: 0.875rem 1rem 0.5rem;
+    }
+    
+    .itinerary-edit-header h2 {
+        font-size: 1.125rem;
+    }
+    
+    #itinerary-edit-panel {
+        padding: 0 1rem 0.875rem;
+    }
+    
+    #results-mode-tabs {
+        padding: 0.625rem 0.75rem;
+    }
+    
+    .mode-tab {
+        padding: 0.5rem 0.25rem;
+    }
+    
+    .mode-tab svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .mode-tab-duration {
+        font-size: 0.75rem;
+    }
+    
+    .results-list {
+        padding: 0.5rem;
+    }
+    
+    .route-option {
+        padding: 0.875rem;
+        margin-bottom: 0.5rem;
+        border-radius: 10px;
+    }
+    
+    .route-line-badge {
+        min-width: 32px;
+        height: 24px;
+        font-size: 0.75rem;
+        border-radius: 5px;
+    }
+    
+    .route-time {
+        font-size: 0.9rem;
+    }
+    
+    .route-duration {
+        font-size: 0.85rem;
+    }
+}
+
