@@ -3621,17 +3621,17 @@ function renderInfoTraficCard() {
             const state = lineStatuses[route.route_id] || { status: 'normal', message: '' };
             const routeColor = route.route_color ? `#${route.route_color}` : '#3388ff';
             const textColor = route.route_text_color ? `#${route.route_text_color}` : '#ffffff';
-            let statusIcon = '';
-            let statusColor = 'transparent'; 
+            
+            // Comptabiliser les alertes
             if (state.status !== 'normal') {
                 alertCount++;
-                if (state.status === 'annulation') statusColor = 'var(--color-red)';
-                else if (state.status === 'retard') statusColor = 'var(--color-yellow)';
-                else statusColor = 'var(--color-orange)';
-                statusIcon = `<div class="status-indicator-triangle type-${state.status}" style="border-bottom-color: ${statusColor};"></div>`;
             }
+            
+            // Icône de statut (style TBM) - affichée uniquement si pas normal
+            const statusIcon = state.status !== 'normal' ? '<span class="status-icon"></span>' : '';
+            
             badgesHtml += `
-                <div class="trafic-badge-item status-${state.status}">
+                <div class="trafic-badge-item status-${state.status}" title="${state.message || ''}">
                     <span class="line-badge" style="background-color: ${routeColor}; color: ${textColor};">
                         ${route.route_short_name}
                     </span>

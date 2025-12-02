@@ -2389,6 +2389,7 @@ details[open] .accordion-content {
     align-items: center;
     cursor: pointer;
     min-width: 45px;
+    position: relative;
 }
 .line-badge {
     display: inline-flex;
@@ -2409,12 +2410,64 @@ details[open] .accordion-content {
     box-shadow: var(--shadow-md);
 }
 
-.status-indicator-triangle {
-    width: 0; 
-    height: 0; 
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    margin-top: 5px;
+/* === INDICATEURS D'ÉTAT DES LIGNES (style TBM) === */
+.trafic-badge-item .status-icon {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    z-index: 1;
+}
+
+/* Retard - Jaune avec icône horloge */
+.trafic-badge-item.status-retard .status-icon {
+    background: var(--color-yellow);
+    color: #1a1a1a;
+}
+.trafic-badge-item.status-retard .status-icon::before {
+    content: "⏱";
+    font-size: 10px;
+}
+
+/* Perturbation - Orange avec icône warning */
+.trafic-badge-item.status-perturbation .status-icon {
+    background: var(--color-orange);
+}
+.trafic-badge-item.status-perturbation .status-icon::before {
+    content: "!";
+    font-weight: 900;
+}
+
+/* Annulation - Rouge avec icône X */
+.trafic-badge-item.status-annulation .status-icon {
+    background: var(--color-red);
+}
+.trafic-badge-item.status-annulation .status-icon::before {
+    content: "✕";
+    font-size: 10px;
+}
+
+/* Travaux - Orange avec icône outil */
+.trafic-badge-item.status-travaux .status-icon {
+    background: var(--color-orange);
+}
+.trafic-badge-item.status-travaux .status-icon::before {
+    content: "⚠";
+    font-size: 10px;
+}
+
+/* Pas d'icône pour status normal */
+.trafic-badge-item.status-normal .status-icon {
+    display: none;
 }
 
 /* =========================================
