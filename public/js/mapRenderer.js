@@ -772,7 +772,7 @@ export class MapRenderer {
      */
     addLocateControl(onSuccess, onError) {
         if (!this.map) {
-            console.warn('Carte non initialisée, impossible d’ajouter le contrôle de localisation.');
+            console.warn('Carte non initialisée, impossible d\'ajouter le contrôle de localisation.');
             return;
         }
         if (this.locateControl) {

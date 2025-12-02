@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v102'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V102: Popup arrêts style SNCF Connect
+const CACHE_VERSION = 'v103'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V103: Fix apostrophe syntax error
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
