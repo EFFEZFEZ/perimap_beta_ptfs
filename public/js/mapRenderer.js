@@ -656,55 +656,79 @@ export class MapRenderer {
 
         const associatedStopIds = this.dataManager.groupedStopMap[masterStop.stop_id] || [masterStop.stop_id];
 
-        const departures = this.dataManager.getUpcomingDepartures(associatedStopIds, currentSeconds, currentDate, 5);
+        // Utiliser la nouvelle fonction pour 1h de départs groupés par ligne
+        const departuresByLine = this.dataManager.getDeparturesForOneHour(associatedStopIds, currentSeconds, currentDate);
 
-        const popupContent = this.createStopPopupContent(masterStop, departures, currentSeconds);
+        const popupContent = this.createStopPopupContent(masterStop, departuresByLine, currentSeconds);
         
         const lat = parseFloat(masterStop.stop_lat);
         const lon = parseFloat(masterStop.stop_lon);
-        L.popup()
+        L.popup({ maxHeight: 350, className: 'stop-schedule-popup' })
             .setLatLng([lat, lon])
             .setContent(popupContent)
             .openOn(this.map);
     }
 
     /**
-     * Formate le contenu HTML pour le popup d'un arrêt
+     * Formate le contenu HTML pour le popup d'un arrêt (style TBM - 1h par ligne)
      */
-    createStopPopupContent(masterStop, departures, currentSeconds) {
-        let html = `<div class="info-popup-content">`;
+    createStopPopupContent(masterStop, departuresByLine, currentSeconds) {
+        let html = `<div class="info-popup-content stop-popup">`;
         html += `<div class="info-popup-header">${masterStop.stop_name}</div>`;
-        html += `<div class="info-popup-body">`; // Corrigé: class. au lieu de class=
+        html += `<div class="info-popup-body">`;
 
-        if (departures.length === 0) {
-            html += `<div class="departure-item empty">Aucun prochain passage trouvé.</div>`;
+        const lineKeys = Object.keys(departuresByLine);
+        
+        if (lineKeys.length === 0) {
+            html += `<div class="departure-item empty">Aucun passage dans la prochaine heure.</div>`;
         } else {
-            departures.forEach(dep => {
-                const waitSeconds = dep.departureSeconds - currentSeconds;
-                let waitTime = "";
-                if (waitSeconds >= 0) {
-                    const waitMinutes = Math.floor(waitSeconds / 60);
-                    if (waitMinutes === 0) {
-                        waitTime = `<span class="wait-time imminent">Imminent</span>`;
-                    } else {
-                        waitTime = `<span class="wait-time">${waitMinutes} min</span>`;
-                    }
-                }
+            // Trier les lignes par premier départ
+            lineKeys.sort((a, b) => {
+                const firstA = departuresByLine[a].departures[0]?.departureSeconds || Infinity;
+                const firstB = departuresByLine[b].departures[0]?.departureSeconds || Infinity;
+                return firstA - firstB;
+            });
 
-                html += `
-                    <div class="departure-item">
-                        <div class="departure-info">
-                            <span class="departure-badge" style="background-color: #${dep.routeColor}; color: #${dep.routeTextColor};">
-                                ${dep.routeShortName}
-                            </span>
-                            <span class="departure-dest">${dep.destination}</span>
-                        </div>
-                        <div class="departure-time">
-                            <strong>${dep.time.substring(0, 5)}</strong>
-                            ${waitTime}
-                        </div>
-                    </div>
-                `;
+            lineKeys.forEach(lineKey => {
+                const line = departuresByLine[lineKey];
+                
+                html += `<div class="line-departures-group">`;
+                
+                // En-tête de la ligne
+                html += `<div class="line-header">`;
+                html += `<span class="departure-badge" style="background-color: #${line.routeColor}; color: #${line.routeTextColor};">
+                            ${line.routeShortName}
+                         </span>`;
+                html += `<span class="departure-dest">${line.destination}</span>`;
+                html += `</div>`;
+                
+                // Liste des horaires
+                html += `<div class="departure-times-list">`;
+                line.departures.forEach((dep, index) => {
+                    const waitSeconds = dep.departureSeconds - currentSeconds;
+                    const waitMinutes = Math.floor(waitSeconds / 60);
+                    
+                    let timeClass = '';
+                    let waitLabel = '';
+                    
+                    if (waitMinutes <= 0) {
+                        timeClass = 'imminent';
+                        waitLabel = 'Imm.';
+                    } else if (waitMinutes <= 5) {
+                        timeClass = 'soon';
+                        waitLabel = `${waitMinutes}'`;
+                    } else {
+                        waitLabel = `${waitMinutes}'`;
+                    }
+                    
+                    html += `<span class="departure-time-chip ${timeClass}" title="Dans ${waitMinutes} min">
+                                ${dep.time.substring(0, 5)}
+                                <small>${waitLabel}</small>
+                             </span>`;
+                });
+                html += `</div>`;
+                
+                html += `</div>`;
             });
         }
 

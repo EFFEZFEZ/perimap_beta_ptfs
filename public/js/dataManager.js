@@ -690,6 +690,70 @@ export class DataManager {
     }
 
     /**
+     * Départs sur 1 heure groupés par ligne (pour popup arrêt style TBM)
+     */
+    getDeparturesForOneHour(stopIds, currentSeconds, date) {
+        const serviceIdSet = this.getServiceIds(date);
+        
+        if (serviceIdSet.size === 0) {
+            console.warn('⚠️  Aucun service actif');
+            return {};
+        }
+
+        const oneHourLater = currentSeconds + 3600; // 1 heure = 3600 secondes
+        const departuresByLine = {}; // { routeShortName: { info, departures: [] } }
+
+        stopIds.forEach(stopId => {
+            const stops = this.stopTimesByStop[stopId] || [];
+            stops.forEach(st => {
+                const trip = this.tripsByTripId[st.trip_id];
+                if (!trip) return;
+
+                // Vérifie si le trip appartient à UN des services actifs
+                const isServiceActive = Array.from(serviceIdSet).some(activeServiceId => {
+                    return this.serviceIdsMatch(trip.service_id, activeServiceId);
+                });
+
+                if (isServiceActive) {
+                    const departureSeconds = this.timeToSeconds(st.departure_time);
+                    // Uniquement les départs dans la prochaine heure
+                    if (departureSeconds >= currentSeconds && departureSeconds <= oneHourLater) {
+                        const route = this.routesById[trip.route_id];
+                        const routeKey = route.route_short_name;
+                        const stopTimes = this.stopTimesByTrip[st.trip_id];
+                        const destination = this.getTripDestination(stopTimes);
+
+                        // Clé unique par ligne + destination
+                        const lineKey = `${routeKey}_${destination}`;
+
+                        if (!departuresByLine[lineKey]) {
+                            departuresByLine[lineKey] = {
+                                routeShortName: route.route_short_name,
+                                routeColor: route.route_color,
+                                routeTextColor: route.route_text_color,
+                                destination: destination,
+                                departures: []
+                            };
+                        }
+
+                        departuresByLine[lineKey].departures.push({
+                            time: st.departure_time,
+                            departureSeconds: departureSeconds
+                        });
+                    }
+                }
+            });
+        });
+
+        // Trier les départs dans chaque ligne
+        Object.values(departuresByLine).forEach(line => {
+            line.departures.sort((a, b) => a.departureSeconds - b.departureSeconds);
+        });
+
+        return departuresByLine;
+    }
+
+    /**
      * Trips actifs (gère PLUSIEURS services actifs)
      */
     getActiveTrips(currentSeconds, date) {
