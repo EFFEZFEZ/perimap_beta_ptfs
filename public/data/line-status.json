@@ -3,9 +3,9 @@
   "globalMessage": "",
   "lines": {
     "_comment_majeures": "=== LIGNES MAJEURES ===",
-    "A": { "status": "retard", "message": "" },
+    "A": { "status": "normal", "message": "" },
     "B": { "status": "normal", "message": "" },
-    "C": { "status": "retard", "message": "" },
+    "C": { "status": "normal", "message": "" },
     "D": { "status": "normal", "message": "" },
 
     "_comment_express": "=== LIGNES EXPRESS ===",
