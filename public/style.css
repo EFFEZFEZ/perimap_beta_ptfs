@@ -3576,7 +3576,28 @@ body.dark-theme .install-tip-steps section {
     font-style: italic;
     font-size: 0.875rem;
     justify-content: center;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
 }
+
+/* V99: Notice pour les premiers départs */
+.next-day-notice {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    background: var(--primary-color);
+    color: white;
+    border-radius: var(--radius-sm);
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+.next-day-notice .material-symbols-rounded {
+    font-size: 18px;
+}
+
 .departure-info {
     display: flex;
     align-items: center;

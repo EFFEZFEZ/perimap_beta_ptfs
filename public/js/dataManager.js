@@ -691,7 +691,8 @@ export class DataManager {
 
     /**
      * Départs sur 1 heure groupés par ligne (pour popup arrêt style TBM)
-     * V97: Ajout debug + extension fenêtre si aucun résultat
+     * V99: Si aucun départ dans l'heure, cherche les premiers départs de la journée
+     * Retourne { departuresByLine, isNextDayDepartures, firstDepartureTime }
      */
     getDeparturesForOneHour(stopIds, currentSeconds, date) {
         const serviceIdSet = this.getServiceIds(date);
@@ -701,73 +702,100 @@ export class DataManager {
         
         if (serviceIdSet.size === 0) {
             console.warn('⚠️  Aucun service actif pour cette date');
-            return {};
+            return { departuresByLine: {}, isNextDayDepartures: false, firstDepartureTime: null };
         }
 
-        const oneHourLater = currentSeconds + 3600; // 1 heure = 3600 secondes
-        const departuresByLine = {}; // { routeShortName: { info, departures: [] } }
+        const oneHourLater = currentSeconds + 3600;
         
-        let totalStopTimesChecked = 0;
-        let serviceMatchCount = 0;
-        let timeWindowMatchCount = 0;
-
+        // Collecter TOUS les départs futurs du jour (pas seulement 1h)
+        const allFutureDepartures = [];
+        
         stopIds.forEach(stopId => {
             const stops = this.stopTimesByStop[stopId] || [];
-            totalStopTimesChecked += stops.length;
             
             stops.forEach(st => {
                 const trip = this.tripsByTripId[st.trip_id];
                 if (!trip) return;
 
-                // Vérifie si le trip appartient à UN des services actifs
                 const isServiceActive = Array.from(serviceIdSet).some(activeServiceId => {
                     return this.serviceIdsMatch(trip.service_id, activeServiceId);
                 });
 
                 if (isServiceActive) {
-                    serviceMatchCount++;
                     const departureSeconds = this.timeToSeconds(st.departure_time);
                     
-                    // Uniquement les départs dans la prochaine heure
-                    if (departureSeconds >= currentSeconds && departureSeconds <= oneHourLater) {
-                        timeWindowMatchCount++;
+                    // Tous les départs FUTURS (pas passés)
+                    if (departureSeconds >= currentSeconds) {
                         const route = this.routesById[trip.route_id];
                         if (!route) return;
                         
-                        const routeKey = route.route_short_name;
                         const stopTimes = this.stopTimesByTrip[st.trip_id];
                         const destination = this.getTripDestination(stopTimes);
-
-                        // Clé unique par ligne + destination
-                        const lineKey = `${routeKey}_${destination}`;
-
-                        if (!departuresByLine[lineKey]) {
-                            departuresByLine[lineKey] = {
-                                routeShortName: route.route_short_name,
-                                routeColor: route.route_color,
-                                routeTextColor: route.route_text_color,
-                                destination: destination,
-                                departures: []
-                            };
-                        }
-
-                        departuresByLine[lineKey].departures.push({
+                        
+                        allFutureDepartures.push({
+                            departureSeconds,
                             time: st.departure_time,
-                            departureSeconds: departureSeconds
+                            route,
+                            destination
                         });
                     }
                 }
             });
         });
         
-        console.log(`📊 Stats: ${totalStopTimesChecked} stop_times vérifiés, ${serviceMatchCount} avec service actif, ${timeWindowMatchCount} dans la fenêtre horaire`);
-
-        // Trier les départs dans chaque ligne
-        Object.values(departuresByLine).forEach(line => {
-            line.departures.sort((a, b) => a.departureSeconds - b.departureSeconds);
+        // Trier par heure de départ
+        allFutureDepartures.sort((a, b) => a.departureSeconds - b.departureSeconds);
+        
+        // Séparer : départs dans l'heure vs premiers départs
+        const departuresInHour = allFutureDepartures.filter(d => d.departureSeconds <= oneHourLater);
+        
+        let departuresToUse;
+        let isNextDayDepartures = false;
+        let firstDepartureTime = null;
+        
+        if (departuresInHour.length > 0) {
+            // Cas normal : il y a des départs dans l'heure
+            departuresToUse = departuresInHour;
+        } else if (allFutureDepartures.length > 0) {
+            // Pas de départs dans l'heure mais il y en a plus tard
+            // Prendre les 10 premiers départs du reste de la journée
+            departuresToUse = allFutureDepartures.slice(0, 15);
+            isNextDayDepartures = true;
+            firstDepartureTime = allFutureDepartures[0].time;
+            console.log(`🌅 Aucun départ dans l'heure, affiche les premiers départs à partir de ${firstDepartureTime}`);
+        } else {
+            // Aucun départ pour le reste de la journée
+            departuresToUse = [];
+        }
+        
+        // Grouper par ligne + destination
+        const departuresByLine = {};
+        
+        departuresToUse.forEach(dep => {
+            const lineKey = `${dep.route.route_short_name}_${dep.destination}`;
+            
+            if (!departuresByLine[lineKey]) {
+                departuresByLine[lineKey] = {
+                    routeShortName: dep.route.route_short_name,
+                    routeColor: dep.route.route_color,
+                    routeTextColor: dep.route.route_text_color,
+                    destination: dep.destination,
+                    departures: []
+                };
+            }
+            
+            // Limiter à 4 départs par ligne
+            if (departuresByLine[lineKey].departures.length < 4) {
+                departuresByLine[lineKey].departures.push({
+                    time: dep.time,
+                    departureSeconds: dep.departureSeconds
+                });
+            }
         });
+        
+        console.log(`📊 Stats: ${allFutureDepartures.length} départs futurs, ${departuresInHour.length} dans l'heure, isNextDay=${isNextDayDepartures}`);
 
-        return departuresByLine;
+        return { departuresByLine, isNextDayDepartures, firstDepartureTime };
     }
 
     /**

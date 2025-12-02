@@ -649,48 +649,22 @@ export class MapRenderer {
 
     /**
      * Appelé lorsqu'un marqueur d'arrêt est cliqué
+     * V99: Affiche les premiers départs si rien dans l'heure
      */
     onStopClick(masterStop) {
-        // V98: Debug plus détaillé pour comprendre le bug de l'heure
-        const rawSeconds = this.timeManager.getCurrentSeconds();
-        const realTimeNow = new Date();
-        const expectedSeconds = realTimeNow.getHours() * 3600 + realTimeNow.getMinutes() * 60 + realTimeNow.getSeconds();
-        
-        console.log(`⏰ V98 DEBUG timeManager:`);
-        console.log(`   - getCurrentSeconds() retourne: ${rawSeconds} (= ${Math.floor(rawSeconds/3600)}:${String(Math.floor((rawSeconds%3600)/60)).padStart(2,'0')})`);
-        console.log(`   - Heure réelle (new Date()): ${realTimeNow.toLocaleTimeString()} = ${expectedSeconds} secondes`);
-        console.log(`   - timeManager.mode: ${this.timeManager.mode}`);
-        console.log(`   - timeManager.isRunning: ${this.timeManager.isRunning}`);
-        console.log(`   - timeManager.simulatedSeconds: ${this.timeManager.simulatedSeconds}`);
-        
-        // Utiliser l'heure RÉELLE si le timeManager semble buggé
-        const currentSeconds = (rawSeconds < 3600 && expectedSeconds > 18000) ? expectedSeconds : rawSeconds;
-        if (rawSeconds !== currentSeconds) {
-            console.warn(`⚠️ V98: Correction appliquée! Utilise ${currentSeconds} au lieu de ${rawSeconds}`);
-        }
-        
+        const currentSeconds = this.timeManager.getCurrentSeconds();
         const currentDate = this.timeManager.getCurrentDate();
 
-        // V96: Debug pour comprendre pourquoi les horaires ne s'affichent pas
-        console.log(`🚏 Clic sur arrêt: ${masterStop.stop_name} (${masterStop.stop_id})`);
+        console.log(`🚏 Clic sur arrêt: ${masterStop.stop_name}`);
         
         const associatedStopIds = this.dataManager.groupedStopMap[masterStop.stop_id] || [masterStop.stop_id];
-        console.log(`📍 Stop IDs associés:`, associatedStopIds);
-        
-        // Vérifier si ces stop_ids existent dans stopTimesByStop
-        const stbsKeys = Object.keys(this.dataManager.stopTimesByStop);
-        console.log(`📊 stopTimesByStop a ${stbsKeys.length} clés`);
-        
-        associatedStopIds.forEach(sid => {
-            const hasData = this.dataManager.stopTimesByStop[sid];
-            console.log(`   - ${sid}: ${hasData ? hasData.length + ' stop_times' : 'AUCUNE DONNÉE'}`);
-        });
 
-        // Utiliser la nouvelle fonction pour 1h de départs groupés par ligne
-        const departuresByLine = this.dataManager.getDeparturesForOneHour(associatedStopIds, currentSeconds, currentDate);
-        console.log(`🕐 Départs trouvés:`, Object.keys(departuresByLine).length, 'lignes');
+        // V99: Utiliser la nouvelle fonction qui retourne aussi isNextDayDepartures
+        const result = this.dataManager.getDeparturesForOneHour(associatedStopIds, currentSeconds, currentDate);
+        const { departuresByLine, isNextDayDepartures, firstDepartureTime } = result;
+        console.log(`🕐 Départs trouvés:`, Object.keys(departuresByLine).length, 'lignes', isNextDayDepartures ? `(premiers départs à ${firstDepartureTime})` : '');
 
-        const popupContent = this.createStopPopupContent(masterStop, departuresByLine, currentSeconds);
+        const popupContent = this.createStopPopupContent(masterStop, departuresByLine, currentSeconds, isNextDayDepartures, firstDepartureTime);
         
         const lat = parseFloat(masterStop.stop_lat);
         const lon = parseFloat(masterStop.stop_lon);
@@ -702,8 +676,9 @@ export class MapRenderer {
 
     /**
      * Formate le contenu HTML pour le popup d'un arrêt (style TBM - 1h par ligne)
+     * V99: Gère l'affichage des premiers départs quand il n'y en a pas dans l'heure
      */
-    createStopPopupContent(masterStop, departuresByLine, currentSeconds) {
+    createStopPopupContent(masterStop, departuresByLine, currentSeconds, isNextDayDepartures = false, firstDepartureTime = null) {
         let html = `<div class="info-popup-content stop-popup">`;
         html += `<div class="info-popup-header">${masterStop.stop_name}</div>`;
         html += `<div class="info-popup-body">`;
@@ -711,8 +686,19 @@ export class MapRenderer {
         const lineKeys = Object.keys(departuresByLine);
         
         if (lineKeys.length === 0) {
-            html += `<div class="departure-item empty">Aucun passage dans la prochaine heure.</div>`;
+            html += `<div class="departure-item empty">
+                        <span class="material-symbols-rounded" style="font-size: 24px; opacity: 0.5;">bedtime</span>
+                        <span>Aucun passage prévu aujourd'hui</span>
+                     </div>`;
         } else {
+            // V99: Message d'information si ce sont les premiers départs
+            if (isNextDayDepartures && firstDepartureTime) {
+                html += `<div class="next-day-notice">
+                            <span class="material-symbols-rounded">schedule</span>
+                            <span>Premiers départs à partir de ${firstDepartureTime.substring(0, 5)}</span>
+                         </div>`;
+            }
+            
             // Trier les lignes par premier départ
             lineKeys.sort((a, b) => {
                 const firstA = departuresByLine[a].departures[0]?.departureSeconds || Infinity;
