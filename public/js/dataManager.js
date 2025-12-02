@@ -746,26 +746,17 @@ export class DataManager {
         // Trier par heure de départ
         allFutureDepartures.sort((a, b) => a.departureSeconds - b.departureSeconds);
         
-        // Séparer : départs dans l'heure vs premiers départs
-        const departuresInHour = allFutureDepartures.filter(d => d.departureSeconds <= oneHourLater);
-        
-        let departuresToUse;
+        // V107: Pas de limite d'1h, on prend tous les départs futurs
+        // et on limite à 4 par ligne/destination
+        let departuresToUse = allFutureDepartures;
         let isNextDayDepartures = false;
         let firstDepartureTime = null;
         
-        if (departuresInHour.length > 0) {
-            // Cas normal : il y a des départs dans l'heure
-            departuresToUse = departuresInHour;
-        } else if (allFutureDepartures.length > 0) {
-            // Pas de départs dans l'heure mais il y en a plus tard
-            // Prendre les 10 premiers départs du reste de la journée
-            departuresToUse = allFutureDepartures.slice(0, 15);
+        // Si aucun départ immédiat mais il y en a plus tard
+        if (allFutureDepartures.length > 0 && allFutureDepartures[0].departureSeconds > oneHourLater) {
             isNextDayDepartures = true;
             firstDepartureTime = allFutureDepartures[0].time;
-            console.log(`🌅 Aucun départ dans l'heure, affiche les premiers départs à partir de ${firstDepartureTime}`);
-        } else {
-            // Aucun départ pour le reste de la journée
-            departuresToUse = [];
+            console.log(`🌅 Premiers départs à partir de ${firstDepartureTime}`);
         }
         
         // Grouper par ligne + destination
@@ -776,6 +767,7 @@ export class DataManager {
             
             if (!departuresByLine[lineKey]) {
                 departuresByLine[lineKey] = {
+                    routeId: dep.route.route_id,
                     routeShortName: dep.route.route_short_name,
                     routeColor: dep.route.route_color,
                     routeTextColor: dep.route.route_text_color,
@@ -784,7 +776,7 @@ export class DataManager {
                 };
             }
             
-            // Limiter à 4 départs par ligne
+            // V107: Limiter à 4 départs par ligne/destination
             if (departuresByLine[lineKey].departures.length < 4) {
                 departuresByLine[lineKey].departures.push({
                     time: dep.time,
@@ -793,7 +785,7 @@ export class DataManager {
             }
         });
         
-        console.log(`📊 Stats: ${allFutureDepartures.length} départs futurs, ${departuresInHour.length} dans l'heure, isNextDay=${isNextDayDepartures}`);
+        console.log(`📊 Stats: ${allFutureDepartures.length} départs futurs, isNextDay=${isNextDayDepartures}`);
 
         return { departuresByLine, isNextDayDepartures, firstDepartureTime };
     }

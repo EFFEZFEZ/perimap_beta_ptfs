@@ -668,15 +668,32 @@ export class MapRenderer {
         
         const lat = parseFloat(masterStop.stop_lat);
         const lon = parseFloat(masterStop.stop_lon);
-        L.popup({ maxHeight: 350, className: 'stop-schedule-popup' })
+        const popup = L.popup({ maxHeight: 350, className: 'stop-schedule-popup' })
             .setLatLng([lat, lon])
             .setContent(popupContent)
             .openOn(this.map);
+        
+        // V106: Ajouter les gestionnaires de clic sur les destinations
+        setTimeout(() => {
+            const destElements = document.querySelectorAll('.popup-dest-clickable');
+            destElements.forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const routeId = el.dataset.routeId;
+                    const routeName = el.dataset.routeName;
+                    const routeColor = el.dataset.routeColor;
+                    const stopName = el.dataset.stopName;
+                    const destination = el.dataset.destination;
+                    
+                    this.showRouteToDestination(routeId, routeName, routeColor, stopName, destination);
+                });
+            });
+        }, 50);
     }
 
     /**
      * Formate le contenu HTML pour le popup d'un arrêt
-     * V105: Style SNCF Connect - une ligne par route avec destinations en dessous
+     * V106: Destinations cliquables pour afficher le tracé
      */
     createStopPopupContent(masterStop, departuresByLine, currentSeconds, isNextDayDepartures = false, firstDepartureTime = null) {
         const lineKeys = Object.keys(departuresByLine);
@@ -691,12 +708,15 @@ export class MapRenderer {
                     routeShortName: line.routeShortName,
                     routeColor: line.routeColor,
                     routeTextColor: line.routeTextColor,
+                    routeId: line.routeId,
                     destinations: []
                 };
             }
             lineGroups[routeName].destinations.push({
                 destination: line.destination,
-                departures: line.departures // Toutes les données, pas de limite
+                departures: line.departures,
+                tripId: line.tripId,
+                routeId: line.routeId
             });
         });
 
@@ -730,10 +750,20 @@ export class MapRenderer {
                             <span class="popup-stop-name">${masterStop.stop_name}</span>
                          </div>`;
                 
-                // Destinations avec leurs horaires
+                // Destinations avec leurs horaires - CLIQUABLES
                 lineGroup.destinations.forEach(dest => {
                     html += `<div class="popup-dest-row">
-                                <div class="popup-dest-name">${dest.destination}</div>
+                                <div class="popup-dest-name popup-dest-clickable" 
+                                     data-route-id="${dest.routeId || ''}"
+                                     data-route-name="${lineGroup.routeShortName}"
+                                     data-route-color="${lineGroup.routeColor}"
+                                     data-destination="${dest.destination}"
+                                     data-stop-id="${masterStop.stop_id}"
+                                     data-stop-name="${masterStop.stop_name}"
+                                     data-trip-id="${dest.tripId || ''}">
+                                    ${dest.destination}
+                                    <span class="dest-arrow">→</span>
+                                </div>
                                 <div class="popup-times">`;
                     
                     // Tous les horaires (pas de slice)
@@ -750,6 +780,128 @@ export class MapRenderer {
 
         html += `</div>`;
         return html;
+    }
+
+    /**
+     * V106: Affiche le tracé d'une ligne entre l'arrêt actuel et la destination
+     */
+    showRouteToDestination(routeId, routeName, routeColor, stopName, destination) {
+        console.log(`🚌 Afficher tracé: ${routeName} de ${stopName} vers ${destination}`);
+        
+        // Fermer le popup
+        this.map.closePopup();
+        
+        // Masquer toutes les lignes sauf celle sélectionnée
+        this.highlightSingleRoute(routeId, routeColor);
+        
+        // Zoomer sur le tracé
+        if (this.routeLayersById && this.routeLayersById[routeId]) {
+            const layers = this.routeLayersById[routeId];
+            if (layers.length > 0) {
+                const group = L.featureGroup(layers);
+                const bounds = group.getBounds();
+                if (bounds.isValid()) {
+                    this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+                }
+            }
+        }
+        
+        // Afficher une notification
+        this.showRouteNotification(routeName, routeColor, stopName, destination);
+    }
+    
+    /**
+     * V106: Met en surbrillance une seule ligne et estompe les autres
+     */
+    highlightSingleRoute(routeId, routeColor) {
+        if (!this.routeLayersById) return;
+        
+        Object.entries(this.routeLayersById).forEach(([id, layers]) => {
+            layers.forEach(layer => {
+                if (id === routeId) {
+                    // Ligne sélectionnée - pleine opacité et plus épaisse
+                    layer.setStyle({
+                        opacity: 1,
+                        weight: 6,
+                        color: '#' + routeColor
+                    });
+                    layer.bringToFront();
+                } else {
+                    // Autres lignes - très estompées
+                    layer.setStyle({
+                        opacity: 0.15,
+                        weight: 3
+                    });
+                }
+            });
+        });
+        
+        // Stocker l'ID de la ligne mise en avant
+        this.highlightedRouteId = routeId;
+    }
+    
+    /**
+     * V106: Réinitialise toutes les lignes à leur style normal
+     */
+    resetRouteHighlight() {
+        if (!this.routeLayersById) return;
+        
+        Object.values(this.routeLayersById).forEach(layers => {
+            layers.forEach(layer => {
+                const baseColor = layer.__baseColor || '#3388FF';
+                layer.setStyle(this.getRouteStyle(baseColor));
+            });
+        });
+        
+        this.highlightedRouteId = null;
+        
+        // Masquer la notification
+        this.hideRouteNotification();
+    }
+    
+    /**
+     * V106: Affiche une notification en bas de la carte
+     */
+    showRouteNotification(routeName, routeColor, stopName, destination) {
+        // Supprimer l'ancienne notification si elle existe
+        this.hideRouteNotification();
+        
+        const notification = document.createElement('div');
+        notification.className = 'route-notification';
+        notification.innerHTML = `
+            <div class="route-notif-content">
+                <span class="route-notif-badge" style="background:#${routeColor};">${routeName}</span>
+                <span class="route-notif-text">${stopName} → ${destination}</span>
+            </div>
+            <button class="route-notif-close" title="Afficher toutes les lignes">✕</button>
+        `;
+        
+        // Ajouter au container de la carte
+        const mapContainer = this.map.getContainer();
+        mapContainer.appendChild(notification);
+        
+        // Animation d'entrée
+        requestAnimationFrame(() => notification.classList.add('visible'));
+        
+        // Event pour fermer
+        notification.querySelector('.route-notif-close').addEventListener('click', () => {
+            this.resetRouteHighlight();
+        });
+        
+        this.routeNotification = notification;
+    }
+    
+    /**
+     * V106: Cache la notification
+     */
+    hideRouteNotification() {
+        if (this.routeNotification) {
+            this.routeNotification.classList.remove('visible');
+            setTimeout(() => {
+                this.routeNotification?.remove();
+                this.routeNotification = null;
+            }, 300);
+        }
     }
 
 

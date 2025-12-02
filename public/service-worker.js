@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v105'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V105: Popup SNCF Connect - une scrollbar, toutes lignes
+const CACHE_VERSION = 'v106'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V106: Destinations cliquables avec tracé de ligne
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
