@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v111'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V111: Popup arrêt mobile - décale la carte pour mieux voir
+const CACHE_VERSION = 'v112'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V112: Perturbations K2, D, K4A/B, K1A/B, N
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;

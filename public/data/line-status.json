@@ -1,12 +1,12 @@
 {
-  "lastUpdate": "2025-12-02T20:00:00",
+  "lastUpdate": "2025-12-03T10:00:00",
   "globalMessage": "",
   "lines": {
     "_comment_majeures": "=== LIGNES MAJEURES ===",
     "A": { "status": "normal", "message": "" },
     "B": { "status": "normal", "message": "" },
     "C": { "status": "normal", "message": "" },
-    "D": { "status": "normal", "message": "" },
+    "D": { "status": "perturbation", "message": "Possible changement d'arrêt : Bd Michel Montaigne côté parking, en face du tribunal (autre côté de la route)" },
 
     "_comment_express": "=== LIGNES EXPRESS ===",
     "e1": { "status": "normal", "message": "" },
@@ -17,18 +17,18 @@
     "e7": { "status": "normal", "message": "" },
 
     "_comment_quartier": "=== LIGNES DE QUARTIER ===",
-    "K1A": { "status": "normal", "message": "" },
-    "K1B": { "status": "normal", "message": "" },
-    "K2": { "status": "normal", "message": "" },
+    "K1A": { "status": "perturbation", "message": "Possible changement d'arrêt : Bd Michel Montaigne côté parking, en face du tribunal (autre côté de la route)" },
+    "K1B": { "status": "perturbation", "message": "Possible changement d'arrêt : Bd Michel Montaigne côté parking, en face du tribunal (autre côté de la route)" },
+    "K2": { "status": "perturbation", "message": "Probable changement d'arrêt pour Tourny Pompidou sens montant (arrêt de la A et la C)" },
     "K3A": { "status": "normal", "message": "" },
     "K3B": { "status": "normal", "message": "" },
-    "K4A": { "status": "normal", "message": "" },
-    "K4B": { "status": "normal", "message": "" },
+    "K4A": { "status": "perturbation", "message": "Possible changement d'arrêt : Bd Michel Montaigne côté parking, en face du tribunal (autre côté de la route)" },
+    "K4B": { "status": "perturbation", "message": "Possible changement d'arrêt : Bd Michel Montaigne côté parking, en face du tribunal (autre côté de la route)" },
     "K5": { "status": "normal", "message": "" },
     "K6": { "status": "normal", "message": "" },
 
     "_comment_navettes": "=== NAVETTES ===",
-    "N": { "status": "normal", "message": "" },
+    "N": { "status": "perturbation", "message": "Possible changement d'arrêt : Bd Michel Montaigne côté parking, en face du tribunal (autre côté de la route)" },
     "N1": { "status": "normal", "message": "" },
 
     "_comment_rurales": "=== LIGNES RURALES ===",
