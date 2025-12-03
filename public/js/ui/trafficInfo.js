@@ -7,6 +7,9 @@
 
 import { getCategoryForRoute, PDF_FILENAME_MAP, ROUTE_LONG_NAME_MAP } from '../config/routes.js';
 
+// Stockage des données de ligne pour le modal
+let lineDataCache = {};
+
 /**
  * Rend la carte d'info trafic avec l'état des lignes
  * @param {Object} dataManager - Instance du DataManager
@@ -17,6 +20,7 @@ import { getCategoryForRoute, PDF_FILENAME_MAP, ROUTE_LONG_NAME_MAP } from '../c
 export function renderInfoTraficCard(dataManager, lineStatuses, container, countElement) {
     if (!dataManager || !container) return;
     container.innerHTML = '';
+    lineDataCache = {}; // Reset le cache
     let alertCount = 0;
     
     const groupedRoutes = {
@@ -60,8 +64,21 @@ export function renderInfoTraficCard(dataManager, lineStatuses, container, count
                 statusIcon = `<div class="status-indicator-triangle type-${state.status}" style="border-bottom-color: ${statusColor};"></div>`;
             }
             
+            // Stocker les données de la ligne pour le modal
+            const lineKey = route.route_short_name;
+            lineDataCache[lineKey] = {
+                routeId: route.route_id,
+                shortName: route.route_short_name,
+                longName: ROUTE_LONG_NAME_MAP[route.route_short_name] || route.route_long_name || '',
+                color: routeColor,
+                textColor: textColor,
+                status: state.status,
+                message: state.message,
+                category: categoryData.name
+            };
+            
             badgesHtml += `
-                <div class="trafic-badge-item status-${state.status}">
+                <div class="trafic-badge-item status-${state.status}" data-line="${lineKey}">
                     <span class="line-badge" style="background-color: ${routeColor}; color: ${textColor};">
                         ${route.route_short_name}
                     </span>
@@ -79,6 +96,9 @@ export function renderInfoTraficCard(dataManager, lineStatuses, container, count
         container.appendChild(groupDiv);
     }
     
+    // Ajouter les événements de clic sur les badges
+    setupLineClickListeners(container);
+    
     if (countElement) {
         countElement.textContent = alertCount;
         countElement.classList.toggle('hidden', alertCount === 0);
@@ -86,6 +106,117 @@ export function renderInfoTraficCard(dataManager, lineStatuses, container, count
     
     return alertCount;
 }
+
+/**
+ * Configure les listeners de clic sur les badges de ligne
+ */
+function setupLineClickListeners(container) {
+    container.querySelectorAll('.trafic-badge-item').forEach(badge => {
+        badge.addEventListener('click', () => {
+            const lineKey = badge.dataset.line;
+            const lineData = lineDataCache[lineKey];
+            if (lineData) {
+                showLineDetailModal(lineData);
+            }
+        });
+    });
+}
+
+/**
+ * Affiche le modal de détail d'une ligne
+ */
+function showLineDetailModal(lineData) {
+    let modal = document.getElementById('line-detail-modal');
+    
+    // Créer le modal s'il n'existe pas
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'line-detail-modal';
+        modal.className = 'line-detail-modal';
+        modal.innerHTML = `
+            <div class="line-detail-backdrop"></div>
+            <div class="line-detail-content">
+                <button class="line-detail-close" aria-label="Fermer">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="line-detail-header">
+                    <span class="line-detail-badge"></span>
+                    <span class="line-detail-name"></span>
+                </div>
+                <div class="line-detail-body">
+                    <div class="line-detail-status"></div>
+                    <div class="line-detail-section">
+                        <h4>Raison :</h4>
+                        <p class="line-detail-reason"></p>
+                    </div>
+                    <div class="line-detail-section">
+                        <h4>Informations complémentaires :</h4>
+                        <p class="line-detail-info"></p>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Événements de fermeture
+        modal.querySelector('.line-detail-backdrop').addEventListener('click', hideLineDetailModal);
+        modal.querySelector('.line-detail-close').addEventListener('click', hideLineDetailModal);
+    }
+    
+    // Remplir les données
+    const badge = modal.querySelector('.line-detail-badge');
+    badge.textContent = lineData.shortName;
+    badge.style.backgroundColor = lineData.color;
+    badge.style.color = lineData.textColor;
+    
+    modal.querySelector('.line-detail-name').textContent = lineData.longName || lineData.category;
+    
+    // Status
+    const statusDiv = modal.querySelector('.line-detail-status');
+    const statusLabels = {
+        'normal': { label: 'Trafic normal', class: 'status-normal', icon: '✓' },
+        'perturbation': { label: 'Perturbation en cours', class: 'status-perturbation', icon: '!' },
+        'retard': { label: 'Retards signalés', class: 'status-retard', icon: '⏱' },
+        'annulation': { label: 'Service annulé', class: 'status-annulation', icon: '✕' },
+        'travaux': { label: 'Travaux en cours', class: 'status-travaux', icon: '⚠' }
+    };
+    const statusInfo = statusLabels[lineData.status] || statusLabels['normal'];
+    statusDiv.className = `line-detail-status ${statusInfo.class}`;
+    statusDiv.innerHTML = `<span class="status-badge-icon">${statusInfo.icon}</span> ${statusInfo.label}`;
+    
+    // Raison et informations
+    const reasonEl = modal.querySelector('.line-detail-reason');
+    const infoEl = modal.querySelector('.line-detail-info');
+    
+    if (lineData.status === 'normal') {
+        reasonEl.textContent = 'Aucune perturbation signalée';
+        infoEl.textContent = 'Le trafic est normal sur cette ligne.';
+    } else {
+        reasonEl.textContent = lineData.message || 'Information non disponible';
+        infoEl.textContent = 'Nous vous conseillons de prévoir un temps de trajet supplémentaire. Consultez les horaires en temps réel pour plus de détails.';
+    }
+    
+    // Afficher le modal
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Cache le modal de détail
+ */
+function hideLineDetailModal() {
+    const modal = document.getElementById('line-detail-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+// Exposer la fonction pour fermer le modal depuis l'extérieur
+export { hideLineDetailModal };
 
 /**
  * Construit la liste des fiches horaires
