@@ -8797,32 +8797,51 @@ body.dark-theme .tarifs-choice {
     }
 }
 
-/* === 4. NEWS BANNER MOBILE - Texte wrap === */
+/* === 4. NEWS BANNER MOBILE - V116: Défilement LED sur mobile === */
 @media (max-width: 480px) {
     .news-banner {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 0.5rem;
-    }
-    
-    .news-banner-content {
-        flex: 1 1 100%;
-        order: 2;
+        padding: 0.75rem;
     }
     
     .news-banner-icon {
-        order: 1;
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+    }
+    
+    .news-banner-icon svg {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .news-banner-content {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+    
+    .news-banner-label {
+        font-size: 0.65rem;
     }
     
     .news-banner-link {
-        order: 3;
-        margin-left: auto;
+        padding: 0.3rem 0.6rem;
+        font-size: 0.7rem;
+        flex-shrink: 0;
     }
     
+    /* Garder le défilement actif sur mobile */
     .news-banner-text {
-        white-space: normal;
-        overflow: visible;
-        text-overflow: unset;
-        line-height: 1.4;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+    
+    /* Animation marquee plus rapide sur mobile */
+    .news-banner-text.marquee-active .marquee-inner {
+        animation-duration: 12s;
     }
 }
 
