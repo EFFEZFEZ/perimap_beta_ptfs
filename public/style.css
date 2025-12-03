@@ -19,42 +19,81 @@
     to { transform: rotate(360deg); }
 }
 /* =========================================
- * NOUVEAU THÈME & VARIABLES
+ * CHARTE GRAPHIQUE PÉRIMAP - IDENTITÉ VISUELLE
+ * =========================================
+ * 
+ * 🎨 COULEURS OFFICIELLES:
+ * - Vert Périmap (primaire): #22c55e
+ * - Cyan (secondaire): #00c8ff
+ * - Gradient signature: linear-gradient(135deg, #22c55e, #00c8ff)
+ * 
+ * 🔤 TYPOGRAPHIE:
+ * - Police: Manrope (Google Fonts)
+ * - Fallback: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
+ * 
+ * Voir css/brand.css pour la documentation complète
  * ========================================= */
 :root {
-    /* Identité graphique (inspirée) */
+    /* ═══════════════════════════════════════════════════════════════════════
+       COULEURS PÉRIMAP - IDENTITÉ OFFICIELLE
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    /* Couleur primaire - Vert Périmap */
+    --pm-green: #22c55e;
+    --pm-green-hover: #16a34a;
+    --pm-green-light: rgba(34, 197, 94, 0.1);
+    --pm-green-glow: rgba(34, 197, 94, 0.3);
+    
+    /* Couleur secondaire - Cyan */
+    --pm-cyan: #00c8ff;
+    --pm-cyan-hover: #0ea5e9;
+    --pm-cyan-light: rgba(0, 200, 255, 0.1);
+    
+    /* Gradient signature Périmap */
+    --pm-gradient: linear-gradient(135deg, #22c55e 0%, #00c8ff 100%);
+    --pm-gradient-text: linear-gradient(135deg, #22c55e, #00c8ff);
+    
+    /* ═══════════════════════════════════════════════════════════════════════
+       MAPPING ANCIEN → NOUVEAU (compatibilité)
+       ═══════════════════════════════════════════════════════════════════════ */
+    
+    /* Anciennes variables (conservées pour compatibilité) */
     --color-blue: #007bff;
     --color-purple: #6f42c1;
     --color-orange: #fd7e14;
-    --color-green: #28a745;
-    --color-red: #dc3545;
-    --color-yellow: #ffc107;
-    --color-green-check: #28a745;
-    --color-tab-active: #008080; /* Vert/Bleu canard pour les onglets */
-    --color-nav-condensed-bg: #005a9c; /* Bleu foncé (type Irigo) */
-    --color-nav-condensed-hover: #004a80;
+    --color-green: var(--pm-green);      /* Unifié avec vert Périmap */
+    --color-red: #ef4444;
+    --color-yellow: #eab308;
+    --color-green-check: var(--pm-green);
+    --color-tab-active: var(--pm-green); /* Unifié avec vert Périmap */
+    --color-nav-condensed-bg: #0f172a;   /* Fond sombre cohérent */
+    --color-nav-condensed-hover: #1e293b;
 
-    /* Palette de base */
-    --primary: #2563eb;
-    --primary-dark: #1d4ed8;
+    /* Palette de base - Alignée sur charte Périmap */
+    --primary: var(--pm-green);          /* Vert Périmap comme primaire */
+    --primary-dark: var(--pm-green-hover);
     --secondary: #64748b;
-    --bg-light: #f8f9fa; /* Fond de page gris clair */
+    --bg-light: #f8fafc;
     --bg-main: #ffffff;
-    --bg-secondary: #f8fafc;
+    --bg-secondary: #f1f5f9;
     --text-primary: #0f172a;
     --text-secondary: #64748b;
     --border: #e2e8f0;
     
+    /* Ombres */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 20px var(--pm-green-glow);
 
+    /* Rayons de bordure */
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 16px;
+    --radius-xl: 24px;
     --radius-full: 9999px;
     
-    /* Transitions globales */
+    /* Transitions */
     --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -87,18 +126,18 @@
     overflow-anchor: none;
 }
 
-/* Dark theme variables - applied by toggling `body.dark-theme` */
+/* Dark theme - Aligné sur charte Périmap */
 body.dark-theme {
     --bg-main: #0b1220;
     --bg-secondary: #0f1724;
-    --bg-light: #071223;
+    --bg-light: #0b1220;
     --text-primary: #e6eef8;
     --text-secondary: #9fb3c9;
-    --border: rgba(255,255,255,0.06);
-    --primary: #4aa3ff;
-    --primary-dark: #2b8fe6;
-    --color-tab-active: #43b0ff;
-    --color-nav-condensed-bg: rgba(10,50,90,0.9);
+    --border: rgba(255,255,255,0.08);
+    --primary: var(--pm-green);
+    --primary-dark: var(--pm-green-hover);
+    --color-tab-active: var(--pm-green);
+    --color-nav-condensed-bg: rgba(11, 18, 32, 0.95);
 }
 
 /* Small visual adjustments in dark mode */

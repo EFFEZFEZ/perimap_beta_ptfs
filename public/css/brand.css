@@ -1,0 +1,445 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * PÉRIMAP - CHARTE GRAPHIQUE & IDENTITÉ VISUELLE
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Ce fichier définit l'identité visuelle officielle de Périmap.
+ * Toutes les pages du site DOIVENT importer ce fichier et respecter ces règles.
+ * 
+ * 🎨 PALETTE DE COULEURS
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 
+ * PRIMAIRE : Vert Périmap #22c55e (rgb 34, 197, 94)
+ *   - Utilisé pour : CTA principaux, liens actifs, accents positifs
+ *   - Variations : #16a34a (hover), #15803d (pressed)
+ * 
+ * SECONDAIRE : Bleu Cyan #00c8ff (rgb 0, 200, 255)
+ *   - Utilisé pour : Éléments interactifs, highlights, hover states
+ *   - Variation : #0ea5e9 (plus sombre)
+ * 
+ * ACCENT : Gradient Périmap
+ *   - Combinaison : linear-gradient(135deg, #22c55e, #00c8ff)
+ *   - Utilisé pour : Logos, titres premium, badges spéciaux
+ * 
+ * FOND CLAIR (Light Mode)
+ *   - Page : #f8fafc
+ *   - Cartes : #ffffff
+ *   - Bordures : #e2e8f0
+ * 
+ * FOND SOMBRE (Dark Mode)
+ *   - Page : #0b1220
+ *   - Cartes : #0f1724
+ *   - Bordures : rgba(255,255,255,0.06)
+ * 
+ * TEXTES
+ *   - Principal : #0f172a (light) / #e6eef8 (dark)
+ *   - Secondaire : #64748b (light) / #9fb3c9 (dark)
+ * 
+ * 🔤 TYPOGRAPHIE
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 
+ * Police principale : Manrope (Google Fonts)
+ * Fallback : -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
+ * 
+ * Hiérarchie :
+ *   - H1 : 2.5rem (40px), weight 800
+ *   - H2 : 2rem (32px), weight 700  
+ *   - H3 : 1.5rem (24px), weight 600
+ *   - Body : 1rem (16px), weight 400
+ *   - Small : 0.875rem (14px), weight 400
+ * 
+ * 📐 ESPACEMENTS & RAYONS
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 
+ * Rayons de bordure :
+ *   - Petit (boutons) : 8px
+ *   - Moyen (cartes) : 16px
+ *   - Grand (modales) : 24px
+ *   - Circulaire : 9999px
+ * 
+ * ⏱️ ANIMATIONS
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 
+ * Timing par défaut : cubic-bezier(0.4, 0, 0.2, 1)
+ *   - Rapide : 150ms (hover states)
+ *   - Normal : 250ms (transitions)
+ *   - Lent : 350ms (modales, overlays)
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   VARIABLES CSS - IDENTITÉ PÉRIMAP
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+    /* ─────────────────────────────────────────────────────────────────────────
+       COULEURS PRINCIPALES
+       ───────────────────────────────────────────────────────────────────────── */
+    
+    /* Vert Périmap - Couleur signature */
+    --pm-green: #22c55e;
+    --pm-green-hover: #16a34a;
+    --pm-green-pressed: #15803d;
+    --pm-green-light: rgba(34, 197, 94, 0.1);
+    --pm-green-glow: rgba(34, 197, 94, 0.3);
+    
+    /* Cyan - Couleur secondaire */
+    --pm-cyan: #00c8ff;
+    --pm-cyan-hover: #0ea5e9;
+    --pm-cyan-light: rgba(0, 200, 255, 0.1);
+    --pm-cyan-glow: rgba(0, 200, 255, 0.3);
+    
+    /* Gradient signature */
+    --pm-gradient: linear-gradient(135deg, #22c55e 0%, #00c8ff 100%);
+    --pm-gradient-hover: linear-gradient(135deg, #16a34a 0%, #0ea5e9 100%);
+    --pm-gradient-text: linear-gradient(135deg, #22c55e, #00c8ff);
+    
+    /* Couleurs utilitaires */
+    --pm-red: #ef4444;
+    --pm-orange: #f59e0b;
+    --pm-yellow: #eab308;
+    --pm-blue: #3b82f6;
+    
+    /* ─────────────────────────────────────────────────────────────────────────
+       LIGHT MODE (par défaut)
+       ───────────────────────────────────────────────────────────────────────── */
+    --pm-bg-page: #f8fafc;
+    --pm-bg-card: #ffffff;
+    --pm-bg-elevated: #ffffff;
+    --pm-bg-input: #f1f5f9;
+    
+    --pm-text-primary: #0f172a;
+    --pm-text-secondary: #64748b;
+    --pm-text-muted: #94a3b8;
+    --pm-text-inverse: #ffffff;
+    
+    --pm-border: #e2e8f0;
+    --pm-border-light: #f1f5f9;
+    --pm-border-focus: var(--pm-green);
+    
+    --pm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --pm-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --pm-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --pm-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    --pm-shadow-glow: 0 0 20px var(--pm-green-glow);
+    
+    /* ─────────────────────────────────────────────────────────────────────────
+       TYPOGRAPHIE
+       ───────────────────────────────────────────────────────────────────────── */
+    --pm-font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    --pm-font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    
+    --pm-font-size-xs: 0.75rem;   /* 12px */
+    --pm-font-size-sm: 0.875rem;  /* 14px */
+    --pm-font-size-base: 1rem;    /* 16px */
+    --pm-font-size-lg: 1.125rem;  /* 18px */
+    --pm-font-size-xl: 1.25rem;   /* 20px */
+    --pm-font-size-2xl: 1.5rem;   /* 24px */
+    --pm-font-size-3xl: 2rem;     /* 32px */
+    --pm-font-size-4xl: 2.5rem;   /* 40px */
+    --pm-font-size-5xl: 3rem;     /* 48px */
+    
+    --pm-font-weight-normal: 400;
+    --pm-font-weight-medium: 500;
+    --pm-font-weight-semibold: 600;
+    --pm-font-weight-bold: 700;
+    --pm-font-weight-extrabold: 800;
+    
+    --pm-line-height-tight: 1.25;
+    --pm-line-height-normal: 1.5;
+    --pm-line-height-relaxed: 1.75;
+    
+    /* ─────────────────────────────────────────────────────────────────────────
+       ESPACEMENTS
+       ───────────────────────────────────────────────────────────────────────── */
+    --pm-space-1: 0.25rem;  /* 4px */
+    --pm-space-2: 0.5rem;   /* 8px */
+    --pm-space-3: 0.75rem;  /* 12px */
+    --pm-space-4: 1rem;     /* 16px */
+    --pm-space-5: 1.25rem;  /* 20px */
+    --pm-space-6: 1.5rem;   /* 24px */
+    --pm-space-8: 2rem;     /* 32px */
+    --pm-space-10: 2.5rem;  /* 40px */
+    --pm-space-12: 3rem;    /* 48px */
+    --pm-space-16: 4rem;    /* 64px */
+    --pm-space-20: 5rem;    /* 80px */
+    
+    /* ─────────────────────────────────────────────────────────────────────────
+       RAYONS DE BORDURE
+       ───────────────────────────────────────────────────────────────────────── */
+    --pm-radius-sm: 4px;
+    --pm-radius-md: 8px;
+    --pm-radius-lg: 12px;
+    --pm-radius-xl: 16px;
+    --pm-radius-2xl: 24px;
+    --pm-radius-full: 9999px;
+    
+    /* ─────────────────────────────────────────────────────────────────────────
+       TRANSITIONS
+       ───────────────────────────────────────────────────────────────────────── */
+    --pm-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --pm-ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --pm-ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --pm-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    
+    --pm-duration-fast: 150ms;
+    --pm-duration-normal: 250ms;
+    --pm-duration-slow: 350ms;
+    
+    --pm-transition-fast: var(--pm-duration-fast) var(--pm-ease);
+    --pm-transition-normal: var(--pm-duration-normal) var(--pm-ease);
+    --pm-transition-slow: var(--pm-duration-slow) var(--pm-ease);
+    
+    /* ─────────────────────────────────────────────────────────────────────────
+       Z-INDEX
+       ───────────────────────────────────────────────────────────────────────── */
+    --pm-z-base: 0;
+    --pm-z-dropdown: 100;
+    --pm-z-sticky: 200;
+    --pm-z-fixed: 300;
+    --pm-z-modal-backdrop: 400;
+    --pm-z-modal: 500;
+    --pm-z-popover: 600;
+    --pm-z-tooltip: 700;
+    --pm-z-toast: 800;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DARK MODE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme="dark"],
+.dark-theme,
+body.dark-theme {
+    --pm-bg-page: #0b1220;
+    --pm-bg-card: #0f1724;
+    --pm-bg-elevated: #141d2b;
+    --pm-bg-input: #1a2332;
+    
+    --pm-text-primary: #e6eef8;
+    --pm-text-secondary: #9fb3c9;
+    --pm-text-muted: #6b7c93;
+    
+    --pm-border: rgba(255, 255, 255, 0.08);
+    --pm-border-light: rgba(255, 255, 255, 0.04);
+    
+    --pm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --pm-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    --pm-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --pm-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LANDING PAGES DARK (about, mentions-legales)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-page="landing"] {
+    --pm-bg-page: linear-gradient(135deg, #0b1220 0%, #0f1a2e 50%, #0b1220 100%);
+    --pm-bg-card: rgba(255, 255, 255, 0.03);
+    --pm-bg-elevated: rgba(255, 255, 255, 0.05);
+    --pm-text-primary: #ffffff;
+    --pm-text-secondary: rgba(255, 255, 255, 0.7);
+    --pm-text-muted: rgba(255, 255, 255, 0.5);
+    --pm-border: rgba(255, 255, 255, 0.08);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CLASSES UTILITAIRES PÉRIMAP
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Texte avec gradient signature */
+.pm-text-gradient {
+    background: var(--pm-gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Bouton primaire Périmap */
+.pm-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--pm-space-2);
+    padding: var(--pm-space-3) var(--pm-space-6);
+    background: var(--pm-gradient);
+    color: white;
+    font-family: var(--pm-font-family);
+    font-weight: var(--pm-font-weight-semibold);
+    font-size: var(--pm-font-size-base);
+    border: none;
+    border-radius: var(--pm-radius-full);
+    cursor: pointer;
+    transition: all var(--pm-transition-normal);
+    box-shadow: var(--pm-shadow-md), 0 0 20px var(--pm-green-glow);
+}
+
+.pm-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--pm-shadow-lg), 0 0 30px var(--pm-green-glow);
+}
+
+.pm-btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Bouton secondaire */
+.pm-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--pm-space-2);
+    padding: var(--pm-space-3) var(--pm-space-6);
+    background: transparent;
+    color: var(--pm-text-primary);
+    font-family: var(--pm-font-family);
+    font-weight: var(--pm-font-weight-medium);
+    font-size: var(--pm-font-size-base);
+    border: 1px solid var(--pm-border);
+    border-radius: var(--pm-radius-full);
+    cursor: pointer;
+    transition: all var(--pm-transition-fast);
+}
+
+.pm-btn-secondary:hover {
+    border-color: var(--pm-green);
+    color: var(--pm-green);
+}
+
+/* Card Périmap */
+.pm-card {
+    background: var(--pm-bg-card);
+    border: 1px solid var(--pm-border);
+    border-radius: var(--pm-radius-xl);
+    padding: var(--pm-space-6);
+    transition: all var(--pm-transition-normal);
+}
+
+.pm-card:hover {
+    border-color: var(--pm-cyan-light);
+    box-shadow: var(--pm-shadow-lg);
+}
+
+/* Lien Périmap */
+.pm-link {
+    color: var(--pm-cyan);
+    text-decoration: none;
+    transition: color var(--pm-transition-fast);
+}
+
+.pm-link:hover {
+    color: var(--pm-green);
+}
+
+/* Badge ligne */
+.pm-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--pm-space-1) var(--pm-space-3);
+    font-size: var(--pm-font-size-sm);
+    font-weight: var(--pm-font-weight-semibold);
+    border-radius: var(--pm-radius-full);
+    background: var(--pm-green-light);
+    color: var(--pm-green);
+}
+
+/* Container max-width */
+.pm-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--pm-space-5);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATIONS PÉRIMAP
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes pm-fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes pm-fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pm-fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pm-slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pm-slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pm-scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes pm-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes pm-glow {
+    0%, 100% { box-shadow: 0 0 20px var(--pm-green-glow); }
+    50% { box-shadow: 0 0 40px var(--pm-green-glow); }
+}
+
+/* Classes d'animation */
+.pm-animate-fadeIn { animation: pm-fadeIn var(--pm-duration-normal) var(--pm-ease) forwards; }
+.pm-animate-fadeInUp { animation: pm-fadeInUp var(--pm-duration-normal) var(--pm-ease) forwards; }
+.pm-animate-fadeInDown { animation: pm-fadeInDown var(--pm-duration-normal) var(--pm-ease) forwards; }
+.pm-animate-slideInLeft { animation: pm-slideInLeft var(--pm-duration-normal) var(--pm-ease) forwards; }
+.pm-animate-slideInRight { animation: pm-slideInRight var(--pm-duration-normal) var(--pm-ease) forwards; }
+.pm-animate-scaleIn { animation: pm-scaleIn var(--pm-duration-normal) var(--pm-ease) forwards; }
+.pm-animate-pulse { animation: pm-pulse 2s var(--pm-ease) infinite; }
+.pm-animate-glow { animation: pm-glow 3s var(--pm-ease) infinite; }
+
+/* Délais d'animation */
+.pm-delay-100 { animation-delay: 100ms; }
+.pm-delay-200 { animation-delay: 200ms; }
+.pm-delay-300 { animation-delay: 300ms; }
+.pm-delay-400 { animation-delay: 400ms; }
+.pm-delay-500 { animation-delay: 500ms; }

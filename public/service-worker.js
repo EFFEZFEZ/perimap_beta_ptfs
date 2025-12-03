@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v122'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V122: Refonte landing page about.html + mentions-legales.html - Design épuré animé + Hébergeur Vercel
+const CACHE_VERSION = 'v123'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V123: Charte graphique unifiée - brand.css + harmonisation couleurs Vert #22c55e / Cyan #00c8ff + Police Manrope
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
