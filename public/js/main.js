@@ -42,6 +42,7 @@ import {
 
 import { getCategoryForRoute, LINE_CATEGORIES, PDF_FILENAME_MAP, ROUTE_LONG_NAME_MAP } from './config/routes.js';
 import { ICONS, getManeuverIcon, getAlertBannerIcon } from './config/icons.js';
+import { updateNewsBanner } from './ui/trafficInfo.js';
 
 // Modules
 let dataManager;
@@ -587,6 +588,7 @@ function setupDashboardContent() {
     loadLineStatuses().then(() => {
         renderInfoTraficCard();
         renderAlertBanner();
+        updateNewsBanner(dataManager, lineStatuses); // V114: Mise à jour du bandeau défilant
     });
     
     buildFicheHoraireList();
