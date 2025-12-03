@@ -2523,14 +2523,15 @@ details[open] .accordion-content {
 /* V76: Style du bouton FAB (Floating Action Button) pour la carte */
 #map-container #btn-toggle-filter,
 .map-fab-button {
-    position: fixed;
+    position: fixed !important;
     bottom: calc(30px + env(safe-area-inset-bottom));
-    right: 20px;
+    right: 20px !important;
+    left: auto !important;
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: var(--primary);
-    color: white;
+    background: #22c55e !important; /* Vert primaire forcé */
+    color: white !important;
     border: none;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     z-index: 1100;
