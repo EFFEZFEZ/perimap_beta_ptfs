@@ -21,8 +21,8 @@ export function createRouterContext({ dataManager, apiManager, icons }) {
     const gtfsTripsCache = new Map();
 
     const getWalkingRoute = (startPoint, endPoint) => getWalkingRouteInternal({ dataManager, apiManager, placeIdCache }, startPoint, endPoint);
-    const getCachedTripsBetweenStops = (startIds, endIds, reqDate, windowStartSec, windowEndSec) =>
-        getCachedTripsBetweenStopsInternal({ dataManager, gtfsTripsCache }, startIds, endIds, reqDate, windowStartSec, windowEndSec);
+    const getCachedTripsBetweenStops = (startIds, endIds, reqDate, windowStartSec, windowEndSec, searchMode = 'partir') =>
+        getCachedTripsBetweenStopsInternal({ dataManager, gtfsTripsCache }, startIds, endIds, reqDate, windowStartSec, windowEndSec, searchMode);
 
     return {
         computeHybridItinerary: (fromCoordsRaw, toCoordsRaw, searchTime, labels = {}, forcedStops = {}) =>
@@ -165,21 +165,21 @@ async function getCachedPlaceIdInternal(context, lat, lon) {
     }
 }
 
-function getCachedTripsBetweenStopsInternal(context, startIds, endIds, reqDate, windowStartSec, windowEndSec) {
+function getCachedTripsBetweenStopsInternal(context, startIds, endIds, reqDate, windowStartSec, windowEndSec, searchMode = 'partir') {
     const { dataManager, gtfsTripsCache } = context;
     try {
-        const key = JSON.stringify({ startIds: startIds.slice().sort(), endIds: endIds.slice().sort(), date: reqDate.toISOString().split('T')[0], windowStartSec, windowEndSec });
+        const key = JSON.stringify({ startIds: startIds.slice().sort(), endIds: endIds.slice().sort(), date: reqDate.toISOString().split('T')[0], windowStartSec, windowEndSec, searchMode });
         const now = Date.now();
         const cached = gtfsTripsCache.get(key);
         if (cached && (now - cached.ts) < GTFS_TRIPS_CACHE_TTL_MS) {
             return cached.value;
         }
-        const result = dataManager.getTripsBetweenStops(startIds, endIds, reqDate, windowStartSec, windowEndSec) || [];
+        const result = dataManager.getTripsBetweenStops(startIds, endIds, reqDate, windowStartSec, windowEndSec, searchMode) || [];
         gtfsTripsCache.set(key, { ts: now, value: result });
         return result;
     } catch (err) {
         console.warn('getCachedTripsBetweenStops error', err);
-        return dataManager.getTripsBetweenStops(startIds, endIds, reqDate, windowStartSec, windowEndSec) || [];
+        return dataManager.getTripsBetweenStops(startIds, endIds, reqDate, windowStartSec, windowEndSec, searchMode) || [];
     }
 }
 
@@ -856,15 +856,34 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
                     if (boardingIdx !== -1 && alightIdx !== -1 && boardingIdx < alightIdx) {
                         const depSec = dataManager.timeToSeconds(stopTimes[boardingIdx].departure_time);
                         const arrSec = dataManager.timeToSeconds(stopTimes[alightIdx].arrival_time);
-                        if (depSec >= windowStartSec && depSec <= windowEndSec) {
-                            firstLegTrips.push({
-                                trip,
-                                stopTimes,
-                                boardingIdx,
-                                alightIdx,
-                                depSec,
-                                arrSec
-                            });
+                        // ✅ FIX: En mode "arriver", filtrer différemment - on veut des départs qui permettent d'arriver à temps
+                        // En mode "partir", on filtre sur le départ (>= heure demandée)
+                        // En mode "arriver", on garde les départs dans la fenêtre (ils seront filtrés plus tard sur l'arrivée finale)
+                        const isArriveMode = searchTime?.type === 'arriver';
+                        if (isArriveMode) {
+                            // En mode arriver, on accepte les départs dans la fenêtre (ils seront filtrés sur l'arrivée finale)
+                            if (depSec >= windowStartSec && depSec <= windowEndSec) {
+                                firstLegTrips.push({
+                                    trip,
+                                    stopTimes,
+                                    boardingIdx,
+                                    alightIdx,
+                                    depSec,
+                                    arrSec
+                                });
+                            }
+                        } else {
+                            // Mode partir: le départ doit être >= heure demandée
+                            if (depSec >= windowStartSec && depSec <= windowEndSec) {
+                                firstLegTrips.push({
+                                    trip,
+                                    stopTimes,
+                                    boardingIdx,
+                                    alightIdx,
+                                    depSec,
+                                    arrSec
+                                });
+                            }
                         }
                     }
                 }
@@ -1006,18 +1025,24 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         // Trier tous les candidats selon le mode de recherche
         const isArriveMode = searchTime?.type === 'arriver';
         if (isArriveMode) {
-            // Mode ARRIVER: trier par heure d'arrivée DÉCROISSANTE (arrivée la plus proche de l'heure demandée en premier)
-            // Les arrivées les plus tardives (mais <= heure demandée) sont les meilleures
-            allCandidates.sort((a, b) => {
+            // ✅ FIX: Mode ARRIVER - filtrer pour ne garder que les arrivées <= heure demandée
+            const filteredCandidates = allCandidates.filter(it => {
+                const arrSec = it._arrivalSeconds || dataManager.timeToSeconds(it.arrivalTime) || 0;
+                return arrSec <= reqSeconds; // Arrivée avant ou à l'heure demandée
+            });
+            
+            // Trier par heure d'arrivée DÉCROISSANTE (arrivée la plus proche de l'heure demandée en premier)
+            filteredCandidates.sort((a, b) => {
                 const arrA = a._arrivalSeconds || dataManager.timeToSeconds(a.arrivalTime) || 0;
                 const arrB = b._arrivalSeconds || dataManager.timeToSeconds(b.arrivalTime) || 0;
                 return arrB - arrA; // Décroissant
             });
+            transferResults.push(...filteredCandidates.slice(0, HYBRID_ROUTING_CONFIG.TRANSFER_MAX_ITINERARIES));
         } else {
             // Mode PARTIR: trier par heure de départ CROISSANTE (premier départ en premier)
             allCandidates.sort((a, b) => (a._departureSeconds || 0) - (b._departureSeconds || 0));
+            transferResults.push(...allCandidates.slice(0, HYBRID_ROUTING_CONFIG.TRANSFER_MAX_ITINERARIES));
         }
-        transferResults.push(...allCandidates.slice(0, HYBRID_ROUTING_CONFIG.TRANSFER_MAX_ITINERARIES));
         
         // Log de synthèse
         if (!globalThis._transferResultsLogged) {
@@ -1130,15 +1155,19 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
     console.log(`🔍 Router: Recherche directe`, {
         startIds: expandedStartIds.slice(0, 5),
         endIds: expandedEndIds.slice(0, 5),
-        fenetre: `${Math.floor(windowStartSec/3600)}h${Math.floor((windowStartSec%3600)/60)} - ${Math.floor(windowEndSec/3600)}h${Math.floor((windowEndSec%3600)/60)}`
+        fenetre: `${Math.floor(windowStartSec/3600)}h${Math.floor((windowStartSec%3600)/60)} - ${Math.floor(windowEndSec/3600)}h${Math.floor((windowEndSec%3600)/60)}`,
+        mode: searchTime?.type || 'partir'
     });
 
+    // ✅ FIX: Passer le mode de recherche pour filtrer correctement sur départ ou arrivée
+    const searchMode = searchTime?.type || 'partir';
     const trips = getCachedTripsBetweenStops(
         expandedStartIds,
         expandedEndIds,
         reqDate,
         windowStartSec,
-        windowEndSec
+        windowEndSec,
+        searchMode
     );
     
     if (trips?.length > 0) {

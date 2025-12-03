@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v109'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V109: Fix bouton Filtrer position et couleur
+const CACHE_VERSION = 'v110'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V110: Fix mode arriver (respecte l'heure d'arrivée demandée)
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;

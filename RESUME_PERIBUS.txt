@@ -1,0 +1,211 @@
+================================================================================
+                    PERIBUS APP - Résumé Personnel de Développement
+================================================================================
+
+Développeur : Chadi
+Date : 3 décembre 2025
+Version actuelle : 3.6.0 (v109)
+
+================================================================================
+                              OBJECTIF DU PROJET
+================================================================================
+
+Application PWA de transport en commun pour le réseau Peribus (Périgueux) :
+- Consultation des horaires en temps réel
+- Calcul d'itinéraires
+- Visualisation cartographique des lignes et arrêts
+- Informations trafic et perturbations
+
+================================================================================
+                          ÉTAT D'AVANCEMENT : 80%
+================================================================================
+
+FONCTIONNALITÉS TERMINÉES
+--------------------------------------------------------------------------------
+| Fonctionnalité          | Description                              | Version |
+|-------------------------|------------------------------------------|---------|
+| Carte interactive       | MapLibre GL avec arrêts et lignes        | v1+     |
+| Popups arrêts           | Style SNCF Connect avec prochains passages| v97-105|
+| Calcul itinéraires      | Multi-modal (bus + marche)               | v50+    |
+| Géolocalisation         | Position utilisateur + arrêt proche      | v30+    |
+| Fiches horaires         | Consultation par ligne/arrêt             | v60+    |
+| Mode hors-ligne         | Service Worker + Cache                   | v80+    |
+| Thème sombre            | Détection auto + toggle manuel           | v70+    |
+| Destinations cliquables | Clic destination → centre sur arrêt      | v108    |
+| Filtrage lignes         | Bouton Filtrer sur la carte              | v109    |
+| Info trafic             | Affichage des perturbations              | v90+    |
+
+EN COURS / À FAIRE
+--------------------------------------------------------------------------------
+| Priorité | Fonctionnalité              | Complexité |
+|----------|----------------------------|------------|
+| HAUTE    | Skeleton loaders           | Moyenne    |
+| HAUTE    | Historique recherches      | Facile     |
+| MOYENNE  | Refactoring main.js        | Haute      |
+| MOYENNE  | Favoris (arrêts/lignes)    | Moyenne    |
+| BASSE    | GTFS-RT temps réel         | Haute      |
+| BASSE    | Notifications push         | Haute      |
+
+================================================================================
+                          ARCHITECTURE TECHNIQUE
+================================================================================
+
+STRUCTURE DES FICHIERS
+--------------------------------------------------------------------------------
+public/
+├── index.html          # Page principale (SPA)
+├── style.css           # Styles (9800+ lignes)
+├── manifest.json       # PWA manifest
+├── service-worker.js   # Cache offline (v109)
+├── js/
+│   ├── main.js         # Cœur de l'app (4300+ lignes) ⚠️ À refactorer
+│   ├── app.js          # Initialisation
+│   ├── mapRenderer.js  # Gestion carte MapLibre
+│   ├── dataManager.js  # Gestion données GTFS
+│   ├── timeManager.js  # Gestion horaires
+│   ├── uiManager.js    # Interface utilisateur
+│   ├── router.js       # Calcul itinéraires
+│   └── config/
+│       ├── routes.js   # Config lignes (couleurs, noms)
+│       └── icons.js    # Config icônes
+├── data/
+│   └── gtfs/           # Données GTFS statiques
+│       ├── stops.txt
+│       ├── routes.txt
+│       ├── trips.txt
+│       ├── stop_times.txt
+│       └── ...
+└── views/              # Pages HTML
+    ├── carte.html
+    ├── horaires.html
+    ├── itineraire.html
+    └── ...
+
+TECHNOLOGIES UTILISÉES
+--------------------------------------------------------------------------------
+- Frontend    : Vanilla JS (ES6+), CSS3
+- Carte       : MapLibre GL JS
+- PWA         : Service Worker, Web App Manifest
+- Données     : GTFS statique (fichiers txt)
+- Build       : Aucun (vanilla)
+- Hébergement : GitHub Pages
+
+================================================================================
+                        FONCTIONS CLÉS IMPLÉMENTÉES
+================================================================================
+
+MapRenderer (mapRenderer.js)
+--------------------------------------------------------------------------------
+createStopPopupContent(stop)      → Génère le HTML du popup SNCF Connect
+goToDestinationStop(stopName)     → Centre la carte sur un arrêt
+findStopByName(stopName)          → Recherche flexible d'arrêt
+showRouteOnMap(routeId)           → Affiche une ligne sur la carte
+highlightStop(stopId)             → Met en surbrillance un arrêt
+
+DataManager (dataManager.js)
+--------------------------------------------------------------------------------
+getDeparturesForOneHour(stopId)   → Max 4 départs par ligne/destination
+getNextDepartures(stopId)         → Prochains passages
+getRouteStops(routeId)            → Arrêts d'une ligne
+searchStops(query)                → Recherche d'arrêts
+
+TimeManager (timeManager.js)
+--------------------------------------------------------------------------------
+getCurrentTime()                  → Heure actuelle format GTFS
+isServiceActive(serviceId)        → Service actif aujourd'hui ?
+formatTime(gtfsTime)              → Format lisible (HH:MM)
+
+================================================================================
+                              DESIGN SYSTEM
+================================================================================
+
+COULEURS DES LIGNES
+--------------------------------------------------------------------------------
+| Ligne    | Couleur | Code    |
+|----------|---------|---------|
+| A        | Rouge   | #E53935 |
+| B        | Bleu    | #1E88E5 |
+| C        | Vert    | #43A047 |
+| D        | Orange  | #FB8C00 |
+| E        | Violet  | #8E24AA |
+| Navette  | Gris    | #757575 |
+
+COMPOSANTS UI
+--------------------------------------------------------------------------------
+- Bottom Sheet : Modal glissante depuis le bas
+- FAB          : Bouton flottant (géoloc, filtres)
+- Cards        : Cartes info avec ombre
+- Chips        : Badges lignes colorés
+- Skeleton     : Placeholders chargement (à implémenter)
+
+================================================================================
+                      HISTORIQUE DES VERSIONS RÉCENTES
+================================================================================
+
+| Version | Date       | Changements                              |
+|---------|------------|------------------------------------------|
+| v109    | 03/12/2025 | Fix bouton Filtrer (position + couleur)  |
+| v108    | 03/12/2025 | Destinations cliquables simplifiées      |
+| v107    | 02/12/2025 | Fix affichage tracé route                |
+| v106    | 02/12/2025 | Destinations cliquables avec tracé       |
+| v105    | 01/12/2025 | Popups style SNCF Connect finalisés      |
+
+================================================================================
+                              ROADMAP 2026
+================================================================================
+
+Q1 2026
+--------------------------------------------------------------------------------
+[ ] Skeleton loaders
+[ ] Historique recherches (localStorage)
+[ ] Refactoring main.js en modules
+[ ] Favoris arrêts/lignes
+
+Q2 2026
+--------------------------------------------------------------------------------
+[ ] GTFS-RT (temps réel si API dispo)
+[ ] Notifications perturbations
+[ ] Mode accessibilité amélioré
+
+Q3 2026
+--------------------------------------------------------------------------------
+[ ] Multi-réseau (autres villes)
+[ ] Statistiques utilisateur
+[ ] Gamification (badges)
+
+================================================================================
+                              BUGS CONNUS
+================================================================================
+
+1. Performance : main.js trop gros (4300 lignes) → lag sur vieux téléphones
+2. Carte : Parfois lent au premier chargement
+3. iOS Safari : Quelques glitches sur les bottom sheets
+
+================================================================================
+                               RESSOURCES
+================================================================================
+
+- Repo GitHub  : github.com/EFFEZFEZ/p-rimap-sans-api-
+- Branche      : main
+- Doc GTFS     : gtfs.org
+- MapLibre     : maplibre.org/maplibre-gl-js-docs
+
+================================================================================
+                           NOTES PERSONNELLES
+================================================================================
+
+- Toujours tester sur mobile avant de push
+- Le Service Worker doit être incrémenté à chaque changement
+- Les données GTFS sont mises à jour manuellement
+- Utiliser console.log avec parcimonie en prod
+- Penser à vider le cache navigateur pour tester
+
+================================================================================
+
+Note finale : L'app est fonctionnelle à 80%. Les prochaines priorités sont
+l'amélioration de l'UX (skeleton loaders, historique) et le refactoring
+technique pour la maintenabilité.
+
+================================================================================
+                        Document généré le 3 décembre 2025
+================================================================================

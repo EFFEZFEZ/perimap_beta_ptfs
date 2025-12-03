@@ -9,7 +9,7 @@ import { StopTimesStore } from './stopTimesStore.js';
  */
 
 const GTFS_CACHE_KEY = 'peribus_gtfs_cache_v2';
-const GTFS_CACHE_VERSION = '2.10.0';  // V65: Prochains départs GTFS + UI fixes
+const GTFS_CACHE_VERSION = '2.11.0';  // V110: Fix mode arriver (filtrage sur heure d'arrivée)
 const GTFS_CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 heures (augmenté pour moins de rechargements)
 const GTFS_CACHE_META_KEY = 'peribus_gtfs_cache_meta';
 const GTFS_CACHE_DB = 'peribus_gtfs_cache_db';
@@ -1134,9 +1134,10 @@ export class DataManager {
      * Recherche de trips GTFS qui vont d'un des arrêts de départ à un des arrêts d'arrivée
      * startStopIds / endStopIds: Array or Set of stop_id strings
      * date: Date object
-     * windowStartSeconds/windowEndSeconds: optional seconds-since-midnight window to filter departures
+     * windowStartSeconds/windowEndSeconds: optional seconds-since-midnight window to filter departures/arrivals
+     * searchMode: 'partir' (défaut) filtre sur l'heure de départ, 'arriver' filtre sur l'heure d'arrivée
      */
-    getTripsBetweenStops(startStopIds, endStopIds, date, windowStartSeconds = 0, windowEndSeconds = 86400) {
+    getTripsBetweenStops(startStopIds, endStopIds, date, windowStartSeconds = 0, windowEndSeconds = 86400, searchMode = 'partir') {
         const startSet = new Set(Array.isArray(startStopIds) ? startStopIds : Array.from(startStopIds || []));
         const endSet = new Set(Array.isArray(endStopIds) ? endStopIds : Array.from(endStopIds || []));
         const serviceSet = this.getServiceIds(date instanceof Date ? date : new Date(date));
@@ -1198,7 +1199,14 @@ export class DataManager {
             const depSec = this.timeToSeconds(boardingST.departure_time || boardingST.arrival_time);
             const arrSec = this.timeToSeconds(alightST.arrival_time || alightST.departure_time);
 
-            if (depSec < windowStartSeconds || depSec > windowEndSeconds) { debugStats.outOfWindow++; continue; }
+            // ✅ FIX: En mode "arriver", filtrer sur l'heure d'arrivée, sinon sur l'heure de départ
+            if (searchMode === 'arriver') {
+                // Mode arriver: l'arrivée doit être dans la fenêtre (et <= heure demandée)
+                if (arrSec < windowStartSeconds || arrSec > windowEndSeconds) { debugStats.outOfWindow++; continue; }
+            } else {
+                // Mode partir: le départ doit être dans la fenêtre (et >= heure demandée)
+                if (depSec < windowStartSeconds || depSec > windowEndSeconds) { debugStats.outOfWindow++; continue; }
+            }
 
             debugStats.accepted++;
             results.push({
