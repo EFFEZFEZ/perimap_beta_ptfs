@@ -673,19 +673,14 @@ export class MapRenderer {
             .setContent(popupContent)
             .openOn(this.map);
         
-        // V106: Ajouter les gestionnaires de clic sur les destinations
+        // V108: Ajouter les gestionnaires de clic sur les destinations
         setTimeout(() => {
             const destElements = document.querySelectorAll('.popup-dest-clickable');
             destElements.forEach(el => {
                 el.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const routeId = el.dataset.routeId;
-                    const routeName = el.dataset.routeName;
-                    const routeColor = el.dataset.routeColor;
-                    const stopName = el.dataset.stopName;
                     const destination = el.dataset.destination;
-                    
-                    this.showRouteToDestination(routeId, routeName, routeColor, stopName, destination);
+                    this.goToDestinationStop(destination);
                 });
             });
         }, 50);
@@ -783,139 +778,59 @@ export class MapRenderer {
     }
 
     /**
-     * V106: Affiche le tracé d'une ligne entre l'arrêt actuel et la destination
+     * V108: Centre la carte sur l'arrêt terminus quand on clique sur une destination
      */
-    showRouteToDestination(routeId, routeName, routeColor, stopName, destination) {
-        console.log(`🚌 Afficher tracé: Ligne ${routeName} (${routeId}) de ${stopName} vers ${destination}`);
-        console.log(`📍 routeLayersById disponibles:`, Object.keys(this.routeLayersById || {}));
+    goToDestinationStop(destinationName) {
+        console.log(`🎯 Recherche arrêt: ${destinationName}`);
         
-        // Fermer le popup
+        // Fermer le popup actuel
         this.map.closePopup();
         
-        // Masquer toutes les lignes sauf celle sélectionnée
-        this.highlightSingleRoute(routeId, routeColor);
+        // Chercher l'arrêt par son nom
+        const stop = this.findStopByName(destinationName);
         
-        // Zoomer sur le tracé
-        if (this.routeLayersById && this.routeLayersById[routeId]) {
-            console.log(`✅ Route trouvée: ${routeId} avec ${this.routeLayersById[routeId].length} layers`);
-            const layers = this.routeLayersById[routeId];
-            if (layers.length > 0) {
-                const group = L.featureGroup(layers);
-                const bounds = group.getBounds();
-                if (bounds.isValid()) {
-                    this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-                }
-            }
-        } else {
-            console.warn(`❌ Route NON trouvée: ${routeId}`);
-        }
-        
-        // Afficher une notification
-        this.showRouteNotification(routeName, routeColor, stopName, destination);
-    }
-    
-    /**
-     * V106: Met en surbrillance une seule ligne et estompe les autres
-     */
-    highlightSingleRoute(routeId, routeColor) {
-        if (!this.routeLayersById) {
-            console.warn('❌ routeLayersById non disponible');
-            return;
-        }
-        
-        console.log(`🎨 Mise en surbrillance route: ${routeId}, couleur: ${routeColor}`);
-        let found = false;
-        
-        Object.entries(this.routeLayersById).forEach(([id, layers]) => {
-            layers.forEach(layer => {
-                if (id === routeId) {
-                    found = true;
-                    // Ligne sélectionnée - pleine opacité et BEAUCOUP plus épaisse
-                    layer.setStyle({
-                        opacity: 1,
-                        weight: 8,
-                        color: '#' + routeColor
-                    });
-                    layer.bringToFront();
-                } else {
-                    // Autres lignes - MASQUÉES (opacity 0)
-                    layer.setStyle({
-                        opacity: 0,
-                        weight: 0
-                    });
-                }
+        if (stop) {
+            const lat = parseFloat(stop.stop_lat);
+            const lon = parseFloat(stop.stop_lon);
+            
+            console.log(`✅ Arrêt trouvé: ${stop.stop_name} à [${lat}, ${lon}]`);
+            
+            // Centrer la carte sur l'arrêt avec animation
+            this.map.flyTo([lat, lon], 16, {
+                duration: 1
             });
-        });
-        
-        if (!found) {
-            console.warn(`❌ Aucune layer trouvée pour routeId: ${routeId}`);
-        }
-        
-        // Stocker l'ID de la ligne mise en avant
-        this.highlightedRouteId = routeId;
-    }
-    
-    /**
-     * V106: Réinitialise toutes les lignes à leur style normal
-     */
-    resetRouteHighlight() {
-        if (!this.routeLayersById) return;
-        
-        Object.values(this.routeLayersById).forEach(layers => {
-            layers.forEach(layer => {
-                const baseColor = layer.__baseColor || '#3388FF';
-                layer.setStyle(this.getRouteStyle(baseColor));
-            });
-        });
-        
-        this.highlightedRouteId = null;
-        
-        // Masquer la notification
-        this.hideRouteNotification();
-    }
-    
-    /**
-     * V106: Affiche une notification en bas de la carte
-     */
-    showRouteNotification(routeName, routeColor, stopName, destination) {
-        // Supprimer l'ancienne notification si elle existe
-        this.hideRouteNotification();
-        
-        const notification = document.createElement('div');
-        notification.className = 'route-notification';
-        notification.innerHTML = `
-            <div class="route-notif-content">
-                <span class="route-notif-badge" style="background:#${routeColor};">${routeName}</span>
-                <span class="route-notif-text">${stopName} → ${destination}</span>
-            </div>
-            <button class="route-notif-close" title="Afficher toutes les lignes">✕</button>
-        `;
-        
-        // Ajouter au BODY pour être au-dessus de tout
-        document.body.appendChild(notification);
-        
-        // Animation d'entrée
-        requestAnimationFrame(() => notification.classList.add('visible'));
-        
-        // Event pour fermer
-        notification.querySelector('.route-notif-close').addEventListener('click', () => {
-            this.resetRouteHighlight();
-        });
-        
-        this.routeNotification = notification;
-    }
-    
-    /**
-     * V106: Cache la notification
-     */
-    hideRouteNotification() {
-        if (this.routeNotification) {
-            this.routeNotification.classList.remove('visible');
+            
+            // Ouvrir le popup de l'arrêt après l'animation
             setTimeout(() => {
-                this.routeNotification?.remove();
-                this.routeNotification = null;
-            }, 300);
+                this.onStopClick(stop);
+            }, 1100);
+        } else {
+            console.warn(`❌ Arrêt non trouvé: ${destinationName}`);
         }
+    }
+    
+    /**
+     * V108: Trouve un arrêt par son nom (recherche flexible)
+     */
+    findStopByName(name) {
+        if (!this.dataManager || !this.dataManager.masterStops) return null;
+        
+        const normalizedName = name.toLowerCase().trim();
+        
+        // Recherche exacte d'abord
+        let found = this.dataManager.masterStops.find(s => 
+            s.stop_name.toLowerCase().trim() === normalizedName
+        );
+        
+        // Sinon recherche partielle
+        if (!found) {
+            found = this.dataManager.masterStops.find(s => 
+                s.stop_name.toLowerCase().includes(normalizedName) ||
+                normalizedName.includes(s.stop_name.toLowerCase())
+            );
+        }
+        
+        return found;
     }
 
 
