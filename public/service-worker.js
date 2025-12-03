@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v128'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V128: Audit SEO/A11y + Roadmap README
+const CACHE_VERSION = 'v129'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V129: Fix carte PC + bouton géoloc mobile
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
