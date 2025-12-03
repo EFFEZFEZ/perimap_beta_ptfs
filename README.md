@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/icons/icon-192.png" alt="Périmap Logo" width="120" height="120">
+  <img src="https://i.ibb.co/99PZh9Zq/export6-removebg-preview.webp" alt="Périmap Logo" width="120" height="120">
 </p>
 
 <h1 align="center">Périmap</h1>
@@ -9,38 +9,38 @@
 </p>
 
 <p align="center">
-  <a href="https://perimap.fr">🌐 perimap.fr</a> •
-  <a href="https://instagram.com/perimap.fr">📸 Instagram</a> •
-  <a href="https://facebook.com/perimap.fr">👍 Facebook</a>
+  <a href="https://perimap.fr">perimap.fr</a> •
+  <a href="https://instagram.com/perimap.fr">Instagram</a> •
+  <a href="https://facebook.com/perimap.fr">Facebook</a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.9.0-22c55e?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/version-3.13.0-22c55e?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/PWA-Ready-00c8ff?style=flat-square" alt="PWA">
   <img src="https://img.shields.io/badge/license-MIT-gray?style=flat-square" alt="License">
 </p>
 
 ---
 
-## 🚌 À propos
+## À propos
 
 **Périmap** est une application web progressive (PWA) gratuite et indépendante qui simplifie les déplacements en transports en commun dans le Grand Périgueux. Elle offre une alternative moderne à l'application officielle Péribus avec une interface épurée et des fonctionnalités avancées.
 
-### ✨ Fonctionnalités principales
+### Fonctionnalités principales
 
 | Fonctionnalité | Description |
 |----------------|-------------|
-| 🗺️ **Carte interactive** | Visualisez les lignes et arrêts sur une carte Leaflet |
-| 🚍 **Bus en temps réel** | Suivez la position des bus en direct |
-| 📍 **Calcul d'itinéraire** | Trouvez le meilleur trajet (bus, marche, vélo) |
-| ⏰ **Horaires GTFS** | Consultez les horaires de tous les arrêts |
-| 🌙 **Mode sombre** | Interface adaptée à vos préférences |
-| 📱 **Hors-ligne** | Fonctionne même sans connexion internet |
-| 📲 **Installable** | Ajoutez l'app sur votre écran d'accueil |
+| **Carte interactive** | Visualisez les lignes et arrêts sur une carte Leaflet |
+| **Bus en temps réel** | Suivez la position des bus en direct |
+| **Calcul d'itinéraire** | Trouvez le meilleur trajet (bus, marche, vélo) |
+| **Horaires GTFS** | Consultez les horaires de tous les arrêts |
+| **Mode sombre** | Interface adaptée à vos préférences |
+| **Hors-ligne** | Fonctionne même sans connexion internet |
+| **Installable** | Ajoutez l'app sur votre écran d'accueil |
 
 ---
 
-## 🎨 Identité visuelle
+## Identité visuelle
 
 ### Couleurs officielles
 
@@ -129,7 +129,7 @@
 
 ---
 
-## 🏗️ Architecture technique
+## Architecture technique
 
 ### Stack technologique
 
@@ -213,7 +213,7 @@ perimap/
 
 ---
 
-## 🚀 Installation & Développement
+## Installation & Développement
 
 ### Prérequis
 
@@ -246,7 +246,7 @@ node scripts/preprocess-gtfs.mjs
 
 ---
 
-## 📱 PWA & Installation
+## PWA & Installation
 
 Périmap est une **Progressive Web App** installable :
 
@@ -264,7 +264,7 @@ Périmap est une **Progressive Web App** installable :
 
 ---
 
-## 📊 Données utilisées
+## Données utilisées
 
 ### GTFS Péribus
 
@@ -293,7 +293,7 @@ Les données de transport proviennent du **GTFS officiel du réseau Péribus** :
 
 ---
 
-## 🔒 Confidentialité & Mentions légales
+## Confidentialité & Mentions légales
 
 ### Données personnelles
 
@@ -314,7 +314,7 @@ Les données de transport proviennent du **GTFS officiel du réseau Péribus** :
 
 ---
 
-## 🤝 Contribution
+## Contribution
 
 Ce projet est open-source ! Contributions bienvenues :
 
@@ -334,13 +334,13 @@ Ouvrir une [Issue GitHub](https://github.com/EFFEZFEZ/p-rimap-sans-api-/issues) 
 
 ---
 
-## 📜 Licence
+## Licence
 
 Ce projet est sous licence **MIT**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
 ---
 
-## 🙏 Remerciements
+## Remerciements
 
 - **Péribus / Grand Périgueux** pour les données GTFS publiques
 - **OpenStreetMap** pour les fonds de carte
@@ -350,11 +350,60 @@ Ce projet est sous licence **MIT**. Voir le fichier [LICENSE](LICENSE) pour plus
 ---
 
 <p align="center">
-  <strong>Fait avec ❤️ pour les usagers du Grand Périgueux</strong>
+  <strong>Fait avec soin pour les usagers du Grand Périgueux</strong>
 </p>
 
 <p align="center">
   <a href="https://perimap.fr">perimap.fr</a>
 </p>
+
+---
+
+## Roadmap de développement
+
+### En cours (v128+)
+
+| Priorité | Tâche | Statut |
+|----------|-------|--------|
+| Haute | Notifications push perturbations | Planifié |
+| Haute | Favoris arrêts/lignes | Planifié |
+| Moyenne | Widget iOS/Android | Recherche |
+| Moyenne | Intégration calendrier | Planifié |
+
+### Court terme (Q1 2025)
+
+- [ ] **Alertes personnalisées** : Notifications push pour vos lignes favorites
+- [ ] **Favoris** : Sauvegarder vos arrêts et trajets fréquents
+- [ ] **Historique** : Retrouver vos dernières recherches
+- [ ] **Partage d'itinéraire** : Envoyer un trajet par lien
+
+### Moyen terme (Q2 2025)
+
+- [ ] **Temps réel avancé** : Intégration API SIRI si disponible
+- [ ] **Accessibilité PMR** : Filtres et infos accessibilité
+- [ ] **Multi-langue** : Support anglais/espagnol
+- [ ] **Statistiques** : Tableau de bord personnel (km parcourus, CO2 économisé)
+
+### Long terme (2025+)
+
+- [ ] **Application native** : React Native ou Flutter
+- [ ] **Crowdsourcing** : Signalement perturbations par les usagers
+- [ ] **Gamification** : Badges et récompenses fidélité
+- [ ] **Extension réseau** : Support d'autres réseaux Nouvelle-Aquitaine
+
+### Idées en discussion
+
+| Idée | Faisabilité | Impact |
+|------|-------------|--------|
+| Mode AR (réalité augmentée) | Complexe | Wow effect |
+| Chatbot assistant | Moyen | Utile |
+| Apple Watch / Wear OS | Moyen | Niche |
+| Intégration Citymapper | Facile | Visibilité |
+
+### Contribution
+
+Vous avez une idée ? Ouvrez une [Issue GitHub](https://github.com/EFFEZFEZ/p-rimap-sans-api-/issues) !
+
+Les contributions sont les bienvenues via Pull Request.
 
 

@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v127'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V127: Fix logo nav (external webp)
+const CACHE_VERSION = 'v128'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V128: Audit SEO/A11y + Roadmap README
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
