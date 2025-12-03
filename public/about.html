@@ -1,689 +1,550 @@
 <!DOCTYPE html>
-<html lang="fr" data-page="landing">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>À propos - Périmap | L'app qui simplifie vos trajets en bus à Périgueux</title>
-    <meta name="description" content="Découvrez Périmap, l'application moderne pour les transports en commun de Périgueux. Une solution innovante pour le Grand Périgueux.">
-    <meta name="keywords" content="Périmap, à propos, application bus Périgueux, Péribus, transport Grand Périgueux">
+    <title>À propos – Périmap</title>
+    <meta name="description" content="Périmap simplifie vos trajets en transports en commun à Périgueux. Application gratuite et indépendante.">
     <link rel="canonical" href="https://perimap.fr/about.html">
     <link rel="icon" type="image/png" href="icons/icon-192.png">
     <link rel="manifest" href="manifest.json">
     
-    <!-- Open Graph -->
-    <meta property="og:title" content="À propos - Périmap">
-    <meta property="og:description" content="Découvrez l'histoire et la mission de Périmap, votre compagnon de transport à Périgueux.">
+    <meta property="og:title" content="À propos – Périmap">
+    <meta property="og:description" content="L'application moderne pour les transports du Grand Périgueux.">
     <meta property="og:image" content="https://perimap.fr/icons/icon-192.png">
     <meta property="og:url" content="https://perimap.fr/about.html">
-    <meta property="og:type" content="website">
     
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="À propos - Périmap">
-    <meta name="twitter:description" content="Découvrez l'histoire et la mission de Périmap.">
-
-    <!-- Charte graphique Périmap -->
-    <link rel="stylesheet" href="css/brand.css">
-    
-    <!-- Police Manrope -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Schema.org -->
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "AboutPage",
-        "name": "À propos de Périmap",
-        "description": "Découvrez Périmap, l'application moderne pour les transports en commun de Périgueux.",
-        "url": "https://perimap.fr/about.html",
-        "mainEntity": {
-            "@type": "Organization",
-            "name": "Périmap",
-            "url": "https://perimap.fr",
-            "logo": "https://perimap.fr/icons/icon-192.png",
-            "contactPoint": {
-                "@type": "ContactPoint",
-                "email": "perimapfr@gmail.com",
-                "contactType": "customer service"
-            }
-        }
-    }
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-        /* ═══════════════════════════════════════════════════════════════════
-           PAGE STYLES - Utilise les variables de brand.css
-           ═══════════════════════════════════════════════════════════════════ */
-        
-        * {
+        *, *::before, *::after {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        :root {
+            --color-bg: #0a0a0b;
+            --color-surface: #111113;
+            --color-surface-2: #18181b;
+            --color-border: rgba(255, 255, 255, 0.06);
+            --color-text: #fafafa;
+            --color-text-secondary: #a1a1aa;
+            --color-text-muted: #71717a;
+            --color-accent: #22c55e;
+            --color-accent-secondary: #00c8ff;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --radius: 12px;
+            --transition: 200ms ease;
+        }
+
+        html {
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
         body {
-            font-family: var(--pm-font-family);
-            background: var(--pm-bg-page);
+            font-family: var(--font);
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
             min-height: 100vh;
-            color: var(--pm-text-primary);
-            overflow-x: hidden;
-            line-height: var(--pm-line-height-normal);
         }
 
-        /* Particules animées */
-        .particles {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
-        }
-
-        .particle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: var(--pm-green-glow);
-            border-radius: 50%;
-            animation: float 20s infinite ease-in-out;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
-        }
-
-        /* Header */
-        .header {
+        /* Navigation */
+        nav {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            padding: var(--pm-space-5) var(--pm-space-10);
+            height: 64px;
+            background: rgba(10, 10, 11, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--color-border);
+            z-index: 100;
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: center;
-            z-index: var(--pm-z-fixed);
-            background: rgba(11, 18, 32, 0.9);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--pm-border);
+            padding: 0 24px;
         }
 
-        .logo {
+        .nav-logo {
             display: flex;
             align-items: center;
-            gap: var(--pm-space-3);
+            gap: 10px;
             text-decoration: none;
-            color: var(--pm-text-primary);
+            color: var(--color-text);
+            font-weight: 600;
+            font-size: 18px;
         }
 
-        .logo img {
-            width: 40px;
-            height: 40px;
-            border-radius: var(--pm-radius-md);
-        }
-
-        .logo span {
-            font-size: var(--pm-font-size-2xl);
-            font-weight: var(--pm-font-weight-bold);
-            background: var(--pm-gradient-text);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .nav-logo img {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
         }
 
         .nav-links {
             display: flex;
-            gap: var(--pm-space-8);
+            gap: 32px;
         }
 
         .nav-links a {
-            color: var(--pm-text-secondary);
+            color: var(--color-text-secondary);
             text-decoration: none;
-            font-weight: var(--pm-font-weight-medium);
-            transition: color var(--pm-transition-fast);
-            position: relative;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color var(--transition);
         }
 
         .nav-links a:hover {
-            color: var(--pm-green);
-        }
-
-        .nav-links a::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--pm-gradient);
-            transition: width var(--pm-transition-normal);
-        }
-
-        .nav-links a:hover::after {
-            width: 100%;
+            color: var(--color-text);
         }
 
         /* Main */
         main {
-            position: relative;
-            z-index: 1;
-            padding-top: 120px;
+            padding-top: 64px;
         }
 
         /* Hero */
         .hero {
+            padding: 120px 24px 80px;
             text-align: center;
-            padding: var(--pm-space-20) var(--pm-space-5);
-            max-width: 900px;
+            max-width: 680px;
             margin: 0 auto;
         }
 
         .hero h1 {
-            font-size: clamp(var(--pm-font-size-3xl), 6vw, var(--pm-font-size-5xl));
-            font-weight: var(--pm-font-weight-extrabold);
-            margin-bottom: var(--pm-space-5);
-            opacity: 0;
-            animation: pm-fadeInUp 1s var(--pm-ease) forwards;
-        }
-
-        .hero h1 .highlight {
-            background: var(--pm-gradient-text);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: clamp(32px, 5vw, 48px);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+            line-height: 1.1;
         }
 
         .hero p {
-            font-size: var(--pm-font-size-lg);
-            color: var(--pm-text-secondary);
-            line-height: var(--pm-line-height-relaxed);
-            max-width: 700px;
+            font-size: 18px;
+            color: var(--color-text-secondary);
+            max-width: 480px;
             margin: 0 auto;
-            opacity: 0;
-            animation: pm-fadeInUp 1s var(--pm-ease) 0.2s forwards;
         }
 
-        /* Features */
+        /* Section */
+        section {
+            padding: 0 24px 80px;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--color-accent);
+            margin-bottom: 32px;
+        }
+
+        /* Features Grid */
         .features {
-            padding: var(--pm-space-16) var(--pm-space-5);
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: var(--pm-space-8);
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
         }
 
-        .feature-card {
-            background: var(--pm-bg-card);
-            border: 1px solid var(--pm-border);
-            border-radius: var(--pm-radius-xl);
-            padding: var(--pm-space-10) var(--pm-space-8);
-            transition: all var(--pm-transition-normal);
-            opacity: 0;
-            animation: pm-fadeInUp 0.8s var(--pm-ease) forwards;
+        .feature {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 24px;
+            transition: border-color var(--transition);
         }
 
-        .feature-card:nth-child(1) { animation-delay: 0.3s; }
-        .feature-card:nth-child(2) { animation-delay: 0.5s; }
-        .feature-card:nth-child(3) { animation-delay: 0.7s; }
-
-        .feature-card:hover {
-            transform: translateY(-10px);
-            border-color: var(--pm-green-light);
-            box-shadow: var(--pm-shadow-lg), 0 0 40px var(--pm-green-glow);
+        .feature:hover {
+            border-color: rgba(255, 255, 255, 0.12);
         }
 
         .feature-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: var(--pm-radius-lg);
-            background: var(--pm-green-light);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--color-surface-2);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            margin-bottom: var(--pm-space-5);
+            margin-bottom: 16px;
         }
 
-        .feature-card h3 {
-            font-size: var(--pm-font-size-xl);
-            font-weight: var(--pm-font-weight-semibold);
-            margin-bottom: var(--pm-space-3);
-            color: var(--pm-text-primary);
+        .feature-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--color-accent);
+            stroke-width: 1.5;
+            fill: none;
         }
 
-        .feature-card p {
-            color: var(--pm-text-secondary);
-            line-height: var(--pm-line-height-relaxed);
+        .feature h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .feature p {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+            line-height: 1.5;
         }
 
         /* Mission */
-        .mission {
-            padding: var(--pm-space-20) var(--pm-space-5);
+        .mission-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 40px;
             text-align: center;
-        }
-
-        .mission-content {
-            max-width: 800px;
+            max-width: 640px;
             margin: 0 auto;
-            background: var(--pm-green-light);
-            border: 1px solid var(--pm-green-glow);
-            border-radius: var(--pm-radius-2xl);
-            padding: var(--pm-space-16) var(--pm-space-10);
-            position: relative;
-            overflow: hidden;
         }
 
-        .mission-content::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, var(--pm-green-glow) 0%, transparent 50%);
-            animation: pulse 8s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-        }
-
-        .mission h2 {
-            font-size: var(--pm-font-size-3xl);
-            font-weight: var(--pm-font-weight-bold);
-            margin-bottom: var(--pm-space-6);
-            position: relative;
-            z-index: 1;
-        }
-
-        .mission p {
-            font-size: var(--pm-font-size-lg);
-            color: var(--pm-text-secondary);
-            line-height: var(--pm-line-height-relaxed);
-            position: relative;
-            z-index: 1;
+        .mission-card p {
+            font-size: 16px;
+            color: var(--color-text-secondary);
+            line-height: 1.7;
         }
 
         /* CTA */
         .cta {
-            padding: var(--pm-space-20) var(--pm-space-5);
             text-align: center;
+            padding: 40px 24px 80px;
         }
 
         .cta-button {
             display: inline-flex;
             align-items: center;
-            gap: var(--pm-space-3);
-            padding: var(--pm-space-5) var(--pm-space-10);
-            background: var(--pm-gradient);
-            color: white;
+            gap: 8px;
+            padding: 14px 28px;
+            background: var(--color-accent);
+            color: #000;
             text-decoration: none;
-            font-weight: var(--pm-font-weight-bold);
-            font-size: var(--pm-font-size-lg);
-            border-radius: var(--pm-radius-full);
-            transition: all var(--pm-transition-normal);
-            box-shadow: var(--pm-shadow-lg), 0 0 30px var(--pm-green-glow);
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 8px;
+            transition: all var(--transition);
         }
 
         .cta-button:hover {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: var(--pm-shadow-xl), 0 0 50px var(--pm-green-glow);
+            background: #1ea550;
+            transform: translateY(-1px);
+        }
+
+        .cta-button svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
         }
 
         /* Footer */
         footer {
-            padding: var(--pm-space-10) var(--pm-space-5);
+            border-top: 1px solid var(--color-border);
+            padding: 40px 24px;
             text-align: center;
-            border-top: 1px solid var(--pm-border);
-            background: rgba(11, 18, 32, 0.5);
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: center;
-            gap: var(--pm-space-4);
-            margin-bottom: var(--pm-space-5);
-        }
-
-        .social-links a {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: var(--pm-bg-card);
-            border: 1px solid var(--pm-border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all var(--pm-transition-normal);
-        }
-
-        .social-links a:hover {
-            background: var(--pm-gradient);
-            border-color: transparent;
-            transform: translateY(-3px);
-        }
-
-        .social-links svg {
-            width: 20px;
-            height: 20px;
-            fill: var(--pm-text-secondary);
-            transition: fill var(--pm-transition-fast);
-        }
-
-        .social-links a:hover svg {
-            fill: white;
         }
 
         .footer-links {
             display: flex;
             justify-content: center;
-            gap: var(--pm-space-8);
-            flex-wrap: wrap;
-            margin-bottom: var(--pm-space-5);
+            gap: 24px;
+            margin-bottom: 24px;
         }
 
         .footer-links a {
-            color: var(--pm-text-muted);
+            color: var(--color-text-muted);
             text-decoration: none;
-            transition: color var(--pm-transition-fast);
+            font-size: 14px;
+            transition: color var(--transition);
         }
 
         .footer-links a:hover {
-            color: var(--pm-green);
+            color: var(--color-text);
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .social-links a {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition);
+        }
+
+        .social-links a:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            background: var(--color-surface-2);
+        }
+
+        .social-links svg {
+            width: 16px;
+            height: 16px;
+            fill: var(--color-text-secondary);
         }
 
         .copyright {
-            color: var(--pm-text-muted);
-            font-size: var(--pm-font-size-sm);
+            font-size: 13px;
+            color: var(--color-text-muted);
         }
 
         /* Responsive */
-        @media (max-width: 768px) {
-            .header {
-                padding: var(--pm-space-4) var(--pm-space-5);
-            }
-
+        @media (max-width: 640px) {
             .nav-links {
                 display: none;
             }
-
+            
             .hero {
-                padding: var(--pm-space-16) var(--pm-space-5);
+                padding: 80px 20px 60px;
             }
-
-            .mission-content {
-                padding: var(--pm-space-10) var(--pm-space-6);
+            
+            section {
+                padding: 0 20px 60px;
             }
-
-            .feature-card {
-                padding: var(--pm-space-8) var(--pm-space-6);
+            
+            .mission-card {
+                padding: 28px;
             }
         }
 
-        /* ═══════════════════════════════════════════════════════════════════
-           ADMIN PANEL (caché)
-           ═══════════════════════════════════════════════════════════════════ */
-        
+        /* Admin (invisible) */
         .admin-trigger {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: var(--pm-bg-card);
-            border: 1px solid var(--pm-border);
+            bottom: 16px;
+            right: 16px;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: transparent;
             cursor: pointer;
             opacity: 0;
-            transition: opacity var(--pm-transition-fast);
-            z-index: 999;
+            z-index: 50;
         }
 
-        .admin-trigger:hover {
-            opacity: 1;
-        }
+        .admin-trigger:hover { opacity: 0.1; background: #fff; }
 
-        .admin-modal {
+        .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: var(--pm-z-modal);
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 200;
             align-items: center;
             justify-content: center;
-            padding: var(--pm-space-5);
+            padding: 20px;
         }
 
-        .admin-modal.active {
-            display: flex;
-        }
+        .modal.active { display: flex; }
 
-        .admin-content {
-            background: var(--pm-bg-elevated);
-            border-radius: var(--pm-radius-xl);
-            padding: var(--pm-space-10);
-            max-width: 900px;
+        .modal-content {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 32px;
+            max-width: 800px;
             width: 100%;
-            max-height: 90vh;
+            max-height: 80vh;
             overflow-y: auto;
         }
 
-        .admin-content h2 {
-            margin-bottom: var(--pm-space-5);
-            color: var(--pm-green);
+        .modal h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 24px;
         }
 
-        .admin-login {
-            display: flex;
-            flex-direction: column;
-            gap: var(--pm-space-4);
-            max-width: 300px;
+        .form-group {
+            margin-bottom: 16px;
         }
 
-        .admin-login input {
-            padding: var(--pm-space-3) var(--pm-space-4);
-            border: 1px solid var(--pm-border);
-            border-radius: var(--pm-radius-md);
-            background: var(--pm-bg-input);
-            color: var(--pm-text-primary);
-            font-family: var(--pm-font-family);
-            font-size: var(--pm-font-size-base);
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--color-surface-2);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            color: var(--color-text);
+            font-family: var(--font);
+            font-size: 14px;
         }
 
-        .admin-login input:focus {
+        .form-group input:focus {
             outline: none;
-            border-color: var(--pm-green);
+            border-color: var(--color-accent);
         }
 
-        .admin-login button {
-            padding: var(--pm-space-3) var(--pm-space-5);
-            background: var(--pm-gradient);
+        .btn {
+            padding: 12px 20px;
             border: none;
-            border-radius: var(--pm-radius-md);
-            color: white;
-            font-family: var(--pm-font-family);
-            font-weight: var(--pm-font-weight-semibold);
+            border-radius: 8px;
+            font-family: var(--font);
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
-            transition: transform var(--pm-transition-fast);
+            transition: all var(--transition);
         }
 
-        .admin-login button:hover {
-            transform: scale(1.02);
+        .btn-primary {
+            background: var(--color-accent);
+            color: #000;
         }
 
-        .admin-panel {
-            display: none;
+        .btn-secondary {
+            background: var(--color-surface-2);
+            color: var(--color-text);
         }
 
-        .admin-panel.active {
-            display: block;
-        }
+        .admin-panel { display: none; }
+        .admin-panel.active { display: block; }
 
         .admin-table {
             width: 100%;
             border-collapse: collapse;
-            margin: var(--pm-space-5) 0;
+            margin: 16px 0;
         }
 
         .admin-table th,
         .admin-table td {
-            padding: var(--pm-space-3);
+            padding: 12px;
             text-align: left;
-            border-bottom: 1px solid var(--pm-border);
+            border-bottom: 1px solid var(--color-border);
+            font-size: 14px;
         }
 
         .admin-table th {
-            color: var(--pm-green);
-            font-weight: var(--pm-font-weight-semibold);
+            color: var(--color-text-secondary);
+            font-weight: 500;
         }
 
         .admin-table select,
         .admin-table input {
-            padding: var(--pm-space-2) var(--pm-space-3);
-            border: 1px solid var(--pm-border);
-            border-radius: var(--pm-radius-md);
-            background: var(--pm-bg-input);
-            color: var(--pm-text-primary);
-            font-family: var(--pm-font-family);
+            padding: 8px 12px;
+            background: var(--color-surface-2);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            color: var(--color-text);
+            font-family: var(--font);
+            font-size: 13px;
             width: 100%;
         }
 
         .admin-actions {
             display: flex;
-            gap: var(--pm-space-3);
-            margin-top: var(--pm-space-5);
+            gap: 12px;
+            margin-top: 24px;
         }
 
-        .admin-actions button {
-            padding: var(--pm-space-3) var(--pm-space-6);
-            border: none;
-            border-radius: var(--pm-radius-md);
-            font-family: var(--pm-font-family);
-            font-weight: var(--pm-font-weight-semibold);
-            cursor: pointer;
-            transition: all var(--pm-transition-fast);
-        }
-
-        .btn-save {
-            background: var(--pm-gradient);
-            color: white;
-        }
-
-        .btn-close {
-            background: var(--pm-bg-card);
-            color: var(--pm-text-primary);
-            border: 1px solid var(--pm-border) !important;
-        }
-
-        .admin-status {
-            margin-top: var(--pm-space-4);
-            padding: var(--pm-space-3) var(--pm-space-4);
-            border-radius: var(--pm-radius-md);
+        .status-msg {
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
             display: none;
         }
 
-        .admin-status.success {
+        .status-msg.success {
             display: block;
-            background: var(--pm-green-light);
-            color: var(--pm-green);
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--color-accent);
         }
 
-        .admin-status.error {
+        .status-msg.error {
             display: block;
             background: rgba(239, 68, 68, 0.1);
-            color: var(--pm-red);
+            color: #ef4444;
         }
     </style>
 </head>
 <body>
-    <!-- Particules animées -->
-    <div class="particles" id="particles"></div>
-
-    <!-- Header -->
-    <header class="header">
-        <a href="/" class="logo">
-            <img src="icons/icon-192.png" alt="Périmap">
+    <nav>
+        <a href="/" class="nav-logo">
+            <img src="icons/icon-192.png" alt="">
             <span>Périmap</span>
         </a>
-        <nav class="nav-links">
+        <div class="nav-links">
             <a href="/">Accueil</a>
             <a href="/#itineraire">Itinéraire</a>
             <a href="/#horaires">Horaires</a>
             <a href="/mentions-legales.html">Mentions légales</a>
-        </nav>
-    </header>
+        </div>
+    </nav>
 
-    <!-- Main -->
     <main>
-        <!-- Hero -->
         <section class="hero">
-            <h1>Une app créée pour <span class="highlight">simplifier</span> vos trajets</h1>
-            <p>Périmap est née d'une envie simple : rendre les transports en commun de Périgueux accessibles, modernes et agréables à utiliser. Une solution 100% gratuite pour tous les usagers.</p>
+            <h1>Simplifier vos trajets au quotidien</h1>
+            <p>Périmap est une application gratuite et indépendante pour les transports en commun du Grand Périgueux.</p>
         </section>
 
-        <!-- Features -->
-        <section class="features">
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🚍</div>
+        <section>
+            <p class="section-title">Fonctionnalités</p>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                    </div>
                     <h3>Temps réel</h3>
-                    <p>Suivez vos bus en direct sur la carte et consultez les horaires de passage actualisés à chaque arrêt.</p>
+                    <p>Suivez les bus en direct sur la carte et consultez les prochains passages à chaque arrêt.</p>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🗺️</div>
-                    <h3>Itinéraires optimisés</h3>
-                    <p>Trouvez le meilleur trajet grâce à notre moteur de calcul intégré, combinant marche et transport en commun.</p>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+                    </div>
+                    <h3>Itinéraires</h3>
+                    <p>Calculez le meilleur trajet en combinant bus, marche et vélo selon vos préférences.</p>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📱</div>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+                    </div>
                     <h3>Hors-ligne</h3>
-                    <p>Installez l'app sur votre téléphone et accédez aux horaires même sans connexion internet.</p>
+                    <p>Accédez aux horaires même sans connexion grâce au mode progressif de l'application.</p>
                 </div>
             </div>
         </section>
 
-        <!-- Mission -->
-        <section class="mission">
-            <div class="mission-content">
-                <h2>Notre mission</h2>
-                <p>Périmap est un projet indépendant et bénévole, développé avec passion pour améliorer la mobilité quotidienne des habitants du Grand Périgueux. L'application utilise les données GTFS officielles du réseau Péribus pour vous offrir des informations fiables et à jour.</p>
+        <section>
+            <p class="section-title">Notre mission</p>
+            <div class="mission-card">
+                <p>Périmap est un projet indépendant et bénévole, développé pour améliorer la mobilité des habitants du Grand Périgueux. L'application utilise les données GTFS officielles du réseau Péribus.</p>
             </div>
         </section>
 
-        <!-- CTA -->
-        <section class="cta">
+        <div class="cta">
             <a href="/" class="cta-button">
-                <span>Découvrir l'application</span>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
+                <span>Ouvrir l'application</span>
+                <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
-        </section>
+        </div>
     </main>
 
-    <!-- Footer -->
     <footer>
         <div class="social-links">
-            <a href="https://www.instagram.com/perimap.fr" target="_blank" rel="noopener" title="Instagram">
+            <a href="https://instagram.com/perimap.fr" target="_blank" rel="noopener" aria-label="Instagram">
                 <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
             </a>
-            <a href="https://www.facebook.com/perimap.fr" target="_blank" rel="noopener" title="Facebook">
+            <a href="https://facebook.com/perimap.fr" target="_blank" rel="noopener" aria-label="Facebook">
                 <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
             </a>
         </div>
@@ -692,114 +553,98 @@
             <a href="/mentions-legales.html">Mentions légales</a>
             <a href="mailto:perimapfr@gmail.com">Contact</a>
         </div>
-        <p class="copyright">© 2025 Périmap. Projet indépendant.</p>
+        <p class="copyright">© 2025 Périmap</p>
     </footer>
 
-    <!-- Admin (invisible) -->
+    <!-- Admin -->
     <div class="admin-trigger" id="adminTrigger"></div>
-    <div class="admin-modal" id="adminModal">
-        <div class="admin-content">
-            <div class="admin-login" id="adminLogin">
-                <h2>🔐 Administration</h2>
-                <input type="password" id="adminPassword" placeholder="Mot de passe">
-                <input type="text" id="githubToken" placeholder="Token GitHub (optionnel)">
-                <button onclick="loginAdmin()">Connexion</button>
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div id="loginForm">
+                <h2>Administration</h2>
+                <div class="form-group">
+                    <input type="password" id="pwd" placeholder="Mot de passe">
+                </div>
+                <div class="form-group">
+                    <input type="text" id="token" placeholder="Token GitHub (optionnel)">
+                </div>
+                <button class="btn btn-primary" onclick="login()">Connexion</button>
             </div>
-            <div class="admin-panel" id="adminPanelContent">
-                <h2>📊 Gestion du trafic</h2>
+            <div class="admin-panel" id="adminPanel">
+                <h2>Gestion du trafic</h2>
                 <table class="admin-table">
-                    <thead>
-                        <tr><th>Ligne</th><th>Statut</th><th>Message</th></tr>
-                    </thead>
+                    <thead><tr><th>Ligne</th><th>Statut</th><th>Message</th></tr></thead>
                     <tbody id="trafficTable"></tbody>
                 </table>
                 <div class="admin-actions">
-                    <button class="btn-save" onclick="saveTraffic()">💾 Sauvegarder</button>
-                    <button class="btn-close" onclick="closeAdmin()">Fermer</button>
+                    <button class="btn btn-primary" onclick="save()">Sauvegarder</button>
+                    <button class="btn btn-secondary" onclick="closeModal()">Fermer</button>
                 </div>
-                <div class="admin-status" id="adminStatus"></div>
+                <div class="status-msg" id="status"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // Particules
-        const particlesContainer = document.getElementById('particles');
-        for (let i = 0; i < 50; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'particle';
-            particle.style.left = Math.random() * 100 + '%';
-            particle.style.animationDelay = Math.random() * 20 + 's';
-            particle.style.animationDuration = (15 + Math.random() * 10) + 's';
-            particlesContainer.appendChild(particle);
+        const PASS = 'perimap2024';
+        let token = localStorage.getItem('gh_token') || '';
+        let data = {};
+
+        document.getElementById('adminTrigger').onclick = () => {
+            document.getElementById('modal').classList.add('active');
+            document.getElementById('token').value = token;
+        };
+
+        document.getElementById('modal').onclick = e => {
+            if (e.target === e.currentTarget) closeModal();
+        };
+
+        function login() {
+            if (document.getElementById('pwd').value === PASS) {
+                const t = document.getElementById('token').value;
+                if (t) { token = t; localStorage.setItem('gh_token', t); }
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('adminPanel').classList.add('active');
+                loadData();
+            }
         }
 
-        // Admin
-        const ADMIN_PASSWORD = 'perimap2024';
-        let savedToken = localStorage.getItem('github_token') || '';
-        let trafficData = {};
-
-        document.getElementById('adminTrigger').addEventListener('click', () => {
-            document.getElementById('adminModal').classList.add('active');
-            document.getElementById('githubToken').value = savedToken;
-        });
-
-        document.getElementById('adminModal').addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) closeAdmin();
-        });
-
-        function loginAdmin() {
-            const password = document.getElementById('adminPassword').value;
-            const token = document.getElementById('githubToken').value;
-            if (password === ADMIN_PASSWORD) {
-                if (token) { savedToken = token; localStorage.setItem('github_token', token); }
-                document.getElementById('adminLogin').style.display = 'none';
-                document.getElementById('adminPanelContent').classList.add('active');
-                loadTrafficData();
-            } else { alert('Mot de passe incorrect'); }
-        }
-
-        async function loadTrafficData() {
+        async function loadData() {
             try {
-                const response = await fetch('data/line-status.json');
-                trafficData = await response.json();
-                renderTrafficTable();
-            } catch (e) { console.error('Erreur:', e); }
+                const r = await fetch('data/line-status.json');
+                data = await r.json();
+                render();
+            } catch(e) {}
         }
 
-        function renderTrafficTable() {
-            const lines = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N', 'TAD'];
-            const statuses = ['normal', 'perturbé', 'interrompu'];
-            const tbody = document.getElementById('trafficTable');
-            tbody.innerHTML = '';
-            lines.forEach(line => {
-                const data = trafficData[line] || { status: 'normal', message: '' };
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td><strong>Ligne ${line}</strong></td><td><select id="status-${line}">${statuses.map(s => `<option value="${s}" ${data.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></td><td><input type="text" id="message-${line}" value="${data.message || ''}" placeholder="Message"></td>`;
-                tbody.appendChild(tr);
-            });
+        function render() {
+            const lines = ['A','B','C','D','E','F','G','H','N','TAD'];
+            const statuses = ['normal','perturbé','interrompu'];
+            document.getElementById('trafficTable').innerHTML = lines.map(l => {
+                const d = data[l] || {status:'normal',message:''};
+                return `<tr><td><strong>${l}</strong></td><td><select id="s-${l}">${statuses.map(s=>`<option ${d.status===s?'selected':''}>${s}</option>`).join('')}</select></td><td><input id="m-${l}" value="${d.message||''}"></td></tr>`;
+            }).join('');
         }
 
-        async function saveTraffic() {
-            const lines = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'N', 'TAD'];
+        async function save() {
+            const lines = ['A','B','C','D','E','F','G','H','N','TAD'];
             const newData = {};
-            lines.forEach(line => { newData[line] = { status: document.getElementById(`status-${line}`).value, message: document.getElementById(`message-${line}`).value }; });
-            const statusEl = document.getElementById('adminStatus');
-            if (!savedToken) { statusEl.className = 'admin-status error'; statusEl.textContent = 'Token GitHub requis'; return; }
+            lines.forEach(l => { newData[l] = { status: document.getElementById(`s-${l}`).value, message: document.getElementById(`m-${l}`).value }; });
+            const el = document.getElementById('status');
+            if (!token) { el.className = 'status-msg error'; el.textContent = 'Token requis'; return; }
             try {
                 const content = btoa(JSON.stringify(newData, null, 2));
-                const getFile = await fetch('https://api.github.com/repos/EFFEZFEZ/p-rimap-sans-api-/contents/public/data/line-status.json', { headers: { Authorization: `token ${savedToken}` } });
-                const fileData = await getFile.json();
-                await fetch('https://api.github.com/repos/EFFEZFEZ/p-rimap-sans-api-/contents/public/data/line-status.json', { method: 'PUT', headers: { Authorization: `token ${savedToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'Mise à jour trafic', content, sha: fileData.sha }) });
-                statusEl.className = 'admin-status success'; statusEl.textContent = '✓ Sauvegardé';
-            } catch (e) { statusEl.className = 'admin-status error'; statusEl.textContent = 'Erreur: ' + e.message; }
+                const file = await (await fetch('https://api.github.com/repos/EFFEZFEZ/p-rimap-sans-api-/contents/public/data/line-status.json', { headers: { Authorization: `token ${token}` }})).json();
+                await fetch('https://api.github.com/repos/EFFEZFEZ/p-rimap-sans-api-/contents/public/data/line-status.json', { method: 'PUT', headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'Update traffic', content, sha: file.sha }) });
+                el.className = 'status-msg success'; el.textContent = 'Sauvegardé';
+            } catch(e) { el.className = 'status-msg error'; el.textContent = e.message; }
         }
 
-        function closeAdmin() {
-            document.getElementById('adminModal').classList.remove('active');
-            document.getElementById('adminLogin').style.display = 'flex';
-            document.getElementById('adminPanelContent').classList.remove('active');
-            document.getElementById('adminPassword').value = '';
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('adminPanel').classList.remove('active');
+            document.getElementById('pwd').value = '';
         }
     </script>
 </body>
