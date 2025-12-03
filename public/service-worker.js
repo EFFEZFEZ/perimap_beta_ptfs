@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v119'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V119: SEO keywords renforcés + icônes réseaux sociaux footer
+const CACHE_VERSION = 'v120'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V120: Mentions légales + fix footer PC alignement
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
