@@ -187,7 +187,8 @@ export function filterLateArrivals(itineraries, targetHour, targetMinute) {
 
 /**
  * Trie et classe les itinéraires pour le mode "arriver".
- * Priorité: arrivée la plus proche de l'heure demandée (mais <= heure demandée), moins de correspondances, moins de marche.
+ * TRI SIMPLE: par heure d'arrivée DÉCROISSANTE (15h55, 15h45, 15h30...)
+ * L'utilisateur veut arriver à 16h -> les trajets les plus proches de 16h en premier
  */
 export function rankArrivalItineraries(itineraries, searchTime) {
   if (!searchTime || searchTime.type !== 'arriver') return itineraries;
@@ -197,70 +198,25 @@ export function rankArrivalItineraries(itineraries, searchTime) {
   const targetMinute = parseInt(searchTime.minute) || 0;
   const targetMinutes = targetHour * 60 + targetMinute;
   
-  console.log(`🎯 rankArrivalItineraries: cible ${String(targetHour).padStart(2,'0')}:${String(targetMinute).padStart(2,'0')} (${targetMinutes}min), ${itineraries.length} itinéraires à trier`);
+  console.log(`🎯 rankArrivalItineraries: cible ${String(targetHour).padStart(2,'0')}:${String(targetMinute).padStart(2,'0')} (${targetMinutes}min), ${itineraries.length} itinéraires`);
   
-  // Debug: afficher tous les itinéraires avant tri
-  console.log('📋 Avant tri (heures d\'arrivée):', itineraries.map(it => it.arrivalTime).join(', '));
-  
-  const scored = itineraries.map(it => {
-    const steps = Array.isArray(it.steps) ? it.steps : [];
-    const busSteps = steps.filter(s => s.type === 'BUS');
-    const walkSteps = steps.filter(s => s.type === 'WALK' || s._isWalk);
-    const transfers = Math.max(0, busSteps.length - 1);
+  // V134: Tri SIMPLE par heure d'arrivée DÉCROISSANTE
+  const sorted = [...itineraries].sort((a, b) => {
+    const arrA = parseTimeToMinutes(a.arrivalTime);
+    const arrB = parseTimeToMinutes(b.arrivalTime);
     
-    const walkingDurationMin = walkSteps.reduce((acc, s) => {
-      const m = (s.duration || '').match(/(\d+)/);
-      return acc + (m ? parseInt(m[1], 10) : 0);
-    }, 0);
+    // Filtrer les arrivées après l'heure demandée (trop tard)
+    const aValid = arrA <= targetMinutes;
+    const bValid = arrB <= targetMinutes;
+    if (aValid !== bValid) return aValid ? -1 : 1;
     
-    const arrMinutes = parseTimeToMinutes(it.arrivalTime);
-    // Distance à l'heure cible (on veut arriver le plus proche possible AVANT ou égal)
-    // arrivalDiff = 0 si arrivée = heure cible (parfait)
-    // arrivalDiff > 0 si arrivée avant l'heure cible (ok, plus petit = mieux car plus proche de la cible)
-    // arrivalDiff = Infinity si arrivée après l'heure cible (mauvais - trop tard!)
-    const arrivalDiff = targetMinutes - arrMinutes;
-    
-    return {
-      it,
-      arrMinutes,
-      arrTime: it.arrivalTime, // Pour debug
-      arrivalDiff: arrivalDiff >= 0 ? arrivalDiff : Infinity, // Pénaliser les arrivées tardives
-      transfers,
-      walkingDurationMin,
-      durationRaw: it.durationRaw || 0
-    };
+    // Trier par arrivée DÉCROISSANTE (15h55 > 15h45 > 15h30)
+    return arrB - arrA;
   });
 
-  // V132: Trier par écart à l'heure cible CROISSANT (du plus proche au plus loin)
-  // Ainsi on affiche d'abord l'arrivée la plus proche de l'heure demandée (ex: 15h50 pour une demande à 16h)
-  // puis les alternatives plus éloignées (15h30, 15h00, 14h30...)
-  scored.sort((a, b) => {
-    // Filtrer d'abord les arrivées valides (avant ou à l'heure cible) vs tardives
-    const aValid = a.arrivalDiff !== Infinity;
-    const bValid = b.arrivalDiff !== Infinity;
-    if (aValid !== bValid) return aValid ? -1 : 1; // Valides en premier
-    
-    // Pour les arrivées valides, trier par écart CROISSANT (plus petit écart = plus proche de la cible = meilleur)
-    // Cela donne: arrivée à 15h50 (10min avant) > 15h30 (30min avant) > 15h00 (60min avant)
-    if (a.arrivalDiff !== b.arrivalDiff) return a.arrivalDiff - b.arrivalDiff;
-    
-    // À écart égal, moins de correspondances = mieux
-    if (a.transfers !== b.transfers) return a.transfers - b.transfers;
-    // Puis par temps de marche
-    if (a.walkingDurationMin !== b.walkingDurationMin) return a.walkingDurationMin - b.walkingDurationMin;
-    // Enfin par durée totale
-    return a.durationRaw - b.durationRaw;
-  });
+  console.log('📋 Tri ARRIVER (arrivée décroissante):', sorted.slice(0, 5).map(it => it.arrivalTime).join(', '));
 
-  console.log('📋 Après tri ARRIVER (du plus proche au plus loin de la cible):', scored.slice(0, 8).map(s => ({
-    arr: s.arrTime,
-    arrMin: s.arrMinutes,
-    diff: s.arrivalDiff === Infinity ? '∞ (trop tard!)' : s.arrivalDiff + 'min avant cible',
-    dep: s.it.departureTime,
-    transfers: s.transfers
-  })));
-
-  return scored.map(x => x.it);
+  return sorted;
 }
 
 /**
