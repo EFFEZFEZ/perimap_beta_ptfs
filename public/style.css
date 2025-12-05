@@ -1,17 +1,229 @@
-#map .leaflet-custom-locate a,
-#detail-map .leaflet-custom-locate a,
-#results-map .leaflet-custom-locate a {
+/* =========================================
+ * V154: CONTRÔLES CARTE MODERNES
+ * ========================================= */
+
+/* Cacher les contrôles de zoom natifs Leaflet */
+.leaflet-control-zoom {
+    display: none !important;
+}
+
+/* Cacher le contrôle d'attribution par défaut */
+.leaflet-control-attribution {
+    font-size: 10px;
+    background: rgba(255,255,255,0.8) !important;
+    padding: 2px 6px !important;
+}
+
+body.dark-theme .leaflet-control-attribution {
+    background: rgba(20,25,35,0.8) !important;
+    color: rgba(255,255,255,0.6);
+}
+
+/* =========================================
+ * NOUVEAU BOUTON LOCALISATION FLOTTANT V154
+ * ========================================= */
+.map-floating-controls {
+    position: absolute;
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+/* Position en bas à droite (desktop et mobile) */
+.leaflet-bottom.leaflet-right .map-floating-controls {
+    margin-bottom: 24px;
+    margin-right: 16px;
+}
+
+.map-btn-locate {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.12),
+        0 2px 6px rgba(0, 0, 0, 0.08),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.map-btn-locate:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: scale(1.08);
+    box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.18),
+        0 4px 8px rgba(0, 0, 0, 0.1),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.map-btn-locate:active {
+    transform: scale(0.95);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.map-btn-locate svg {
+    width: 24px;
+    height: 24px;
+    color: var(--pm-green, #22c55e);
+    stroke-width: 2;
+    transition: all 0.25s ease;
+}
+
+.map-btn-locate:hover svg {
+    color: var(--pm-green-hover, #16a34a);
+}
+
+/* État de chargement */
+.map-btn-locate.is-loading {
+    pointer-events: none;
+}
+
+.map-btn-locate.is-loading svg {
+    animation: locate-crosshair-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes locate-crosshair-pulse {
+    0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% { 
+        transform: scale(0.85);
+        opacity: 0.6;
+    }
+}
+
+/* État d'erreur */
+.map-btn-locate.has-error {
+    background: rgba(239, 68, 68, 0.1);
+    box-shadow: 
+        0 4px 16px rgba(239, 68, 68, 0.2),
+        0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.map-btn-locate.has-error svg {
+    color: #ef4444;
+}
+
+/* =========================================
+ * DARK THEME - BOUTON LOCALISATION
+ * ========================================= */
+body.dark-theme .map-btn-locate {
+    background: rgba(30, 35, 45, 0.95);
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.35),
+        0 2px 6px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .map-btn-locate:hover {
+    background: rgba(40, 48, 60, 0.98);
+    box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.45),
+        0 4px 8px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .map-btn-locate svg {
+    color: #4ade80;
+}
+
+body.dark-theme .map-btn-locate:hover svg {
+    color: #22c55e;
+}
+
+body.dark-theme .map-btn-locate.has-error {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+/* =========================================
+ * RESPONSIVE - MOBILE
+ * ========================================= */
+@media (max-width: 768px) {
+    .leaflet-bottom.leaflet-right .map-floating-controls {
+        margin-bottom: 80px; /* Au-dessus de la bottom nav */
+        margin-right: 12px;
+    }
+    
+    .map-btn-locate {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .map-btn-locate svg {
+        width: 22px;
+        height: 22px;
+    }
+}
+
+/* Ancien style (gardé pour compatibilité) */
+.leaflet-custom-locate {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.leaflet-custom-locate a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px !important;
+    height: 44px !important;
+    background: var(--bg-main) !important;
+    border: none !important;
+    border-radius: 50% !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer;
+}
+
+.leaflet-custom-locate a:hover {
+    background: var(--bg-secondary) !important;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.leaflet-custom-locate a:active {
+    transform: scale(0.95);
+}
+
+.leaflet-custom-locate a svg {
+    width: 20px;
+    height: 20px;
+    color: var(--primary) !important;
+    stroke-width: 2.5;
 }
 
 .leaflet-custom-locate a.is-loading svg {
     animation: locate-spin 0.9s linear infinite;
+    color: var(--primary) !important;
 }
 
 .leaflet-custom-locate a.has-error {
-    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.leaflet-custom-locate a.has-error svg {
+    color: #ef4444 !important;
+}
+
+/* Dark theme */
+body.dark-theme .leaflet-custom-locate a {
+    background: rgba(30, 35, 45, 0.95) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.dark-theme .leaflet-custom-locate a:hover {
+    background: rgba(40, 45, 55, 0.95) !important;
 }
 
 @keyframes locate-spin {
@@ -434,35 +646,33 @@ body, .card, .planner-block, #main-header, #map, .btn, .btn-icon-round {
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15), var(--shadow-md);
 }
 
-/* Leaflet controls: keep them visible & clickable in dark mode */
-.leaflet-control a, .leaflet-control button, .leaflet-bar a, .leaflet-bar button {
-    color: var(--text-primary) !important;
-    background: rgba(255,255,255,0.02) !important;
-    border: 1px solid rgba(255,255,255,0.06) !important;
-}
-.leaflet-control a:hover, .leaflet-control button:hover, .leaflet-bar a:hover, .leaflet-bar button:hover {
-    background: rgba(255,255,255,0.04) !important;
+/* V153: Contrôles Leaflet modernisés */
+.leaflet-bar {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
 }
 
-/* Harmonise l'attribution Leaflet avec notre esthétique (pill glassmorphique) */
+/* V153: Attribution Leaflet discrète */
 .leaflet-control-attribution {
-    background: rgba(255, 255, 255, 0.9) !important;
-    color: var(--text-secondary) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius-full) !important;
-    padding: 0.35rem 0.85rem !important;
-    font-size: 0.72rem !important;
-    line-height: 1 !important;
-    box-shadow: var(--shadow-sm);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
+    background: rgba(255, 255, 255, 0.7) !important;
+    color: #666 !important;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+.leaflet-control-attribution:hover {
+    opacity: 1;
 }
 .leaflet-control-attribution a {
-    color: var(--primary) !important;
-    font-weight: 600;
+    color: #444 !important;
     text-decoration: none;
 }
 .leaflet-control-attribution a:hover {
@@ -473,43 +683,32 @@ body.dark-theme .leaflet-control-attribution,
 #map.dark-theme .leaflet-control-attribution,
 #detail-map.dark-theme .leaflet-control-attribution,
 #results-map.dark-theme .leaflet-control-attribution {
-    background: rgba(6, 12, 20, 0.72) !important;
-    color: var(--text-secondary) !important;
-    border-color: rgba(255,255,255,0.08) !important;
-    box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+    background: rgba(0, 0, 0, 0.5) !important;
+    color: rgba(255, 255, 255, 0.5) !important;
 }
 body.dark-theme .leaflet-control-attribution a,
 #map.dark-theme .leaflet-control-attribution a,
 #detail-map.dark-theme .leaflet-control-attribution a,
 #results-map.dark-theme .leaflet-control-attribution a {
-    color: var(--primary) !important;
+    color: rgba(255, 255, 255, 0.6) !important;
 }
 
 /* Ensure the map container is not covered by header or other elements */
 #map { z-index: 1; }
 
-/* Dark-theme specific tweaks for Leaflet when map container has .dark-theme */
-#map.dark-theme .leaflet-control a,
-#map.dark-theme .leaflet-control button,
-#map.dark-theme .leaflet-bar a,
-#map.dark-theme .leaflet-bar button,
-#detail-map.dark-theme .leaflet-control a,
-#detail-map.dark-theme .leaflet-control button,
-#detail-map.dark-theme .leaflet-bar a,
-#detail-map.dark-theme .leaflet-bar button,
-#results-map.dark-theme .leaflet-control a,
-#results-map.dark-theme .leaflet-control button,
-#results-map.dark-theme .leaflet-bar a,
-#results-map.dark-theme .leaflet-bar button {
-    color: var(--text-primary) !important;
-    background: rgba(8,12,18,0.6) !important;
-    border-color: rgba(255,255,255,0.06) !important;
+/* V153: Positionnement du bouton localisation */
+.leaflet-top.leaflet-right {
+    right: 12px;
+    top: 12px;
 }
 
-#map.dark-theme .leaflet-control-locate svg,
-#detail-map.dark-theme .leaflet-control-locate svg,
-#results-map.dark-theme .leaflet-control-locate svg {
-    color: var(--text-primary) !important;
+/* Mobile: bouton plus bas pour éviter les contrôles système */
+@media (max-width: 768px) {
+    .leaflet-top.leaflet-right {
+        right: 10px;
+        top: auto;
+        bottom: 80px;
+    }
 }
 
 /* =========================================

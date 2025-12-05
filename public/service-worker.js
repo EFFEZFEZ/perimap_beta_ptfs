@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v153'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V153: Fix carte PC position fixed
+const CACHE_VERSION = 'v154'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V154: Bouton localisation moderne (crosshair)
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;

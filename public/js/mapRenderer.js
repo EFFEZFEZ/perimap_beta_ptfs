@@ -43,7 +43,14 @@ const DARK_TILE_CONFIG = Object.freeze({
     }
 });
 
-const LOCATE_BUTTON_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L7 12h10L12 2z"/><circle cx="12" cy="12" r="10"/></svg>`;
+// ✅ V154 - Nouvelle icône de localisation moderne (crosshair/cible)
+const LOCATE_BUTTON_ICON = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4"/>
+    <line x1="12" y1="2" x2="12" y2="6"/>
+    <line x1="12" y1="18" x2="12" y2="22"/>
+    <line x1="2" y1="12" x2="6" y2="12"/>
+    <line x1="18" y1="12" x2="22" y2="12"/>
+</svg>`;
 
 export class MapRenderer {
     /**
@@ -909,18 +916,21 @@ export class MapRenderer {
             setTimeout(() => renderer.setLocateButtonState('idle'), 1800);
         };
 
+        // ✅ V154 - Nouveau contrôle moderne avec design flottant
         const LocateControl = L.Control.extend({
-            options: { position: 'topright' },
+            options: { position: 'bottomright' },
             onAdd() {
-                const container = L.DomUtil.create('div', 'leaflet-bar leaflet-custom-locate');
-                const link = L.DomUtil.create('a', 'leaflet-bar-part leaflet-bar-part-single', container);
-                link.href = '#';
-                link.setAttribute('role', 'button');
-                link.title = 'Me localiser';
-                link.innerHTML = LOCATE_BUTTON_ICON;
-                renderer.locateButtonElement = link;
+                const container = L.DomUtil.create('div', 'map-floating-controls');
+                const btn = L.DomUtil.create('button', 'map-btn-locate', container);
+                btn.type = 'button';
+                btn.setAttribute('aria-label', 'Me localiser');
+                btn.title = 'Me localiser';
+                btn.innerHTML = LOCATE_BUTTON_ICON;
+                renderer.locateButtonElement = btn;
                 renderer.setLocateButtonState('idle');
-                L.DomEvent.on(link, 'click', (e) => {
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+                L.DomEvent.on(btn, 'click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     startLocate();
