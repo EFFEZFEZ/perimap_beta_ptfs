@@ -488,21 +488,23 @@ export class ApiManager {
 
 
     /**
-     * ✨ V145: Calcul intelligent d'itinéraire avec MINIMUM 5 trajets bus
-     * ✅ Fait plusieurs appels API décalés pour obtenir plus de trajets
+     * V147: Calcul SIMPLE d'itinéraire - UN SEUL appel API
+     * L'API Google renvoie jusqu'à 4 alternatives, c'est suffisant
      */
     async fetchItinerary(fromPlaceId, toPlaceId, searchTime = null) {
         const startTime = performance.now();
-        console.log(`🧠 CALCUL INTELLIGENT: ${fromPlaceId} → ${toPlaceId}`);
+        console.log(`🧠 RECHERCHE ITINÉRAIRE: ${fromPlaceId} → ${toPlaceId}`);
+        if (searchTime) {
+            console.log(`⏰ Mode: ${searchTime.type || 'partir'}, Heure: ${searchTime.hour}:${searchTime.minute}`);
+        }
         
-        // ✅ V48: Convertir les alias en coordonnées EN PARALLÈLE
+        // Convertir les alias en coordonnées
         const fromIsAlias = fromPlaceId && fromPlaceId.startsWith('ALIAS_');
         const toIsAlias = toPlaceId && toPlaceId.startsWith('ALIAS_');
         
         let fromCoords = null;
         let toCoords = null;
         
-        // Résolution parallèle des alias
         const aliasPromises = [];
         if (fromIsAlias) aliasPromises.push(this.getPlaceCoords(fromPlaceId).then(c => { fromCoords = c; }));
         if (toIsAlias) aliasPromises.push(this.getPlaceCoords(toPlaceId).then(c => { toCoords = c; }));
@@ -516,104 +518,26 @@ export class ApiManager {
         };
 
         // ========================================
-        // 🚀 V145: APPELS API EN PARALLÈLE + APPELS DÉCALÉS POUR PLUS DE BUS
+        // V147: UN SEUL APPEL PAR MODE - SIMPLE ET EFFICACE
         // ========================================
         
-        // V146: Créer des heures décalées pour obtenir plus de trajets bus
-        const MIN_BUS_ITINERARIES = 5;
-        const busPromises = [
-            this._fetchBusRoute(fromPlaceId, toPlaceId, searchTime, fromCoords, toCoords)
-        ];
-        
-        const baseHour = parseInt(searchTime?.hour) || new Date().getHours();
-        const baseMinute = parseInt(searchTime?.minute) || new Date().getMinutes();
-        
-        if (searchTime?.type === 'arriver') {
-            // Mode ARRIVER: chercher des trajets qui arrivent AVANT l'heure demandée
-            // On décale l'heure d'arrivée vers l'arrière (-30, -60, -90 min)
-            const offsets = [-30, -60, -90];
-            offsets.forEach(offset => {
-                let newMinute = baseMinute + offset;
-                let newHour = baseHour + Math.floor(newMinute / 60);
-                newMinute = ((newMinute % 60) + 60) % 60; // Gère les minutes négatives
-                if (newMinute < 0) {
-                    newMinute += 60;
-                    newHour -= 1;
-                }
-                if (newHour < 0 || newHour >= 24) return;
-                
-                const offsetSearchTime = {
-                    ...searchTime,
-                    hour: String(newHour).padStart(2, '0'),
-                    minute: String(newMinute).padStart(2, '0')
-                };
-                busPromises.push(
-                    this._fetchBusRoute(fromPlaceId, toPlaceId, offsetSearchTime, fromCoords, toCoords)
-                        .catch(() => ({ routes: [] }))
-                );
-            });
-        } else {
-            // Mode PARTIR: chercher des trajets qui partent APRÈS l'heure demandée
-            const offsets = [30, 60, 90];
-            offsets.forEach(offset => {
-                let newMinute = baseMinute + offset;
-                let newHour = baseHour + Math.floor(newMinute / 60);
-                newMinute = newMinute % 60;
-                if (newHour >= 24) return;
-                
-                const offsetSearchTime = {
-                    ...searchTime,
-                    hour: String(newHour).padStart(2, '0'),
-                    minute: String(newMinute).padStart(2, '0')
-                };
-                busPromises.push(
-                    this._fetchBusRoute(fromPlaceId, toPlaceId, offsetSearchTime, fromCoords, toCoords)
-                        .catch(() => ({ routes: [] }))
-                );
-            });
-        }
-        
-        // Lancer tous les appels en parallèle
-        const [bikeResult, walkResult, ...busResults] = await Promise.allSettled([
+        const [busResult, bikeResult, walkResult] = await Promise.allSettled([
+            this._fetchBusRoute(fromPlaceId, toPlaceId, searchTime, fromCoords, toCoords),
             this.fetchBicycleRoute(fromPlaceId, toPlaceId, fromCoords, toCoords),
-            this.fetchWalkingRoute(fromPlaceId, toPlaceId, fromCoords, toCoords),
-            ...busPromises
+            this.fetchWalkingRoute(fromPlaceId, toPlaceId, fromCoords, toCoords)
         ]);
 
-        // 1️⃣ Traitement BUS - Combiner tous les résultats
-        const allBusRoutes = [];
-        const seenDepartures = new Set();
-        
-        busResults.forEach((result, idx) => {
-            if (result.status === 'fulfilled' && result.value?.routes?.length > 0) {
-                result.value.routes.forEach(route => {
-                    // Extraire l'heure de départ pour détecter les doublons
-                    const depTime = route.legs?.[0]?.steps?.find(s => s.travelMode === 'TRANSIT')
-                        ?.transitDetails?.localizedValues?.departureTime?.time?.text;
-                    
-                    if (depTime && !seenDepartures.has(depTime)) {
-                        seenDepartures.add(depTime);
-                        allBusRoutes.push(route);
-                    } else if (!depTime) {
-                        allBusRoutes.push(route); // Garder si pas d'heure (rare)
-                    }
-                });
-            }
-        });
-        
-        console.log(`🚍 Total bus trouvés: ${allBusRoutes.length} (après déduplication)`);
-        
-        if (allBusRoutes.length > 0) {
-            // Reconstruire l'objet busData avec toutes les routes combinées
-            const combinedBusData = { routes: allBusRoutes };
-            const bestRoute = allBusRoutes[0];
+        // 1️⃣ Traitement BUS
+        if (busResult.status === 'fulfilled' && busResult.value?.routes?.length > 0) {
+            const busData = busResult.value;
+            const bestRoute = busData.routes[0];
             const durationSeconds = parseInt(bestRoute.duration?.replace('s', '')) || 0;
             const durationMinutes = Math.round(durationSeconds / 60);
             const transitSteps = bestRoute.legs?.[0]?.steps?.filter(s => s.travelMode === 'TRANSIT') || [];
             const transferCount = Math.max(0, transitSteps.length - 1);
             
-            results.bus = { data: combinedBusData, duration: durationMinutes, transfers: transferCount };
-            console.log(`🚍 Bus: ${durationMinutes}min, ${transferCount} corresp.`);
+            results.bus = { data: busData, duration: durationMinutes, transfers: transferCount };
+            console.log(`🚍 Bus: ${busData.routes.length} trajets trouvés, meilleur: ${durationMinutes}min`);
             
             let score = durationMinutes > 90 || transferCount > 2 ? 20 :
                         durationMinutes > 60 ? 50 :

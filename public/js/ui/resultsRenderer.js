@@ -417,30 +417,15 @@ export function createResultsRenderer(deps) {
       globalIndex++;
     };
 
-    // V144: Afficher les groupes dans l'ordre BUS → BIKE → WALK
+    // V147: Afficher les groupes dans l'ordre BUS → BIKE → WALK
     if (busGroups.length > 0) {
       busGroups.forEach(g => renderGroup(g));
     }
     bikeGroups.forEach(g => renderGroup(g));
     walkGroups.forEach(g => renderGroup(g));
     
-    // V146: Bouton "Générer + de trajets"
-    const loadMoreWrapper = document.createElement('div');
-    loadMoreWrapper.className = 'load-more-wrapper';
-    loadMoreWrapper.innerHTML = `
-      <button class="btn btn-secondary btn-load-more">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        Générer + de trajets
-      </button>
-    `;
-    loadMoreWrapper.querySelector('button').addEventListener('click', () => {
-      if (isArrival && typeof deps.onLoadMoreArrivals === 'function') {
-        deps.onLoadMoreArrivals();
-      } else if (typeof deps.onLoadMoreDepartures === 'function') {
-        deps.onLoadMoreDepartures();
-      }
-    });
-    resultsListContainer.appendChild(loadMoreWrapper);
+    // V147: Système simple - pas de bouton générer plus
+    // L'API Google renvoie déjà les meilleures alternatives
   }
 
   return { render };
