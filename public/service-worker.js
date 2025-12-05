@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v131'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V131: Admin visible + carte mobile plein écran + plus d'itinéraires
+const CACHE_VERSION = 'v132'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V132: Fix top-bar carte + clic lignes trafic
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;

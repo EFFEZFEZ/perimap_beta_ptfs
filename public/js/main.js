@@ -42,7 +42,7 @@ import {
 
 import { getCategoryForRoute, LINE_CATEGORIES, PDF_FILENAME_MAP, ROUTE_LONG_NAME_MAP } from './config/routes.js';
 import { ICONS, getManeuverIcon, getAlertBannerIcon } from './config/icons.js';
-import { updateNewsBanner } from './ui/trafficInfo.js';
+import { updateNewsBanner, renderInfoTraficCard as renderInfoTraficCardFromModule } from './ui/trafficInfo.js';
 
 // Modules
 let dataManager;
@@ -3703,70 +3703,8 @@ function renderItineraryDetail(itinerary) {
 
 function renderInfoTraficCard() {
     if (!dataManager || !infoTraficList) return;
-    infoTraficList.innerHTML = '';
-    let alertCount = 0;
-    
-    const groupedRoutes = {
-        'majeures': { name: 'Lignes majeures', routes: [] },
-        'express': { name: 'Lignes express', routes: [] },
-        'quartier': { name: 'Lignes de quartier', routes: [] },
-        'navettes': { name: 'Navettes', routes: [] }
-    };
-    const allowedCategories = ['majeures', 'express', 'quartier', 'navettes'];
-
-    dataManager.routes.forEach(route => {
-        const category = getCategoryForRoute(route.route_short_name);
-        if (allowedCategories.includes(category)) {
-            groupedRoutes[category].routes.push(route);
-        }
-    });
-
-    for (const [categoryId, categoryData] of Object.entries(groupedRoutes)) {
-        if (categoryData.routes.length === 0) continue;
-
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'trafic-group';
-        
-        let badgesHtml = '';
-        categoryData.routes.sort((a, b) => { 
-             return a.route_short_name.localeCompare(b.route_short_name, undefined, {numeric: true});
-        });
-
-        categoryData.routes.forEach(route => {
-            const state = lineStatuses[route.route_id] || { status: 'normal', message: '' };
-            const routeColor = route.route_color ? `#${route.route_color}` : '#3388ff';
-            const textColor = route.route_text_color ? `#${route.route_text_color}` : '#ffffff';
-            
-            // Comptabiliser les alertes
-            if (state.status !== 'normal') {
-                alertCount++;
-            }
-            
-            // Icône de statut (style TBM) - affichée uniquement si pas normal
-            const statusIcon = state.status !== 'normal' ? '<span class="status-icon"></span>' : '';
-            
-            badgesHtml += `
-                <div class="trafic-badge-item status-${state.status}" title="${state.message || ''}">
-                    <span class="line-badge" style="background-color: ${routeColor}; color: ${textColor};">
-                        ${route.route_short_name}
-                    </span>
-                    ${statusIcon}
-                </div>
-            `;
-        });
-
-        groupDiv.innerHTML = `
-            <h4>${categoryData.name}</h4>
-            <div class="trafic-badge-list">
-                ${badgesHtml}
-            </div>
-        `;
-        infoTraficList.appendChild(groupDiv);
-    }
-    if (infoTraficCount) {
-        infoTraficCount.textContent = alertCount;
-        infoTraficCount.classList.toggle('hidden', alertCount === 0);
-    }
+    // V131: Utiliser la fonction du module trafficInfo.js pour avoir les clics
+    renderInfoTraficCardFromModule(dataManager, lineStatuses, infoTraficList, infoTraficCount);
 }
 
 function buildFicheHoraireList() {
