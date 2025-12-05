@@ -1137,6 +1137,13 @@ body.view-is-locked #legal-strip {
     display: none;
 }
 
+/* V135+: Plein écran carte : enlever le chrome global pour libérer les contrôles (retour, heure, filtre) */
+body.view-map-locked #main-header,
+body.view-map-locked #site-footer,
+body.view-map-locked #legal-strip {
+    display: none !important;
+}
+
 /* V67: Cacher header/footer sur la vue liste itinéraire */
 body.itinerary-view-active #main-header,
 body.itinerary-view-active #site-footer,
@@ -3058,12 +3065,13 @@ details[open] .accordion-content {
  * VUE CARTE (PLEIN ÉCRAN)
  * ========================================= */
 #map-container {
-        display: flex;
-        flex-direction: column;
-        flex: 1 0 auto;
-        min-height: 0;
-        height: 100%;
-        background: var(--bg-light);
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 auto;
+    min-height: 0;
+    height: 100%;
+    background: var(--bg-light);
+    position: relative; /* Ancre les boutons flottants (Filtrer desktop) */
 }
 
 #map-view {
@@ -3097,54 +3105,80 @@ details[open] .accordion-content {
     z-index: 10;
 }
 
-/* V74: Style de base du bouton Filtrer - Visible sur desktop dans le top-bar */
+/* V135: Bouton Filtrer visible (desktop = badge en haut à droite, mobile = FAB) */
 #btn-toggle-filter {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-}
-
-/* V76: Style du bouton FAB (Floating Action Button) pour la carte */
-#map-container #btn-toggle-filter,
-.map-fab-button {
-    position: fixed !important;
-    bottom: calc(30px + env(safe-area-inset-bottom));
-    right: 20px !important;
-    left: auto !important;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: #22c55e !important; /* Vert primaire forcé */
-    color: white !important;
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius-full);
+    background: var(--primary);
+    color: #fff;
     border: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 1100;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0;
+    font-weight: 700;
+    box-shadow: var(--shadow-md);
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+#map-container #btn-toggle-filter svg {
+    width: 20px;
+    height: 20px;
+}
+
 #map-container #btn-toggle-filter:hover,
 .map-fab-button:hover {
-    transform: scale(1.05);
+    transform: scale(1.02);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 #map-container #btn-toggle-filter:active,
 .map-fab-button:active {
-    transform: scale(0.95);
+    transform: scale(0.97);
 }
 
-#map-container #btn-toggle-filter svg {
-    width: 24px;
-    height: 24px;
+/* Desktop : badge fixe en haut à droite (sous le header masqué) avec libellé visible */
+@media (min-width: 769px) {
+    #map-container #btn-toggle-filter {
+        position: absolute;
+        top: 14px;
+        right: 16px;
+        width: auto;
+        height: auto;
+        border-radius: var(--radius-full);
+        padding: 0.65rem 1rem;
+        z-index: 1200;
+    }
+    #map-container #btn-toggle-filter span { display: inline; }
 }
 
-#map-container #btn-toggle-filter span {
-    display: none; /* Cacher le texte sur mobile, garder juste l'icône */
+/* Mobile : FAB ronde en bas à droite */
+@media (max-width: 768px) {
+    #map-container #btn-toggle-filter,
+    .map-fab-button {
+        position: fixed !important;
+        bottom: calc(30px + env(safe-area-inset-bottom));
+        right: 20px !important;
+        left: auto !important;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: #22c55e !important; /* Vert primaire forcé */
+        color: white !important;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 1200;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 0;
+        cursor: pointer;
+    }
+    #map-container #btn-toggle-filter svg {
+        width: 24px;
+        height: 24px;
+    }
+    #map-container #btn-toggle-filter span { display: none; }
 }
 
 #map-container #btn-back-to-dashboard-from-map {
