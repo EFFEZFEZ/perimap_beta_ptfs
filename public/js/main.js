@@ -4417,6 +4417,30 @@ if (typeof window !== 'undefined') {
         getAllFetched: () => allFetchedItineraries,
         getArrivalState: () => ({ lastSearchMode, arrivalRankedAll, arrivalRenderedCount, ARRIVAL_PAGE_SIZE }),
         // Manual trigger (simulate minimal search rendering without network)
-        _debugRender: (mode='ALL') => resultsRenderer && resultsRenderer.render(mode)
+        _debugRender: (mode='ALL') => resultsRenderer && resultsRenderer.render(mode),
+        // V140: offline sorting check without external API
+        simulateItinerarySorting: async function simulateItinerarySorting() {
+            const sampleDepart = [
+                { departureTime: '13:22', arrivalTime: '14:43', type: 'BUS' },
+                { departureTime: '13:25', arrivalTime: '14:49', type: 'BUS' },
+                { departureTime: '13:50', arrivalTime: '15:13', type: 'BUS' },
+                { departureTime: '14:14', arrivalTime: '15:21', type: 'BUS' }
+            ];
+
+            const sampleArrive = [
+                { departureTime: '12:39', arrivalTime: '13:51', type: 'BUS' },
+                { departureTime: '13:25', arrivalTime: '14:49', type: 'BUS' },
+                { departureTime: '14:06', arrivalTime: '15:00', type: 'BUS' },
+                { departureTime: '13:50', arrivalTime: '15:13', type: 'BUS' },
+                { departureTime: '13:22', arrivalTime: '14:43', type: 'BUS' }
+            ];
+
+            console.log('--- DEBUG PARTIR (tri croissant départ) ---');
+            console.table(sortItinerariesByDeparture(sampleDepart).map(it => ({ dep: it.departureTime, arr: it.arrivalTime })));
+
+            console.log('--- DEBUG ARRIVER (cible 15:00, tri arrivée décroissante) ---');
+            const rankedArrive = rankArrivalItineraries(sampleArrive, { type: 'arriver', hour: '15', minute: '00' });
+            console.table(rankedArrive.map(it => ({ dep: it.departureTime, arr: it.arrivalTime })));
+        }
     });
 }

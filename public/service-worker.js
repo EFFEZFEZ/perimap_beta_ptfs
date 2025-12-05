@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v139'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V139: Tri départ + ranking arrivée alignés
+const CACHE_VERSION = 'v140'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V140: Debug simulate tri depart/arriver
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
