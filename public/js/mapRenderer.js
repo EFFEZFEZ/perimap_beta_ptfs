@@ -43,14 +43,23 @@ const DARK_TILE_CONFIG = Object.freeze({
     }
 });
 
-// ✅ V154 - Nouvelle icône de localisation moderne (crosshair/cible)
-const LOCATE_BUTTON_ICON = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="12" cy="12" r="4"/>
-    <line x1="12" y1="2" x2="12" y2="6"/>
-    <line x1="12" y1="18" x2="12" y2="22"/>
-    <line x1="2" y1="12" x2="6" y2="12"/>
-    <line x1="18" y1="12" x2="22" y2="12"/>
-</svg>`;
+// ✅ V155 - Icônes SVG pour les contrôles carte (style Google Maps)
+const ICONS = {
+    locate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+    </svg>`,
+    zoomIn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>`,
+    zoomOut: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>`
+};
+
+// Ancienne variable pour compatibilité
+const LOCATE_BUTTON_ICON = ICONS.locate;
 
 export class MapRenderer {
     /**
@@ -916,30 +925,63 @@ export class MapRenderer {
             setTimeout(() => renderer.setLocateButtonState('idle'), 1800);
         };
 
-        // ✅ V154 - Nouveau contrôle moderne avec design flottant
-        const LocateControl = L.Control.extend({
+        // ✅ V155 - Barre de contrôles moderne style Google Maps
+        const MapControlsBar = L.Control.extend({
             options: { position: 'bottomright' },
-            onAdd() {
+            onAdd(map) {
                 const container = L.DomUtil.create('div', 'map-floating-controls');
-                const btn = L.DomUtil.create('button', 'map-btn-locate', container);
-                btn.type = 'button';
-                btn.setAttribute('aria-label', 'Me localiser');
-                btn.title = 'Me localiser';
-                btn.innerHTML = LOCATE_BUTTON_ICON;
-                renderer.locateButtonElement = btn;
+                
+                // Bouton Zoom +
+                const btnZoomIn = L.DomUtil.create('button', 'map-btn-zoom-in', container);
+                btnZoomIn.type = 'button';
+                btnZoomIn.setAttribute('aria-label', 'Zoom avant');
+                btnZoomIn.title = 'Zoom avant';
+                btnZoomIn.innerHTML = ICONS.zoomIn;
+                
+                // Bouton Zoom -
+                const btnZoomOut = L.DomUtil.create('button', 'map-btn-zoom-out', container);
+                btnZoomOut.type = 'button';
+                btnZoomOut.setAttribute('aria-label', 'Zoom arrière');
+                btnZoomOut.title = 'Zoom arrière';
+                btnZoomOut.innerHTML = ICONS.zoomOut;
+                
+                // Bouton Localisation
+                const btnLocate = L.DomUtil.create('button', 'map-btn-locate', container);
+                btnLocate.type = 'button';
+                btnLocate.setAttribute('aria-label', 'Me localiser');
+                btnLocate.title = 'Me localiser';
+                btnLocate.innerHTML = ICONS.locate;
+                renderer.locateButtonElement = btnLocate;
                 renderer.setLocateButtonState('idle');
+                
+                // Empêcher propagation des clics
                 L.DomEvent.disableClickPropagation(container);
                 L.DomEvent.disableScrollPropagation(container);
-                L.DomEvent.on(btn, 'click', (e) => {
+                
+                // Événements
+                L.DomEvent.on(btnZoomIn, 'click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    map.zoomIn();
+                });
+                
+                L.DomEvent.on(btnZoomOut, 'click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    map.zoomOut();
+                });
+                
+                L.DomEvent.on(btnLocate, 'click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     startLocate();
                 });
+                
                 return container;
             }
         });
 
-        this.locateControl = new LocateControl();
+        this.locateControl = new MapControlsBar();
         this.locateControl.addTo(this.map);
         this.map.on('locationfound', handleLocationFound);
         this.map.on('locationerror', handleLocationError);

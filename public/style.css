@@ -1,136 +1,269 @@
 /* =========================================
- * V154: CONTRÔLES CARTE MODERNES
+ * V155: CONTRÔLES CARTE - DESIGN PREMIUM
+ * Style inspiré Google Maps / Apple Plans
  * ========================================= */
 
-/* Cacher les contrôles de zoom natifs Leaflet */
-.leaflet-control-zoom {
+/* Cacher TOUS les contrôles Leaflet natifs */
+.leaflet-control-zoom,
+.leaflet-control-layers,
+.leaflet-control-scale {
     display: none !important;
 }
 
-/* Cacher le contrôle d'attribution par défaut */
+/* Attribution discrète */
 .leaflet-control-attribution {
-    font-size: 10px;
-    background: rgba(255,255,255,0.8) !important;
-    padding: 2px 6px !important;
+    font-size: 9px;
+    background: rgba(255,255,255,0.7) !important;
+    padding: 2px 8px !important;
+    border-radius: 4px 0 0 0;
+    color: #666;
 }
 
 body.dark-theme .leaflet-control-attribution {
-    background: rgba(20,25,35,0.8) !important;
-    color: rgba(255,255,255,0.6);
+    background: rgba(15, 20, 30, 0.7) !important;
+    color: rgba(255,255,255,0.5);
 }
 
 /* =========================================
- * NOUVEAU BOUTON LOCALISATION FLOTTANT V154
+ * BARRE DE CONTRÔLES FLOTTANTE
+ * Groupe de boutons élégant à droite
  * ========================================= */
 .map-floating-controls {
-    position: absolute;
-    z-index: 1000;
-    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.15),
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
-/* Position en bas à droite (desktop et mobile) */
 .leaflet-bottom.leaflet-right .map-floating-controls {
-    margin-bottom: 24px;
-    margin-right: 16px;
+    margin-bottom: 20px;
+    margin-right: 14px;
 }
 
+/* Bouton générique carte */
+.map-control-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.map-control-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 8px;
+    right: 8px;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.map-control-btn:last-child::after {
+    display: none;
+}
+
+.map-control-btn:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.map-control-btn:active {
+    background: rgba(0, 0, 0, 0.08);
+    transform: scale(0.96);
+}
+
+.map-control-btn svg {
+    width: 20px;
+    height: 20px;
+    color: #333;
+    transition: color 0.15s ease;
+}
+
+.map-control-btn:hover svg {
+    color: #000;
+}
+
+/* =========================================
+ * BOUTON LOCALISATION - STYLE PREMIUM
+ * ========================================= */
 .map-btn-locate {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 52px;
-    height: 52px;
+    width: 46px;
+    height: 46px;
     padding: 0;
+    margin: 0;
     border: none;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow: 
-        0 4px 16px rgba(0, 0, 0, 0.12),
-        0 2px 6px rgba(0, 0, 0, 0.08),
-        0 0 0 1px rgba(0, 0, 0, 0.05);
+    background: transparent;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s ease;
 }
 
 .map-btn-locate:hover {
-    background: rgba(255, 255, 255, 1);
-    transform: scale(1.08);
-    box-shadow: 
-        0 8px 24px rgba(0, 0, 0, 0.18),
-        0 4px 8px rgba(0, 0, 0, 0.1),
-        0 0 0 1px rgba(0, 0, 0, 0.05);
+    background: rgba(34, 197, 94, 0.08);
 }
 
 .map-btn-locate:active {
-    transform: scale(0.95);
-    box-shadow: 
-        0 2px 8px rgba(0, 0, 0, 0.1),
-        0 1px 3px rgba(0, 0, 0, 0.06);
+    background: rgba(34, 197, 94, 0.15);
+    transform: scale(0.96);
 }
 
 .map-btn-locate svg {
-    width: 24px;
-    height: 24px;
-    color: var(--pm-green, #22c55e);
-    stroke-width: 2;
-    transition: all 0.25s ease;
+    width: 22px;
+    height: 22px;
+    color: #22c55e;
+    transition: all 0.15s ease;
 }
 
 .map-btn-locate:hover svg {
-    color: var(--pm-green-hover, #16a34a);
+    color: #16a34a;
+    transform: scale(1.1);
 }
 
-/* État de chargement */
+/* État de chargement - pulsation douce */
 .map-btn-locate.is-loading {
     pointer-events: none;
 }
 
 .map-btn-locate.is-loading svg {
-    animation: locate-crosshair-pulse 0.8s ease-in-out infinite;
+    animation: locate-pulse 1s ease-in-out infinite;
 }
 
-@keyframes locate-crosshair-pulse {
+@keyframes locate-pulse {
     0%, 100% { 
-        transform: scale(1);
         opacity: 1;
+        transform: scale(1);
     }
     50% { 
-        transform: scale(0.85);
-        opacity: 0.6;
+        opacity: 0.5;
+        transform: scale(0.9);
     }
 }
 
 /* État d'erreur */
 .map-btn-locate.has-error {
     background: rgba(239, 68, 68, 0.1);
-    box-shadow: 
-        0 4px 16px rgba(239, 68, 68, 0.2),
-        0 0 0 2px rgba(239, 68, 68, 0.15);
 }
 
 .map-btn-locate.has-error svg {
     color: #ef4444;
+    animation: locate-shake 0.4s ease;
+}
+
+@keyframes locate-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-3px); }
+    40%, 80% { transform: translateX(3px); }
 }
 
 /* =========================================
- * DARK THEME - BOUTON LOCALISATION
+ * BOUTONS ZOOM CUSTOM (optionnel)
  * ========================================= */
-body.dark-theme .map-btn-locate {
-    background: rgba(30, 35, 45, 0.95);
+.map-btn-zoom-in,
+.map-btn-zoom-out {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.map-btn-zoom-in::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 8px;
+    right: 8px;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.map-btn-zoom-in:hover,
+.map-btn-zoom-out:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.map-btn-zoom-in:active,
+.map-btn-zoom-out:active {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.map-btn-zoom-in svg,
+.map-btn-zoom-out svg {
+    width: 18px;
+    height: 18px;
+    color: #555;
+    stroke-width: 2.5;
+}
+
+.map-btn-zoom-in:hover svg,
+.map-btn-zoom-out:hover svg {
+    color: #222;
+}
+
+/* =========================================
+ * DARK THEME
+ * ========================================= */
+body.dark-theme .map-floating-controls {
+    background: #1e2330;
     box-shadow: 
-        0 4px 16px rgba(0, 0, 0, 0.35),
-        0 2px 6px rgba(0, 0, 0, 0.25),
-        0 0 0 1px rgba(255, 255, 255, 0.08);
+        0 4px 24px rgba(0, 0, 0, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .map-control-btn::after,
+body.dark-theme .map-btn-zoom-in::after {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .map-control-btn:hover,
+body.dark-theme .map-btn-zoom-in:hover,
+body.dark-theme .map-btn-zoom-out:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme .map-control-btn:active,
+body.dark-theme .map-btn-zoom-in:active,
+body.dark-theme .map-btn-zoom-out:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .map-control-btn svg,
+body.dark-theme .map-btn-zoom-in svg,
+body.dark-theme .map-btn-zoom-out svg {
+    color: #e2e8f0;
+}
+
+body.dark-theme .map-control-btn:hover svg,
+body.dark-theme .map-btn-zoom-in:hover svg,
+body.dark-theme .map-btn-zoom-out:hover svg {
+    color: #fff;
 }
 
 body.dark-theme .map-btn-locate:hover {
-    background: rgba(40, 48, 60, 0.98);
-    box-shadow: 
-        0 8px 24px rgba(0, 0, 0, 0.45),
-        0 4px 8px rgba(0, 0, 0, 0.3),
-        0 0 0 1px rgba(255, 255, 255, 0.1);
+    background: rgba(34, 197, 94, 0.12);
 }
 
 body.dark-theme .map-btn-locate svg {
@@ -146,84 +279,51 @@ body.dark-theme .map-btn-locate.has-error {
 }
 
 /* =========================================
- * RESPONSIVE - MOBILE
+ * RESPONSIVE MOBILE
  * ========================================= */
 @media (max-width: 768px) {
     .leaflet-bottom.leaflet-right .map-floating-controls {
-        margin-bottom: 80px; /* Au-dessus de la bottom nav */
+        margin-bottom: 90px;
         margin-right: 12px;
     }
     
-    .map-btn-locate {
-        width: 48px;
-        height: 48px;
+    .map-floating-controls {
+        border-radius: 12px;
+    }
+    
+    .map-btn-locate,
+    .map-btn-zoom-in,
+    .map-btn-zoom-out,
+    .map-control-btn {
+        width: 44px;
+        height: 44px;
     }
     
     .map-btn-locate svg {
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
+    }
+    
+    .map-btn-zoom-in svg,
+    .map-btn-zoom-out svg {
+        width: 16px;
+        height: 16px;
     }
 }
 
-/* Ancien style (gardé pour compatibilité) */
-.leaflet-custom-locate {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-}
-
-.leaflet-custom-locate a {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px !important;
-    height: 44px !important;
-    background: var(--bg-main) !important;
-    border: none !important;
-    border-radius: 50% !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-    transition: all 0.2s ease !important;
-    cursor: pointer;
-}
-
-.leaflet-custom-locate a:hover {
-    background: var(--bg-secondary) !important;
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-}
-
-.leaflet-custom-locate a:active {
-    transform: scale(0.95);
-}
-
-.leaflet-custom-locate a svg {
-    width: 20px;
-    height: 20px;
-    color: var(--primary) !important;
-    stroke-width: 2.5;
-}
-
-.leaflet-custom-locate a.is-loading svg {
-    animation: locate-spin 0.9s linear infinite;
-    color: var(--primary) !important;
-}
-
-.leaflet-custom-locate a.has-error {
-    background: rgba(239, 68, 68, 0.1) !important;
-}
-
-.leaflet-custom-locate a.has-error svg {
-    color: #ef4444 !important;
-}
-
-/* Dark theme */
-body.dark-theme .leaflet-custom-locate a {
-    background: rgba(30, 35, 45, 0.95) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3) !important;
-}
-
-body.dark-theme .leaflet-custom-locate a:hover {
-    background: rgba(40, 45, 55, 0.95) !important;
+/* Très petits écrans */
+@media (max-width: 380px) {
+    .leaflet-bottom.leaflet-right .map-floating-controls {
+        margin-right: 8px;
+    }
+    
+    .map-btn-locate,
+    .map-btn-zoom-in,
+    .map-btn-zoom-out,
+    .map-control-btn {
+        width: 40px;
+        height: 40px;
+    }
 }
 
 @keyframes locate-spin {
