@@ -1196,6 +1196,13 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
     
     if (trips?.length > 0) {
         console.log(`✅ Router: ${trips.length} trip(s) direct(s) trouvé(s)`);
+        // V195: Log TOUS les horaires trouvés pour diagnostic
+        const horaires = trips.map(t => ({
+            dep: formatSec(t.departureSeconds),
+            arr: formatSec(t.arrivalSeconds),
+            ligne: t.route?.route_short_name || t.routeId
+        }));
+        console.log(`📋 V195 Tous les horaires GTFS:`, horaires);
     }
     
     const itineraries = [];

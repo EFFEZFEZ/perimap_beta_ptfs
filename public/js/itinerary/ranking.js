@@ -114,32 +114,46 @@ export function filterExpiredDepartures(itineraries, searchTime = null) {
     return itineraries;
   }
   
-  // Si la recherche est pour une date future, ne pas filtrer
-  if (searchTime.date) {
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    
-    // Si la date de recherche est différente d'aujourd'hui, ne pas filtrer
-    if (searchTime.date !== todayStr) {
-      console.log(`📅 Recherche pour ${searchTime.date} (pas aujourd'hui ${todayStr}), pas de filtrage horaire`);
-      return itineraries;
-    }
+  // V195: Normaliser la date de recherche
+  let searchDate;
+  const searchDateRaw = searchTime.date;
+  
+  if (!searchDateRaw || searchDateRaw === 'today' || searchDateRaw === "Aujourd'hui") {
+    searchDate = new Date();
+  } else if (searchDateRaw instanceof Date) {
+    searchDate = searchDateRaw;
+  } else {
+    searchDate = new Date(searchDateRaw);
+  }
+  
+  // Si date invalide, ne pas filtrer
+  if (isNaN(searchDate.getTime())) {
+    console.warn('⚠️ filterExpiredDepartures: date invalide, pas de filtrage');
+    return itineraries;
+  }
+  
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const searchDateStr = `${searchDate.getFullYear()}-${String(searchDate.getMonth() + 1).padStart(2, '0')}-${String(searchDate.getDate()).padStart(2, '0')}`;
+  
+  // V195: Si la recherche est pour une date FUTURE, ne pas filtrer les trajets passés
+  if (searchDateStr !== todayStr) {
+    console.log(`📅 V195: Recherche pour ${searchDateStr} (≠ aujourd'hui ${todayStr}) → pas de filtrage horaire`);
+    return itineraries;
   }
   
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   
   // V70: Si l'heure de recherche est dans le futur, utiliser cette heure comme référence
-  let refMinutes = nowMinutes;
   if (searchTime.hour !== undefined) {
     const searchHour = parseInt(searchTime.hour) || 0;
     const searchMinute = parseInt(searchTime.minute) || 0;
     const searchMinutes = searchHour * 60 + searchMinute;
     
-    // Si l'heure de recherche est dans le futur, utiliser cette heure
+    // Si l'heure de recherche est dans le futur, ne pas filtrer
     if (searchMinutes > nowMinutes) {
-      // On cherche des trajets à partir de cette heure future, pas de filtrage nécessaire
-      console.log(`🕐 Recherche à ${searchHour}:${String(searchMinute).padStart(2,'0')} (futur), pas de filtrage`);
+      console.log(`🕐 V195: Recherche à ${searchHour}:${String(searchMinute).padStart(2,'0')} (futur) → pas de filtrage`);
       return itineraries;
     }
   }
