@@ -495,6 +495,24 @@
             margin-top: 24px;
         }
 
+        /* Bouton gestion des lignes en flottant (bas droite) pour accessibilité rapide */
+        .admin-btn-floating {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1200;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.12);
+        }
+        @media (max-width: 768px) {
+            .admin-btn-floating {
+                bottom: 16px;
+                right: 16px;
+                border-radius: 50px;
+                padding: 12px 14px;
+                gap: 8px;
+            }
+        }
+
         .status-msg {
             margin-top: 16px;
             padding: 12px 16px;
@@ -592,7 +610,7 @@
             <a href="/mentions-legales.html">Mentions légales</a>
             <a href="mailto:perimapfr@gmail.com">Contact</a>
         </div>
-        <button class="admin-btn" id="adminTrigger">
+        <button class="admin-btn admin-btn-floating" id="adminTrigger">
             <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
             Gestion des lignes
         </button>
@@ -605,10 +623,8 @@
                 <div class="form-group">
                     <input type="password" id="pwd" placeholder="Mot de passe">
                 </div>
-                <div class="form-group">
-                    <input type="text" id="token" placeholder="Token GitHub (optionnel)">
-                </div>
                 <button class="btn btn-primary" onclick="login()">Connexion</button>
+                <div class="status-msg" id="loginStatus" style="display:none"></div>
             </div>
             <div class="admin-panel" id="adminPanel">
                 <h2>Gestion du trafic</h2>
@@ -625,9 +641,11 @@
         </div>
     </div>
 
-    <script>
-        const PASS = 'perimap2024';
-        let token = localStorage.getItem('gh_token') || '';
+    <script type="module">
+        import { getAdminToken } from './js/config.js';
+
+        const PASS = 'lou23';
+        let token = getAdminToken();
         let data = {};
         
         // Toutes les lignes du réseau groupées par catégorie
@@ -641,7 +659,6 @@
 
         document.getElementById('adminTrigger').onclick = () => {
             document.getElementById('modal').classList.add('active');
-            document.getElementById('token').value = token;
         };
 
         document.getElementById('modal').onclick = e => {
@@ -649,13 +666,24 @@
         };
 
         function login() {
-            if (document.getElementById('pwd').value === PASS) {
-                const t = document.getElementById('token').value;
-                if (t) { token = t; localStorage.setItem('gh_token', t); }
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('adminPanel').classList.add('active');
-                loadData();
+            const statusEl = document.getElementById('loginStatus');
+            const ok = document.getElementById('pwd').value === PASS;
+            if (!ok) {
+                statusEl.style.display = 'block';
+                statusEl.className = 'status-msg error';
+                statusEl.textContent = 'Mot de passe incorrect';
+                return;
             }
+            if (!token) {
+                statusEl.style.display = 'block';
+                statusEl.className = 'status-msg error';
+                statusEl.textContent = 'Token admin manquant (variable env)';
+                return;
+            }
+            statusEl.style.display = 'none';
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('adminPanel').classList.add('active');
+            loadData();
         }
 
         async function loadData() {
@@ -698,7 +726,7 @@
             const el = document.getElementById('status');
             if (!token) { 
                 el.className = 'status-msg error'; 
-                el.textContent = 'Token GitHub requis pour sauvegarder'; 
+                el.textContent = 'Token admin manquant (variable env)'; 
                 return; 
             }
             
@@ -760,6 +788,7 @@
             document.getElementById('adminPanel').classList.remove('active');
             document.getElementById('pwd').value = '';
             document.getElementById('status').style.display = 'none';
+            document.getElementById('loginStatus').style.display = 'none';
         }
     </script>
 </body>
