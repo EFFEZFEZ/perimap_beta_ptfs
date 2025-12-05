@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v149'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V149: Bouton "Générer + de trajets"
+const CACHE_VERSION = 'v150'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V150: Appels multiples pour combler les trous horaires
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
