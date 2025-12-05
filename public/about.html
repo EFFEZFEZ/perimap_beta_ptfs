@@ -328,21 +328,37 @@
             }
         }
 
-        /* Admin (invisible) */
-        .admin-trigger {
-            position: fixed;
-            bottom: 16px;
-            right: 16px;
-            width: 40px;
-            height: 40px;
+        /* Admin button visible */
+        .admin-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            background: var(--color-surface-2);
+            border: 1px solid var(--color-border);
             border-radius: 8px;
-            background: transparent;
+            color: var(--color-text-secondary);
+            font-family: var(--font);
+            font-size: 13px;
+            font-weight: 500;
             cursor: pointer;
-            opacity: 0;
-            z-index: 50;
+            transition: all var(--transition);
+            margin-top: 16px;
         }
-
-        .admin-trigger:hover { opacity: 0.1; background: #fff; }
+        
+        .admin-btn:hover {
+            background: var(--color-surface);
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+        }
+        
+        .admin-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
 
         .modal {
             display: none;
@@ -449,6 +465,29 @@
             font-size: 13px;
             width: 100%;
         }
+        
+        .admin-table .category-row td {
+            padding-top: 20px;
+            padding-bottom: 8px;
+            border-bottom: none;
+            color: var(--color-accent);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .admin-line-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            padding: 4px 10px;
+            background: var(--color-accent);
+            color: #000;
+            font-weight: 700;
+            font-size: 13px;
+            border-radius: 6px;
+        }
 
         .admin-actions {
             display: flex;
@@ -553,11 +592,12 @@
             <a href="/mentions-legales.html">Mentions légales</a>
             <a href="mailto:perimapfr@gmail.com">Contact</a>
         </div>
+        <button class="admin-btn" id="adminTrigger">
+            <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            Gestion des lignes
+        </button>
         <p class="copyright">© 2025 Périmap</p>
     </footer>
-
-    <!-- Admin -->
-    <div class="admin-trigger" id="adminTrigger"></div>
     <div class="modal" id="modal">
         <div class="modal-content">
             <div id="loginForm">
@@ -589,6 +629,15 @@
         const PASS = 'perimap2024';
         let token = localStorage.getItem('gh_token') || '';
         let data = {};
+        
+        // Toutes les lignes du réseau groupées par catégorie
+        const lineCategories = {
+            'Lignes majeures': ['A', 'B', 'C', 'D'],
+            'Lignes express': ['e1', 'e2', 'e4', 'e5', 'e6', 'e7'],
+            'Lignes de quartier': ['K1A', 'K1B', 'K2', 'K3A', 'K3B', 'K4A', 'K4B', 'K5', 'K6'],
+            'Navettes': ['N', 'N1']
+        };
+        const allLines = Object.values(lineCategories).flat();
 
         document.getElementById('adminTrigger').onclick = () => {
             document.getElementById('modal').classList.add('active');
@@ -611,33 +660,98 @@
 
         async function loadData() {
             try {
-                const r = await fetch('data/line-status.json');
+                const r = await fetch('data/line-status.json?t=' + Date.now());
                 data = await r.json();
                 render();
-            } catch(e) {}
+            } catch(e) { console.error('Erreur chargement:', e); }
         }
 
         function render() {
-            const lines = ['A','B','C','D','E','F','G','H','N','TAD'];
-            const statuses = ['normal','perturbé','interrompu'];
-            document.getElementById('trafficTable').innerHTML = lines.map(l => {
-                const d = data[l] || {status:'normal',message:''};
-                return `<tr><td><strong>${l}</strong></td><td><select id="s-${l}">${statuses.map(s=>`<option ${d.status===s?'selected':''}>${s}</option>`).join('')}</select></td><td><input id="m-${l}" value="${d.message||''}"></td></tr>`;
-            }).join('');
+            const statuses = ['normal', 'perturbation', 'retard', 'annulation', 'travaux'];
+            const statusLabels = {
+                'normal': '✓ Normal',
+                'perturbation': '⚠ Perturbé',
+                'retard': '⏱ Retard',
+                'annulation': '✕ Annulé',
+                'travaux': '🚧 Travaux'
+            };
+            
+            let html = '';
+            for (const [category, lines] of Object.entries(lineCategories)) {
+                html += `<tr class="category-row"><td colspan="3"><strong>${category}</strong></td></tr>`;
+                lines.forEach(l => {
+                    const d = data.lines?.[l] || { status: 'normal', message: '' };
+                    const selectOptions = statuses.map(s => 
+                        `<option value="${s}" ${d.status === s ? 'selected' : ''}>${statusLabels[s]}</option>`
+                    ).join('');
+                    html += `<tr>
+                        <td><span class="admin-line-badge">${l}</span></td>
+                        <td><select id="s-${l}">${selectOptions}</select></td>
+                        <td><input id="m-${l}" value="${d.message || ''}" placeholder="Message (optionnel)"></td>
+                    </tr>`;
+                });
+            }
+            document.getElementById('trafficTable').innerHTML = html;
         }
 
         async function save() {
-            const lines = ['A','B','C','D','E','F','G','H','N','TAD'];
-            const newData = {};
-            lines.forEach(l => { newData[l] = { status: document.getElementById(`s-${l}`).value, message: document.getElementById(`m-${l}`).value }; });
             const el = document.getElementById('status');
-            if (!token) { el.className = 'status-msg error'; el.textContent = 'Token requis'; return; }
+            if (!token) { 
+                el.className = 'status-msg error'; 
+                el.textContent = 'Token GitHub requis pour sauvegarder'; 
+                return; 
+            }
+            
+            // Construire les nouvelles données en conservant la structure
+            const newLines = {};
+            allLines.forEach(l => { 
+                newLines[l] = { 
+                    status: document.getElementById(`s-${l}`).value, 
+                    message: document.getElementById(`m-${l}`).value 
+                }; 
+            });
+            
+            // Conserver les lignes rurales et autres données existantes
+            if (data.lines) {
+                for (const [key, value] of Object.entries(data.lines)) {
+                    if (!allLines.includes(key) && !key.startsWith('_')) {
+                        newLines[key] = value;
+                    }
+                }
+            }
+            
+            const newData = {
+                lastUpdate: new Date().toISOString().slice(0, 19),
+                globalMessage: data.globalMessage || '',
+                lines: newLines
+            };
+            
             try {
-                const content = btoa(JSON.stringify(newData, null, 2));
-                const file = await (await fetch('https://api.github.com/repos/EFFEZFEZ/p-rimap-sans-api-/contents/public/data/line-status.json', { headers: { Authorization: `token ${token}` }})).json();
-                await fetch('https://api.github.com/repos/EFFEZFEZ/p-rimap-sans-api-/contents/public/data/line-status.json', { method: 'PUT', headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'Update traffic', content, sha: file.sha }) });
-                el.className = 'status-msg success'; el.textContent = 'Sauvegardé';
-            } catch(e) { el.className = 'status-msg error'; el.textContent = e.message; }
+                el.className = 'status-msg'; el.textContent = 'Sauvegarde en cours...'; el.style.display = 'block';
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify(newData, null, 2))));
+                const fileRes = await fetch('https://api.github.com/repos/EFFEZFEZ/p-rimap-sans-api-/contents/public/data/line-status.json', { 
+                    headers: { Authorization: `token ${token}` }
+                });
+                const file = await fileRes.json();
+                
+                await fetch('https://api.github.com/repos/EFFEZFEZ/p-rimap-sans-api-/contents/public/data/line-status.json', { 
+                    method: 'PUT', 
+                    headers: { 
+                        Authorization: `token ${token}`, 
+                        'Content-Type': 'application/json' 
+                    }, 
+                    body: JSON.stringify({ 
+                        message: `Mise à jour état lignes - ${new Date().toLocaleString('fr-FR')}`, 
+                        content, 
+                        sha: file.sha 
+                    }) 
+                });
+                el.className = 'status-msg success'; 
+                el.textContent = '✓ Modifications sauvegardées ! Les changements seront visibles dans quelques minutes.';
+            } catch(e) { 
+                el.className = 'status-msg error'; 
+                el.textContent = 'Erreur: ' + e.message; 
+            }
         }
 
         function closeModal() {
@@ -645,6 +759,7 @@
             document.getElementById('loginForm').style.display = 'block';
             document.getElementById('adminPanel').classList.remove('active');
             document.getElementById('pwd').value = '';
+            document.getElementById('status').style.display = 'none';
         }
     </script>
 </body>

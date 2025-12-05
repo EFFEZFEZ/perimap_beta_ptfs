@@ -77,7 +77,7 @@ let allFetchedItineraries = []; // Stocke tous les itinéraires (bus/vélo/march
 let lastSearchMode = null; // 'partir' | 'arriver'
 let arrivalRankedAll = []; // Liste complète triée (arriver)
 let arrivalRenderedCount = 0; // Combien affichés actuellement
-let ARRIVAL_PAGE_SIZE = 5; // Limite initiale / pagination (surchargée par config runtime)
+let ARRIVAL_PAGE_SIZE = 6; // V120: Augmenté à 6 pour afficher plus d'options
 
 // V60: État pour charger plus de départs
 let lastSearchTime = null; // Dernier searchTime utilisé
@@ -87,7 +87,7 @@ let geolocationManager = null;
 
 const BOTTOM_SHEET_LEVELS = [0.4, 0.8]; // Seulement 2 niveaux: peek (40%) et expanded (80%)
 import { getAppConfig } from './config.js';
-import { deduplicateItineraries, rankArrivalItineraries, rankDepartureItineraries, filterExpiredDepartures, filterLateArrivals, limitBikeWalkItineraries } from './itinerary/ranking.js';
+import { deduplicateItineraries, rankArrivalItineraries, rankDepartureItineraries, filterExpiredDepartures, filterLateArrivals, limitBikeWalkItineraries, countBusItineraries, getMinBusItineraries } from './itinerary/ranking.js';
 import { normalizeStopNameForLookup, resolveStopCoordinates } from './utils/geo.js';
 import { createResultsRenderer } from './ui/resultsRenderer.js';
 const BOTTOM_SHEET_DEFAULT_INDEX = 0;

@@ -3,10 +3,11 @@
 export const HYBRID_ROUTING_CONFIG = Object.freeze({
     STOP_SEARCH_RADIUS_M: 500,         // Réduit de 600 à 500 pour accélérer
     STOP_SEARCH_LIMIT: 10,             // Réduit de 15 à 10 pour accélérer
-    MAX_ITINERARIES: 8,                // Réduit de 12 à 8
+    MAX_ITINERARIES: 12,               // V120: Augmenté à 12 pour plus de choix
+    MIN_BUS_ITINERARIES: 3,            // V120: Minimum 3 itinéraires bus garantis
     WALK_DIRECT_MAX_METERS: 150,       // Augmenté pour éviter appels API
     ENABLE_TRANSFERS: true,
-    TRANSFER_MAX_ITINERARIES: 4,       // Réduit de 6 à 4
+    TRANSFER_MAX_ITINERARIES: 6,       // V120: Augmenté à 6 pour plus de choix
     TRANSFER_MIN_BUFFER_SECONDS: 180,
     TRANSFER_MAX_WAIT_SECONDS: 1800,   // Réduit de 2400 à 1800
     TRANSFER_MAX_FIRST_LEG_STOPS: 8,   // Réduit de 15 à 8

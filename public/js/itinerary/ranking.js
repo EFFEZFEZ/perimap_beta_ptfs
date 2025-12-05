@@ -5,6 +5,9 @@
 
 import { parseTimeStringToMinutes } from '../utils/formatters.js';
 
+// V120: Configuration minimum d'itinéraires bus
+const MIN_BUS_ITINERARIES = 3;
+
 /**
  * Déduplique les itinéraires par structure de trajet (même séquence bus/arrêts).
  * En mode "partir", garde le premier départ pour chaque structure.
@@ -228,11 +231,21 @@ export function rankArrivalItineraries(itineraries, searchTime) {
     };
   });
 
-  // Trier: meilleure arrivée (plus proche de l'heure cible sans dépasser), moins de correspondances
+  // V120: Trier par heure d'arrivée DÉCROISSANTE (du plus tard au plus tôt)
+  // Ainsi on affiche d'abord l'arrivée la plus proche de l'heure demandée (ex: 15h50 pour une demande à 16h)
+  // puis les alternatives plus tôt dans l'ordre chronologique inverse (15h30, 15h00, 14h30...)
+  // Cela évite les "sauts temporels" où on passerait de 15h50 à 14h00 directement
   scored.sort((a, b) => {
-    // D'abord par proximité d'arrivée à l'heure cible (0 = parfait, petit = proche de la cible)
-    if (a.arrivalDiff !== b.arrivalDiff) return a.arrivalDiff - b.arrivalDiff;
-    // Puis par nombre de correspondances
+    // Filtrer d'abord les arrivées valides (avant ou à l'heure cible) vs tardives
+    const aValid = a.arrivalDiff !== Infinity;
+    const bValid = b.arrivalDiff !== Infinity;
+    if (aValid !== bValid) return aValid ? -1 : 1; // Valides en premier
+    
+    // Pour les arrivées valides, trier par heure d'arrivée DÉCROISSANTE (du plus tard au plus tôt)
+    // Cela donne: 15h50, 15h30, 15h00, 14h30... (ordre logique pour l'utilisateur)
+    if (a.arrMinutes !== b.arrMinutes) return b.arrMinutes - a.arrMinutes;
+    
+    // À heure égale, moins de correspondances = mieux
     if (a.transfers !== b.transfers) return a.transfers - b.transfers;
     // Puis par temps de marche
     if (a.walkingDurationMin !== b.walkingDurationMin) return a.walkingDurationMin - b.walkingDurationMin;
@@ -259,8 +272,9 @@ export function rankArrivalItineraries(itineraries, searchTime) {
  * V64: Limite les trajets vélo et piéton à un seul de chaque.
  * Ces modes n'ont pas d'horaires (on peut partir quand on veut),
  * donc avoir plusieurs résultats est inutile.
+ * V120: Garantit au minimum MIN_BUS_ITINERARIES trajets bus si disponibles
  */
-export function limitBikeWalkItineraries(itineraries) {
+export function limitBikeWalkItineraries(itineraries, minBusRequired = MIN_BUS_ITINERARIES) {
   if (!Array.isArray(itineraries)) return [];
   
   const busItineraries = [];
@@ -286,6 +300,11 @@ export function limitBikeWalkItineraries(itineraries) {
     }
   }
   
+  // V120: Log si on a moins de bus que le minimum souhaité
+  if (busItineraries.length < minBusRequired && busItineraries.length > 0) {
+    console.log(`⚠️ V120: Seulement ${busItineraries.length} trajet(s) bus trouvé(s) (minimum souhaité: ${minBusRequired})`);
+  }
+  
   // Reconstruire la liste : BUS d'abord, puis vélo, puis piéton
   const result = [...busItineraries];
   if (firstBike) result.push(firstBike);
@@ -296,7 +315,27 @@ export function limitBikeWalkItineraries(itineraries) {
     console.log(`🚴 V64: ${removed} trajet(s) vélo/piéton en double supprimé(s)`);
   }
   
+  console.log(`📊 V120: ${busItineraries.length} bus, ${firstBike ? 1 : 0} vélo, ${firstWalk ? 1 : 0} marche`);
+  
   return result;
+}
+
+/**
+ * V120: Compte le nombre d'itinéraires bus dans une liste
+ */
+export function countBusItineraries(itineraries) {
+  if (!Array.isArray(itineraries)) return 0;
+  return itineraries.filter(it => {
+    const type = it?.type || 'BUS';
+    return type !== 'BIKE' && type !== 'WALK' && !it?._isBike && !it?._isWalk;
+  }).length;
+}
+
+/**
+ * V120: Retourne le minimum d'itinéraires bus configuré
+ */
+export function getMinBusItineraries() {
+  return MIN_BUS_ITINERARIES;
 }
 
 export function rankDepartureItineraries(itineraries) {
