@@ -584,12 +584,14 @@ export class ApiManager {
 
 
     /**
-     * V151: UN SEUL appel API - économique
-     * Le bouton "Générer + de trajets" permet d'en charger plus à la demande
+     * V188: MÉTHODE SNCF CONNECT
+     * - 2 appels API (maintenant + 20min) pour avoir ~5 horaires consécutifs
+     * - Cache les résultats pour "Voir plus"
+     * - Dédoublonne et trie par heure de départ
      */
     async fetchItinerary(fromPlaceId, toPlaceId, searchTime = null) {
         const startTime = performance.now();
-        console.log(`🧠 RECHERCHE ITINÉRAIRE: ${fromPlaceId} → ${toPlaceId}`);
+        console.log(`🧠 V188 RECHERCHE ITINÉRAIRE: ${fromPlaceId} → ${toPlaceId}`);
         if (searchTime) {
             console.log(`⏰ Mode: ${searchTime.type || 'partir'}, Heure: ${searchTime.hour}:${searchTime.minute}`);
         }
@@ -614,37 +616,88 @@ export class ApiManager {
         };
 
         // ========================================
-        // V151: UN SEUL APPEL PAR MODE - ÉCONOMIQUE
+        // V188: 2 APPELS DÉCALÉS = ~5-6 HORAIRES
+        // Comme SNCF Connect: couvrir 30-40 min
         // ========================================
         
-        const [busResult, bikeResult, walkResult] = await Promise.allSettled([
-            this._fetchBusRoute(fromPlaceId, toPlaceId, searchTime, fromCoords, toCoords),
+        const searchTimes = [
+            searchTime,                              // T+0 min (3 résultats)
+            this._offsetSearchTime(searchTime, 20), // T+20 min (2-3 résultats nouveaux)
+        ];
+        
+        const [busResults, bikeResult, walkResult] = await Promise.allSettled([
+            // 2 appels bus en parallèle
+            Promise.allSettled(searchTimes.map(st => this._fetchBusRoute(fromPlaceId, toPlaceId, st, fromCoords, toCoords))),
             this.fetchBicycleRoute(fromPlaceId, toPlaceId, fromCoords, toCoords),
             this.fetchWalkingRoute(fromPlaceId, toPlaceId, fromCoords, toCoords)
         ]);
 
-        // 1️⃣ Traitement BUS
-        if (busResult.status === 'fulfilled' && busResult.value?.routes?.length > 0) {
-            const busData = busResult.value;
-            const bestRoute = busData.routes[0];
-            const durationSeconds = parseInt(bestRoute.duration?.replace('s', '')) || 0;
-            const durationMinutes = Math.round(durationSeconds / 60);
-            const transitSteps = bestRoute.legs?.[0]?.steps?.filter(s => s.travelMode === 'TRANSIT') || [];
-            const transferCount = Math.max(0, transitSteps.length - 1);
+        // 1️⃣ Traitement BUS - Fusionner et dédupliquer
+        if (busResults.status === 'fulfilled') {
+            const allBusRoutes = [];
+            const seenDepartures = new Set();
             
-            results.bus = { data: busData, duration: durationMinutes, transfers: transferCount };
-            console.log(`🚍 Bus: ${busData.routes.length} trajets trouvés`);
+            for (const result of busResults.value) {
+                if (result.status === 'fulfilled' && result.value?.routes?.length > 0) {
+                    for (const route of result.value.routes) {
+                        // Clé unique = heure départ + ligne (pour éviter doublons)
+                        const depTime = route.legs?.[0]?.localizedValues?.departureTime?.time?.text || '';
+                        const transitStep = route.legs?.[0]?.steps?.find(s => s.travelMode === 'TRANSIT');
+                        const lineName = transitStep?.transitDetails?.transitLine?.name || '';
+                        const uniqueKey = `${depTime}-${lineName}`;
+                        
+                        if (!seenDepartures.has(uniqueKey)) {
+                            seenDepartures.add(uniqueKey);
+                            allBusRoutes.push(route);
+                        }
+                    }
+                }
+            }
             
-            let score = durationMinutes > 90 || transferCount > 2 ? 20 :
-                        durationMinutes > 60 ? 50 :
-                        durationMinutes > 30 ? 75 : 100;
-            results.recommendations.push({
-                mode: 'bus', score,
-                reason: `${durationMinutes}min${transferCount ? ` (${transferCount} corresp.)` : ''}`
-            });
+            if (allBusRoutes.length > 0) {
+                // Trier par heure de départ (format HH:MM)
+                allBusRoutes.sort((a, b) => {
+                    const depA = a.legs?.[0]?.localizedValues?.departureTime?.time?.text || '99:99';
+                    const depB = b.legs?.[0]?.localizedValues?.departureTime?.time?.text || '99:99';
+                    return depA.localeCompare(depB);
+                });
+                
+                // Garder les 5 premiers pour l'affichage, mettre le reste en cache
+                const displayRoutes = allBusRoutes.slice(0, 5);
+                const cachedRoutes = allBusRoutes.slice(5);
+                
+                // Stocker en cache pour "Voir plus"
+                this._cachedBusRoutes = cachedRoutes;
+                this._lastSearchParams = { fromPlaceId, toPlaceId, searchTime, fromCoords, toCoords };
+                
+                const busData = { routes: displayRoutes, hasMore: cachedRoutes.length > 0 };
+                const bestRoute = displayRoutes[0];
+                const durationSeconds = parseInt(bestRoute.duration?.replace('s', '')) || 0;
+                const durationMinutes = Math.round(durationSeconds / 60);
+                const transitSteps = bestRoute.legs?.[0]?.steps?.filter(s => s.travelMode === 'TRANSIT') || [];
+                const transferCount = Math.max(0, transitSteps.length - 1);
+                
+                results.bus = { data: busData, duration: durationMinutes, transfers: transferCount };
+                console.log(`🚍 V188: ${displayRoutes.length} trajets affichés, ${cachedRoutes.length} en cache`);
+                
+                // Log des heures pour vérification
+                const heures = displayRoutes.map(r => r.legs?.[0]?.localizedValues?.departureTime?.time?.text).join(', ');
+                console.log(`📋 Horaires: ${heures}`);
+                
+                let score = durationMinutes > 90 || transferCount > 2 ? 20 :
+                            durationMinutes > 60 ? 50 :
+                            durationMinutes > 30 ? 75 : 100;
+                results.recommendations.push({
+                    mode: 'bus', score,
+                    reason: `${durationMinutes}min${transferCount ? ` (${transferCount} corresp.)` : ''}`
+                });
+            } else {
+                console.warn("⚠️ Pas de bus disponible");
+                results.recommendations.push({ mode: 'bus', score: 0, reason: 'Aucun bus disponible' });
+            }
         } else {
-            console.warn("⚠️ Pas de bus disponible");
-            results.recommendations.push({ mode: 'bus', score: 0, reason: 'Aucun bus disponible' });
+            console.warn("⚠️ Erreur appels bus");
+            results.recommendations.push({ mode: 'bus', score: 0, reason: 'Erreur recherche bus' });
         }
 
         // 2️⃣ Traitement VÉLO
@@ -691,6 +744,38 @@ export class ApiManager {
         }
 
         return results;
+    }
+
+    /**
+     * V187: Décale un searchTime de X minutes
+     * @private
+     */
+    _offsetSearchTime(baseSearchTime, offsetMinutes) {
+        if (!baseSearchTime) {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() + offsetMinutes);
+            return {
+                type: 'partir',
+                hour: now.getHours().toString().padStart(2, '0'),
+                minute: now.getMinutes().toString().padStart(2, '0')
+            };
+        }
+        
+        let hour = parseInt(baseSearchTime.hour) || 0;
+        let minute = parseInt(baseSearchTime.minute) || 0;
+        
+        minute += offsetMinutes;
+        while (minute >= 60) {
+            minute -= 60;
+            hour++;
+        }
+        hour = hour % 24;
+        
+        return {
+            type: baseSearchTime.type || 'partir',
+            hour: hour.toString().padStart(2, '0'),
+            minute: minute.toString().padStart(2, '0')
+        };
     }
 
     /**
