@@ -3568,6 +3568,54 @@ details[open] .accordion-content {
     #map-view #top-bar > * {
         pointer-events: auto;
     }
+
+    /* Desktop: Controls en haut à droite du map */
+    #map-container #map-view #top-bar > .top-bar-controls {
+        position: absolute !important;
+        z-index: 1000;
+        right: 16px;
+        top: 14px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        pointer-events: auto;
+    }
+
+    #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 50%;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        font-size: 20px;
+        transition: all 0.2s ease;
+    }
+
+    #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map:hover {
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: scale(1.05);
+    }
+
+    #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map:active {
+        transform: scale(0.95);
+    }
+
+    /* Dark theme pour le contrôle thème desktop */
+    body.dark-theme #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map {
+        background: rgba(20, 25, 38, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        color: #e2e8f0;
+    }
+
+    body.dark-theme #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map:hover {
+        background: rgba(30, 35, 48, 0.98);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
     
     /* Tous les éléments gardent le même style pill défini globalement */
 }
@@ -3654,6 +3702,53 @@ details[open] .accordion-content {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04);
         pointer-events: auto;
         border: none;
+    }
+
+    /* Contrôles du top-bar (thème) - droite */
+    #map-container #map-view #top-bar > .top-bar-controls {
+        position: fixed !important;
+        z-index: 1000;
+        right: 20px;
+        top: 12px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        pointer-events: auto;
+    }
+
+    #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map {
+        width: 36px;
+        height: 36px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 50%;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04);
+        font-size: 18px;
+        transition: all 0.2s ease;
+    }
+
+    #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map:hover {
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: scale(1.05);
+    }
+
+    #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map:active {
+        transform: scale(0.95);
+    }
+
+    /* Dark theme pour le contrôle thème */
+    body.dark-theme #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map {
+        background: rgba(20, 25, 38, 0.95);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
+        color: #e2e8f0;
+    }
+
+    body.dark-theme #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map:hover {
+        background: rgba(30, 35, 48, 0.98);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     }
     
     /* Bouton Retour - gauche */
