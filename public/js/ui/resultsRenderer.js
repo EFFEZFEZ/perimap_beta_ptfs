@@ -417,24 +417,12 @@ export function createResultsRenderer(deps) {
       globalIndex++;
     };
 
-    // Bus en premier, puis vélo, puis marche (y compris en mode arrivée)
-    const orderedGroups = [...busGroups, ...bikeGroups, ...walkGroups];
-
-    // V143: Afficher les groupes dans l'ordre BUS → BIKE → WALK
+    // V144: Afficher les groupes dans l'ordre BUS → BIKE → WALK
     if (busGroups.length > 0) {
       busGroups.forEach(g => renderGroup(g));
     }
     bikeGroups.forEach(g => renderGroup(g));
     walkGroups.forEach(g => renderGroup(g));
-
-    // V143: Message informatif si peu de bus affichés (mais pas alarmiste)
-    // L'API Google ne renvoie que quelques alternatives proches de l'heure demandée
-    if (busGroups.length > 0 && busGroups.length < 3) {
-      const info = document.createElement('div');
-      info.className = 'results-message notice';
-      info.innerHTML = `<small>💡 Consultez les <a href="#" onclick="event.preventDefault(); document.querySelector('[data-view=\\'horaires\\']')?.click();">fiches horaires</a> pour voir tous les départs.</small>`;
-      resultsListContainer.appendChild(info);
-    }
   }
 
   return { render };

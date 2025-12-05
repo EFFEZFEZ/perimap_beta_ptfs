@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v144'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V144: Message moins alarmiste pour peu de bus
+const CACHE_VERSION = 'v145'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V145: Minimum 5 trajets bus via appels décalés
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
