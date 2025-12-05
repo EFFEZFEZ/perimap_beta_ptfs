@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v133'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V133: Fix status lignes, modal, tri arrivées, bouton + trajets
+const CACHE_VERSION = 'v134'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V134: Fix CSS top-bar mobile (media query)
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;

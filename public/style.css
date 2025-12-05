@@ -1088,13 +1088,6 @@ body.view-map-locked #map {
     height: 100% !important;
 }
 
-/* V132: Assurer que le top-bar reste visible sur la carte (PC et mobile) */
-body.view-map-locked #top-bar {
-    position: relative;
-    z-index: 1000;
-    flex-shrink: 0;
-}
-
 /* V64: Cacher la scrollbar sur la vue carte */
 #map-container,
 #map-view,
@@ -3225,6 +3218,15 @@ details[open] .accordion-content {
     display: none; 
     cursor: pointer;
 } 
+
+/* V133: Assurer que le top-bar reste visible sur PC (écrans > 768px) */
+@media (min-width: 769px) {
+    body.view-map-locked #top-bar {
+        position: relative;
+        z-index: 1000;
+        flex-shrink: 0;
+    }
+}
 
 /* =========================================
  * DESIGN MOBILE (VUE CARTE & SOUS-PAGES)
