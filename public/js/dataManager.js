@@ -623,9 +623,12 @@ export class DataManager {
      * Compare un service_id de trip avec les services actifs
      */
     serviceIdsMatch(tripServiceId, activeServiceId) {
+        if (!tripServiceId || !activeServiceId) return false;
         if (tripServiceId === activeServiceId) return true;
-        if (tripServiceId.startsWith(activeServiceId + ':')) return true;
-        return false;
+
+        // Autorise seulement un suffixe après ":" (ex: service_id étendu)
+        const [base] = tripServiceId.split(':', 4); // base = avant premier ":" supplémentaire
+        return base === activeServiceId;
     }
 
     /**
@@ -1140,6 +1143,20 @@ export class DataManager {
         const startSet = new Set(Array.isArray(startStopIds) ? startStopIds : Array.from(startStopIds || []));
         const endSet = new Set(Array.isArray(endStopIds) ? endStopIds : Array.from(endStopIds || []));
 
+        // Étendre avec les arrêts du cluster (StopPlace -> Quays) pour éviter les faux "noBoarding"
+        const expandCluster = (idSet) => {
+            const extra = [];
+            idSet.forEach(id => {
+                const grouped = this.groupedStopMap[id];
+                if (Array.isArray(grouped)) {
+                    grouped.forEach(gid => extra.push(gid));
+                }
+            });
+            extra.forEach(x => idSet.add(x));
+        };
+        expandCluster(startSet);
+        expandCluster(endSet);
+
         // Normalise la date demandée et prépare les jours voisins (veille/len lendemain)
         const reqDate = (date instanceof Date) ? new Date(date) : new Date(date);
         const prevDate = new Date(reqDate); prevDate.setDate(reqDate.getDate() - 1);
@@ -1154,11 +1171,12 @@ export class DataManager {
         const windowStart = windowStartSeconds;
         const windowEnd = windowEndSeconds;
 
-        // Prépare les fenêtres de service (veille / jour J / lendemain)
+        // Prépare les fenêtres de service (veille / jour J / lendemain) UNIQUEMENT si la fenêtre chevauche
         const serviceWindows = [];
         if (windowStart < 0 && serviceSetPrev.size) {
             serviceWindows.push({ label: 'prev', offset: -86400, serviceSet: serviceSetPrev });
         }
+        // Toujours inclure la journée demandée
         if (serviceSetCurrent.size) {
             serviceWindows.push({ label: 'current', offset: 0, serviceSet: serviceSetCurrent });
         }
@@ -1267,6 +1285,9 @@ export class DataManager {
 
             if (!serviceMatched) {
                 debugStats.serviceRejected++;
+            } else if (!accepted) {
+                // Service actif mais horaire hors fenêtre
+                debugStats.outOfWindow++;
             }
             // Si serviceMatched mais pas accepted, l'itinéraire est juste hors fenêtre (déjà compté outOfWindow)
         }
