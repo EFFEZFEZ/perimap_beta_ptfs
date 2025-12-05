@@ -1652,35 +1652,53 @@ async function loadMoreDepartures() {
     const busItineraries = allFetchedItineraries.filter(it => it.type === 'BUS' || it.type === 'TRANSIT');
     let startHour, startMinute;
     
+    // V203: Calcul robuste de la nouvelle heure avec gestion de la date
+    let baseDateObj;
+    if (!lastSearchTime.date || lastSearchTime.date === 'today' || lastSearchTime.date === "Aujourd'hui") {
+        baseDateObj = new Date();
+    } else {
+        baseDateObj = new Date(lastSearchTime.date);
+    }
+    
+    // Si on a trouvé un dernier départ, on l'utilise comme base
     if (busItineraries.length > 0) {
-        // Prendre le dernier départ + 5 minutes pour avoir de vrais nouveaux horaires
         const lastDep = busItineraries[busItineraries.length - 1].departureTime;
         const match = lastDep?.match(/(\d{1,2}):(\d{2})/);
         if (match) {
-            startHour = parseInt(match[1], 10);
-            startMinute = parseInt(match[2], 10) + 5; // +5 min au lieu de +1
-            if (startMinute >= 60) {
-                startMinute = startMinute - 60;
-                startHour = (startHour + 1) % 24;
-            }
+            const h = parseInt(match[1], 10);
+            const m = parseInt(match[2], 10);
+            
+            // Attention: si le dernier départ est le lendemain (ex: 00:15 alors qu'on cherchait 23:00)
+            // Il faut ajuster la date. Simplification: on prend l'heure de lastSearchTime
+            // Si lastDep < lastSearchTime, c'est probablement le lendemain
+            
+            baseDateObj.setHours(h, m + 5, 0, 0); // +5 min
+            
+            // Si on passe de 23h à 00h, setHours gère le changement de jour automatiquement
+            // MAIS il faut être sûr que baseDateObj était au bon jour avant
+        } else {
+             // Fallback
+             baseDateObj.setHours(parseInt(lastSearchTime.hour), parseInt(lastSearchTime.minute) + 30, 0, 0);
         }
-    }
-    
-    if (startHour === undefined) {
-        // Fallback: décaler de 30 minutes
+    } else {
+        // Fallback: décaler de 30 minutes par rapport à la recherche initiale
         loadMoreOffset += 30;
-        startHour = parseInt(lastSearchTime.hour) + Math.floor((parseInt(lastSearchTime.minute) + loadMoreOffset) / 60);
-        startMinute = (parseInt(lastSearchTime.minute) + loadMoreOffset) % 60;
-        startHour = startHour % 24;
+        baseDateObj.setHours(parseInt(lastSearchTime.hour), parseInt(lastSearchTime.minute) + loadMoreOffset, 0, 0);
     }
+
+    const year = baseDateObj.getFullYear();
+    const month = String(baseDateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(baseDateObj.getDate()).padStart(2, '0');
+    const newDateStr = `${year}-${month}-${day}`;
 
     const offsetSearchTime = {
         ...lastSearchTime,
-        hour: String(startHour).padStart(2, '0'),
-        minute: String(startMinute).padStart(2, '0')
+        date: newDateStr, // Date mise à jour
+        hour: String(baseDateObj.getHours()).padStart(2, '0'),
+        minute: String(baseDateObj.getMinutes()).padStart(2, '0')
     };
 
-    console.log(`🔄 Chargement + de départs à partir de ${offsetSearchTime.hour}:${offsetSearchTime.minute}`);
+    console.log(`🔄 Chargement + de départs à partir de ${offsetSearchTime.date} ${offsetSearchTime.hour}:${offsetSearchTime.minute}`);
     console.log(`📦 Cache: ${existingSignatures.size} signatures, ${existingDepartures.size} heures de départ`);
 
     try {
@@ -1850,13 +1868,18 @@ async function loadMoreArrivals() {
         }
     });
 
+    // V203: Calcul robuste de la nouvelle heure avec gestion de la date (Arriver)
+    let baseDateObj;
+    if (!lastSearchTime.date || lastSearchTime.date === 'today' || lastSearchTime.date === "Aujourd'hui") {
+        baseDateObj = new Date();
+    } else {
+        baseDateObj = new Date(lastSearchTime.date);
+    }
+
     // Trouver l'arrivée la plus tôt parmi les bus pour chercher encore plus tôt
     const busItineraries = allFetchedItineraries.filter(it => it.type === 'BUS' || it.type === 'TRANSIT');
-    let targetHour, targetMinute;
     
     if (busItineraries.length > 0) {
-        // Prendre l'arrivée la plus tôt et demander d'arriver à cette heure - 5 min
-        // Cela forcera l'API à trouver des trajets encore plus tôt
         let earliestArrival = Infinity;
         busItineraries.forEach(it => {
             const match = it.arrivalTime?.match(/(\d{1,2}):(\d{2})/);
@@ -1867,27 +1890,36 @@ async function loadMoreArrivals() {
         });
         
         if (earliestArrival !== Infinity) {
-            earliestArrival -= 30; // Demander d'arriver 30 min plus tôt
-            if (earliestArrival < 0) earliestArrival = 0;
-            targetHour = Math.floor(earliestArrival / 60);
-            targetMinute = earliestArrival % 60;
+            // On recule de 30 minutes
+            // Attention: earliestArrival est en minutes depuis minuit.
+            // Il faut gérer le passage au jour précédent si < 0
+            // Simplification: on utilise setHours sur l'objet Date
+            
+            const h = Math.floor(earliestArrival / 60);
+            const m = earliestArrival % 60;
+            
+            baseDateObj.setHours(h, m - 30, 0, 0);
+        } else {
+             baseDateObj.setHours(parseInt(lastSearchTime.hour) - 1, parseInt(lastSearchTime.minute), 0, 0);
         }
-    }
-    
-    if (targetHour === undefined) {
+    } else {
         // Fallback: décaler de 1h en arrière
-        targetHour = parseInt(lastSearchTime.hour) - 1;
-        targetMinute = parseInt(lastSearchTime.minute);
-        if (targetHour < 0) targetHour = 0;
+        baseDateObj.setHours(parseInt(lastSearchTime.hour) - 1, parseInt(lastSearchTime.minute), 0, 0);
     }
+
+    const year = baseDateObj.getFullYear();
+    const month = String(baseDateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(baseDateObj.getDate()).padStart(2, '0');
+    const newDateStr = `${year}-${month}-${day}`;
 
     const offsetSearchTime = {
         ...lastSearchTime,
-        hour: String(targetHour).padStart(2, '0'),
-        minute: String(targetMinute).padStart(2, '0')
+        date: newDateStr,
+        hour: String(baseDateObj.getHours()).padStart(2, '0'),
+        minute: String(baseDateObj.getMinutes()).padStart(2, '0')
     };
 
-    console.log(`🔄 Chargement + d'arrivées (cible ${offsetSearchTime.hour}:${offsetSearchTime.minute})`);
+    console.log(`🔄 Chargement + d'arrivées (cible ${offsetSearchTime.date} ${offsetSearchTime.hour}:${offsetSearchTime.minute})`);
     console.log(`📦 Cache: ${existingSignatures.size} signatures, ${existingArrivals.size} heures d'arrivée`);
 
     try {

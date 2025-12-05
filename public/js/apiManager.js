@@ -771,34 +771,34 @@ export class ApiManager {
             };
         }
         
-        let hour = parseInt(baseSearchTime.hour) || 0;
-        let minute = parseInt(baseSearchTime.minute) || 0;
-        
-        minute += offsetMinutes;
-        
-        // Gestion de l'addition (futur)
-        while (minute >= 60) {
-            minute -= 60;
-            hour++;
+        // V203: Gestion complète de la date et du passage de minuit
+        // On convertit tout en objet Date pour gérer correctement les changements de jour
+        let dateObj;
+        if (!baseSearchTime.date || baseSearchTime.date === 'today' || baseSearchTime.date === "Aujourd'hui") {
+            dateObj = new Date();
+        } else {
+            dateObj = new Date(baseSearchTime.date);
         }
         
-        // V202: Gestion de la soustraction (passé)
-        while (minute < 0) {
-            minute += 60;
-            hour--;
-        }
+        // Définir l'heure de base
+        dateObj.setHours(parseInt(baseSearchTime.hour) || 0);
+        dateObj.setMinutes(parseInt(baseSearchTime.minute) || 0);
+        dateObj.setSeconds(0);
         
-        // Gestion du passage de minuit
-        if (hour >= 24) hour = hour % 24;
-        if (hour < 0) hour = (hour + 24) % 24;
+        // Ajouter le décalage
+        dateObj.setMinutes(dateObj.getMinutes() + offsetMinutes);
         
-        // V201: Correction critique - Conserver la date d'origine !
-        // Sinon _buildDateTime utilise "Aujourd'hui" par défaut
+        // Reconstruire le searchTime avec la NOUVELLE date et heure
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const newDateStr = `${year}-${month}-${day}`;
+        
         return {
-            ...baseSearchTime, // Copie toutes les propriétés (date, etc.)
-            type: baseSearchTime.type || 'partir',
-            hour: hour.toString().padStart(2, '0'),
-            minute: minute.toString().padStart(2, '0')
+            ...baseSearchTime,
+            date: newDateStr, // Date mise à jour (peut avoir changé de jour)
+            hour: dateObj.getHours().toString().padStart(2, '0'),
+            minute: dateObj.getMinutes().toString().padStart(2, '0')
         };
     }
 
