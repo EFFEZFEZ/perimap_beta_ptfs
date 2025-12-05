@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v165'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V165: Fix positionnement bouton thème
+const CACHE_VERSION = 'v166'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V166: Fusion bouton thème avec clock
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
