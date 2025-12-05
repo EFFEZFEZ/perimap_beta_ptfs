@@ -41,15 +41,17 @@ export default async function handler(req, res) {
             const requestBody = {
                 input: input,
                 languageCode: 'fr',
-                regionCode: 'FR',
-                includedRegionCodes: ['FR'],
-                locationBias: {
-                    circle: {
-                        center: {
-                            latitude: 45.184029,
-                            longitude: 0.7211149
+                // Restriction stricte à la zone du Grand Périgueux (rectangle)
+                locationRestriction: {
+                    rectangle: {
+                        low: {
+                            latitude: 45.10,   // Sud
+                            longitude: 0.55    // Ouest
                         },
-                        radius: 25000.0  // 25km autour de Périgueux
+                        high: {
+                            latitude: 45.30,   // Nord
+                            longitude: 0.90    // Est
+                        }
                     }
                 }
             };
