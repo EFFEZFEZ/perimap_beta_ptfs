@@ -2336,6 +2336,76 @@ function processIntelligentResults(intelligentResults, searchTime) {
         dur: it.duration
     })));
 
+    // V193: FILTRAGE DES BUS GOOGLE PAR JOUR DE SERVICE GTFS
+    // Vérifie que les lignes retournées par Google circulent bien ce jour-là
+    if (dataManager && dataManager.isLoaded) {
+        let searchDate;
+        if (!searchTime?.date || searchTime.date === 'today' || searchTime.date === "Aujourd'hui") {
+            searchDate = new Date();
+        } else {
+            searchDate = new Date(searchTime.date);
+        }
+        
+        const activeServiceIds = dataManager.getServiceIds(searchDate);
+        const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+        console.log(`📅 V193: Vérification jour ${dayNames[searchDate.getDay()]} - ${activeServiceIds.size} services actifs`);
+        
+        if (activeServiceIds.size > 0) {
+            // Construire un Set des lignes actives ce jour-là
+            const activeLinesThisDay = new Set();
+            for (const trip of dataManager.trips) {
+                const isActive = Array.from(activeServiceIds).some(sid => 
+                    dataManager.serviceIdsMatch(trip.service_id, sid)
+                );
+                if (isActive) {
+                    const route = dataManager.getRoute(trip.route_id);
+                    if (route?.route_short_name) {
+                        activeLinesThisDay.add(route.route_short_name.toUpperCase());
+                    }
+                }
+            }
+            console.log(`🚍 V193: Lignes actives ce jour:`, Array.from(activeLinesThisDay).sort().join(', '));
+            
+            // Filtrer les itinéraires bus Google
+            const beforeCount = itineraries.filter(it => it.type === 'BUS').length;
+            const filteredItineraries = itineraries.filter(itin => {
+                if (itin.type !== 'BUS') return true; // Garder vélo et marche
+                
+                // Extraire les noms de lignes depuis l'itinéraire
+                const lineNames = [];
+                if (itin.summarySegments) {
+                    itin.summarySegments.forEach(seg => {
+                        if (seg.name) lineNames.push(seg.name.toUpperCase());
+                    });
+                }
+                if (itin.steps) {
+                    itin.steps.forEach(step => {
+                        if (step.type === 'BUS' && step.lineName) {
+                            lineNames.push(step.lineName.toUpperCase());
+                        }
+                    });
+                }
+                
+                // Vérifier si au moins une ligne est active
+                const hasActiveLine = lineNames.some(name => activeLinesThisDay.has(name));
+                if (!hasActiveLine && lineNames.length > 0) {
+                    console.log(`❌ V193: Itinéraire rejeté (lignes ${lineNames.join(',')} non actives ce jour)`);
+                    return false;
+                }
+                return true;
+            });
+            
+            const afterCount = filteredItineraries.filter(it => it.type === 'BUS').length;
+            if (beforeCount !== afterCount) {
+                console.log(`📊 V193: ${beforeCount - afterCount} itinéraire(s) bus rejeté(s) (hors service ce jour)`);
+            }
+            
+            // Remplacer itineraries par la version filtrée
+            itineraries.length = 0;
+            itineraries.push(...filteredItineraries);
+        }
+    }
+
     // 2. LOGIQUE DE FENÊTRE TEMPORELLE (Horaire Arrivée)
     try {
         if (searchTime && searchTime.type === 'arriver') {
