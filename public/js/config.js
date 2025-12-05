@@ -60,8 +60,8 @@ export function getAdminToken() {
 export function getAppConfig() {
   return {
     googleApiKey: getGoogleApiKey(),
-    arrivalPageSize: 6,  // V120: Augmenté pour plus d'options
-    minBusItineraries: 3, // V120: Minimum 3 itinéraires bus
+    arrivalPageSize: 6,
+    minBusItineraries: 3,
     maxBottomSheetLevels: 3,
     adminToken: getAdminToken()
   };
