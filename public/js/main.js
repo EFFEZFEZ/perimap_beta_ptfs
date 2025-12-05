@@ -1580,18 +1580,15 @@ async function executeItinerarySearch(source, sourceElements) {
         
         console.log('📊 Itinéraires disponibles:', allFetchedItineraries?.length || 0);
 
-        // V63: On garde l'ordre de Google qui est déjà optimisé
-        // Le re-tri manuel causait des sauts d'horaires (8h → 9h en sautant 8h15, 8h30...)
+        // V137b: Forcer un ordre croissant clair (départs les plus proches → plus éloignés)
         const heureDemandee = `${searchTime.hour}:${String(searchTime.minute).padStart(2,'0')}`;
-        
         if (searchTime.type === 'arriver') {
             console.log(`🎯 Mode ARRIVER: Google a trié pour arriver avant ${heureDemandee}`);
-            // Garder l'ordre de Google, juste initialiser pour la pagination
             arrivalRankedAll = [...allFetchedItineraries];
             arrivalRenderedCount = Math.min(ARRIVAL_PAGE_SIZE, arrivalRankedAll.length);
         } else {
-            console.log(`🎯 Mode PARTIR: Google a trié à partir de ${heureDemandee}`);
-            // Garder l'ordre de Google tel quel
+            console.log(`🎯 Mode PARTIR: tri chrono croissant appliqué (base ${heureDemandee})`);
+            allFetchedItineraries = sortItinerariesByDeparture(allFetchedItineraries);
             arrivalRankedAll = [];
             arrivalRenderedCount = 0;
         }
@@ -1736,10 +1733,7 @@ async function loadMoreDepartures() {
             if (it.departureTime) existingDepartures.add(it.departureTime);
         });
         
-        allFetchedItineraries = [...allFetchedItineraries, ...newItineraries];
-        
-        // V63: NE PAS re-trier, garder l'ordre chronologique naturel
-        // Les nouveaux départs sont déjà plus tardifs
+        allFetchedItineraries = sortItinerariesByDeparture([...allFetchedItineraries, ...newItineraries]);
         
         // Re-rendre
         setupResultTabs(allFetchedItineraries);
@@ -1799,6 +1793,21 @@ function createItinerarySignature(it) {
     
     return `${type}::${segments}::${steps}::${depTime}`;
 }
+
+    // V137b: Parse HH:MM safely and return minutes (Infinity if invalid)
+    function parseDepartureMinutes(timeStr) {
+        const match = timeStr?.match?.(/(\d{1,2}):(\d{2})/);
+        if (!match) return Infinity;
+        const h = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        if (Number.isNaN(h) || Number.isNaN(m)) return Infinity;
+        return h * 60 + m;
+    }
+
+    // V137b: Garantit un ordre chronologique croissant (proche → lointain)
+    function sortItinerariesByDeparture(list) {
+        return [...list].sort((a, b) => parseDepartureMinutes(a?.departureTime) - parseDepartureMinutes(b?.departureTime));
+    }
 
 /**
  * V132: Charge plus de trajets pour le mode "arriver"

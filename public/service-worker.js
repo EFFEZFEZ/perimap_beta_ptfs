@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v137'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V137: UI carte alignée charte (top-bar premium)
+const CACHE_VERSION = 'v138'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V138: Tri chrono départs + stabilité liste
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
