@@ -2346,11 +2346,28 @@ function processIntelligentResults(intelligentResults, searchTime) {
             searchDate = new Date(searchTime.date);
         }
         
-        const activeServiceIds = dataManager.getServiceIds(searchDate);
-        const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-        console.log(`📅 V193: Vérification jour ${dayNames[searchDate.getDay()]} - ${activeServiceIds.size} services actifs`);
+        // V194: Ajouter l'heure pour que la date soit complète
+        if (searchTime?.hour !== undefined) {
+            searchDate.setHours(parseInt(searchTime.hour) || 0, parseInt(searchTime.minute) || 0, 0, 0);
+        }
         
-        if (activeServiceIds.size > 0) {
+        const activeServiceIds = dataManager.getServiceIds(searchDate);
+        const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+        const dayName = dayNames[searchDate.getDay()];
+        console.log(`📅 V194: Vérification pour ${dayName} ${searchDate.toLocaleDateString()} - ${activeServiceIds.size} services actifs`);
+        console.log(`📅 V194: Services actifs:`, Array.from(activeServiceIds));
+        
+        if (activeServiceIds.size === 0) {
+            console.warn(`⚠️ V194: AUCUN SERVICE ACTIF pour ${dayName} - Les bus ne circulent peut-être pas`);
+            // Supprimer tous les itinéraires bus
+            const busCount = itineraries.filter(it => it.type === 'BUS').length;
+            if (busCount > 0) {
+                console.log(`❌ V194: Suppression de ${busCount} itinéraire(s) bus car aucun service actif`);
+                const nonBusItins = itineraries.filter(it => it.type !== 'BUS');
+                itineraries.length = 0;
+                itineraries.push(...nonBusItins);
+            }
+        } else {
             // Construire un Set des lignes actives ce jour-là
             const activeLinesThisDay = new Set();
             for (const trip of dataManager.trips) {
@@ -2361,10 +2378,12 @@ function processIntelligentResults(intelligentResults, searchTime) {
                     const route = dataManager.getRoute(trip.route_id);
                     if (route?.route_short_name) {
                         activeLinesThisDay.add(route.route_short_name.toUpperCase());
+                        // V194: Ajouter aussi sans espaces et avec variations
+                        activeLinesThisDay.add(route.route_short_name.toUpperCase().replace(/\s+/g, ''));
                     }
                 }
             }
-            console.log(`🚍 V193: Lignes actives ce jour:`, Array.from(activeLinesThisDay).sort().join(', '));
+            console.log(`🚍 V194: Lignes actives ${dayName}:`, Array.from(activeLinesThisDay).sort().join(', '));
             
             // Filtrer les itinéraires bus Google
             const beforeCount = itineraries.filter(it => it.type === 'BUS').length;
@@ -2372,32 +2391,46 @@ function processIntelligentResults(intelligentResults, searchTime) {
                 if (itin.type !== 'BUS') return true; // Garder vélo et marche
                 
                 // Extraire les noms de lignes depuis l'itinéraire
-                const lineNames = [];
+                const lineNames = new Set();
                 if (itin.summarySegments) {
                     itin.summarySegments.forEach(seg => {
-                        if (seg.name) lineNames.push(seg.name.toUpperCase());
+                        if (seg.name) {
+                            lineNames.add(seg.name.toUpperCase());
+                            lineNames.add(seg.name.toUpperCase().replace(/\s+/g, ''));
+                        }
                     });
                 }
                 if (itin.steps) {
                     itin.steps.forEach(step => {
                         if (step.type === 'BUS' && step.lineName) {
-                            lineNames.push(step.lineName.toUpperCase());
+                            lineNames.add(step.lineName.toUpperCase());
+                            lineNames.add(step.lineName.toUpperCase().replace(/\s+/g, ''));
+                        }
+                        // V194: Aussi vérifier routeShortName
+                        if (step.type === 'BUS' && step.routeShortName) {
+                            lineNames.add(step.routeShortName.toUpperCase());
                         }
                     });
                 }
                 
                 // Vérifier si au moins une ligne est active
-                const hasActiveLine = lineNames.some(name => activeLinesThisDay.has(name));
-                if (!hasActiveLine && lineNames.length > 0) {
-                    console.log(`❌ V193: Itinéraire rejeté (lignes ${lineNames.join(',')} non actives ce jour)`);
+                const hasActiveLine = Array.from(lineNames).some(name => activeLinesThisDay.has(name));
+                
+                if (!hasActiveLine && lineNames.size > 0) {
+                    console.log(`❌ V194: Rejeté - lignes [${Array.from(lineNames).join(', ')}] non actives ${dayName}`);
                     return false;
+                }
+                
+                // Si pas de nom de ligne trouvé, on garde par prudence
+                if (lineNames.size === 0) {
+                    console.warn(`⚠️ V194: Itinéraire sans nom de ligne, conservé par défaut`);
                 }
                 return true;
             });
             
             const afterCount = filteredItineraries.filter(it => it.type === 'BUS').length;
             if (beforeCount !== afterCount) {
-                console.log(`📊 V193: ${beforeCount - afterCount} itinéraire(s) bus rejeté(s) (hors service ce jour)`);
+                console.log(`📊 V194: ${beforeCount - afterCount} itinéraire(s) bus rejeté(s) (hors service ${dayName})`);
             }
             
             // Remplacer itineraries par la version filtrée
