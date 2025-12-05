@@ -159,6 +159,15 @@ export function filterExpiredDepartures(itineraries, searchTime = null) {
     const depMinutes = parseTimeToMinutes(depTime);
     if (depMinutes === Infinity) return true;
     
+    // V185: Détection des trajets du lendemain
+    // Si l'heure de départ est très inférieure à maintenant (plus de 6h de différence),
+    // c'est probablement un trajet du lendemain matin -> on le filtre
+    const timeDiff = nowMinutes - depMinutes;
+    if (timeDiff > 360) { // Plus de 6h d'écart (ex: 23:00 vs 06:00)
+      console.log(`🚫 Trajet ${depTime} filtré (probablement lendemain, diff: ${timeDiff}min)`);
+      return false;
+    }
+    
     // Garder si départ >= maintenant (avec 2 min de marge)
     return depMinutes >= (nowMinutes - 2);
   });
