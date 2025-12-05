@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v196'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V196: Debug getServiceIds complet
+const CACHE_VERSION = 'v197'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V197: 4 appels Google décalés pour plus d'horaires
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;

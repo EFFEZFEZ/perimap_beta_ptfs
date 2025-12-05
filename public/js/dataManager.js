@@ -584,10 +584,6 @@ export class DataManager {
                            String(date.getMonth() + 1).padStart(2, '0') +
                            String(date.getDate()).padStart(2, '0');
 
-        // V196: Debug complet pour diagnostic
-        console.log(`📅 V196 getServiceIds: ${dateString} (${dayOfWeek})`);
-        console.log(`📅 V196 Calendar entrées: ${this.calendar?.length || 0}`);
-
         const activeServiceIds = new Set();
 
         // Étape 1: Suppressions (exception_type = 2)
@@ -595,7 +591,6 @@ export class DataManager {
         this.calendarDates.forEach(d => {
             if (d.date === dateString && d.exception_type === '2') {
                 removedServiceIds.add(d.service_id);
-                console.log(`  ❌ Supprimé: ${d.service_id}`);
             }
         });
 
@@ -605,21 +600,8 @@ export class DataManager {
             const inRange = s.start_date <= dateString && s.end_date >= dateString;
             const notRemoved = !removedServiceIds.has(s.service_id);
             
-            // V196: Log chaque service avec ses critères
-            if (s.service_id.includes('Timetable:9') || s.service_id.includes('Timetable:2') || s.service_id.includes('Timetable:5')) {
-                console.log(`📅 V196 Check ${s.service_id.split(':').pop()}:`, {
-                    dayActive,
-                    dayValue: s[dayOfWeek],
-                    inRange,
-                    start: s.start_date,
-                    end: s.end_date,
-                    notRemoved
-                });
-            }
-            
             if (dayActive && inRange && notRemoved) {
                 activeServiceIds.add(s.service_id);
-                console.log(`  ✅ Service actif: ${s.service_id}`);
             }
         });
 
@@ -627,14 +609,11 @@ export class DataManager {
         this.calendarDates.forEach(d => {
             if (d.date === dateString && d.exception_type === '1') {
                 activeServiceIds.add(d.service_id);
-                console.log(`  ➕ Ajouté: ${d.service_id}`);
             }
         });
 
         if (activeServiceIds.size === 0) {
             console.warn(`⚠️  AUCUN SERVICE ACTIF pour le ${dateString}`);
-        } else {
-            console.log(`📅 V196 Services actifs (${activeServiceIds.size}):`, Array.from(activeServiceIds).map(s => s.split(':').pop()));
         }
         
         return activeServiceIds;

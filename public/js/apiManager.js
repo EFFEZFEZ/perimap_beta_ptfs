@@ -616,17 +616,19 @@ export class ApiManager {
         };
 
         // ========================================
-        // V188: 2 APPELS DÉCALÉS = ~5-6 HORAIRES
-        // Comme SNCF Connect: couvrir 30-40 min
+        // V197: 4 APPELS DÉCALÉS = ~8-10 HORAIRES
+        // Pour compenser les trajets TER/322 rejetés
         // ========================================
         
         const searchTimes = [
-            searchTime,                              // T+0 min (3 résultats)
-            this._offsetSearchTime(searchTime, 20), // T+20 min (2-3 résultats nouveaux)
+            searchTime,                              // T+0 min
+            this._offsetSearchTime(searchTime, 15), // T+15 min
+            this._offsetSearchTime(searchTime, 30), // T+30 min
+            this._offsetSearchTime(searchTime, 50), // T+50 min
         ];
         
         const [busResults, bikeResult, walkResult] = await Promise.allSettled([
-            // 2 appels bus en parallèle
+            // 4 appels bus en parallèle
             Promise.allSettled(searchTimes.map(st => this._fetchBusRoute(fromPlaceId, toPlaceId, st, fromCoords, toCoords))),
             this.fetchBicycleRoute(fromPlaceId, toPlaceId, fromCoords, toCoords),
             this.fetchWalkingRoute(fromPlaceId, toPlaceId, fromCoords, toCoords)
@@ -678,7 +680,7 @@ export class ApiManager {
                 const transferCount = Math.max(0, transitSteps.length - 1);
                 
                 results.bus = { data: busData, duration: durationMinutes, transfers: transferCount };
-                console.log(`🚍 V188: ${displayRoutes.length} trajets affichés, ${cachedRoutes.length} en cache`);
+                console.log(`🚍 V197: ${displayRoutes.length} trajets affichés, ${cachedRoutes.length} en cache`);
                 
                 // Log des heures pour vérification
                 const heures = displayRoutes.map(r => r.legs?.[0]?.localizedValues?.departureTime?.time?.text).join(', ');
