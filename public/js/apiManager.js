@@ -767,7 +767,10 @@ export class ApiManager {
         }
         hour = hour % 24;
         
+        // V201: Correction critique - Conserver la date d'origine !
+        // Sinon _buildDateTime utilise "Aujourd'hui" par défaut
         return {
+            ...baseSearchTime, // Copie toutes les propriétés (date, etc.)
             type: baseSearchTime.type || 'partir',
             hour: hour.toString().padStart(2, '0'),
             minute: minute.toString().padStart(2, '0')
