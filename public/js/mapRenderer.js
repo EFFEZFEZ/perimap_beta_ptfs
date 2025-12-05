@@ -925,27 +925,13 @@ export class MapRenderer {
             setTimeout(() => renderer.setLocateButtonState('idle'), 1800);
         };
 
-        // ✅ V155 - Barre de contrôles moderne style Google Maps
+        // ✅ V158 - Bouton localisation seul (sans zoom)
         const MapControlsBar = L.Control.extend({
             options: { position: 'bottomright' },
             onAdd(map) {
                 const container = L.DomUtil.create('div', 'map-floating-controls');
                 
-                // Bouton Zoom +
-                const btnZoomIn = L.DomUtil.create('button', 'map-btn-zoom-in', container);
-                btnZoomIn.type = 'button';
-                btnZoomIn.setAttribute('aria-label', 'Zoom avant');
-                btnZoomIn.title = 'Zoom avant';
-                btnZoomIn.innerHTML = ICONS.zoomIn;
-                
-                // Bouton Zoom -
-                const btnZoomOut = L.DomUtil.create('button', 'map-btn-zoom-out', container);
-                btnZoomOut.type = 'button';
-                btnZoomOut.setAttribute('aria-label', 'Zoom arrière');
-                btnZoomOut.title = 'Zoom arrière';
-                btnZoomOut.innerHTML = ICONS.zoomOut;
-                
-                // Bouton Localisation
+                // Bouton Localisation uniquement
                 const btnLocate = L.DomUtil.create('button', 'map-btn-locate', container);
                 btnLocate.type = 'button';
                 btnLocate.setAttribute('aria-label', 'Me localiser');
@@ -958,19 +944,7 @@ export class MapRenderer {
                 L.DomEvent.disableClickPropagation(container);
                 L.DomEvent.disableScrollPropagation(container);
                 
-                // Événements
-                L.DomEvent.on(btnZoomIn, 'click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    map.zoomIn();
-                });
-                
-                L.DomEvent.on(btnZoomOut, 'click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    map.zoomOut();
-                });
-                
+                // Événement localisation
                 L.DomEvent.on(btnLocate, 'click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();

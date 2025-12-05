@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v157'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V157: Bouton Filtrer repositionné sur PC
+const CACHE_VERSION = 'v158'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V158: Bouton localisation seul (sans zoom)
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
