@@ -5350,7 +5350,7 @@ body.dark-theme .real-select option {
     display: flex;
     flex-direction: column;
     width: min(8rem, calc(100vw - 2rem));
-    max-height: 14rem;
+    max-height: 70vh; /* V159: Beaucoup plus grand pour voir plus d'options */
     overflow-y: auto;
     scrollbar-width: thin;
 }
@@ -5401,7 +5401,7 @@ body.dark-theme .real-select option {
 @media (max-width: 640px) {
     .time-select-menu {
         width: min(7rem, 60vw);
-        max-height: 12rem;
+        max-height: 60vh; /* V159: Plus grand sur mobile aussi */
         padding: 0.2rem 0;
     }
     .time-select-wrapper-hour .time-select-menu,

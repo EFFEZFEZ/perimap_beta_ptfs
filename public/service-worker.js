@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v158'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V158: Bouton localisation seul (sans zoom)
+const CACHE_VERSION = 'v159'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V159: Sélecteurs heure/minute plus grands (70vh)
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
