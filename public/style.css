@@ -3704,27 +3704,22 @@ details[open] .accordion-content {
     #map-container #map-view #top-bar #clock .theme-toggle-in-clock {
         width: 32px;
         height: 32px;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-radius: 50%;
+        background: transparent;
         border: none;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04);
         font-size: 16px;
         cursor: pointer;
         transition: all 0.2s ease;
-        margin-left: -10px;
+        margin: 0 -4px;
         padding: 0;
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 1001;
         flex-shrink: 0;
+        pointer-events: auto;
     }
 
     #map-container #map-view #top-bar #clock .theme-toggle-in-clock:hover {
-        background: rgba(255, 255, 255, 0.98);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         transform: scale(1.05);
     }
 
@@ -3733,14 +3728,11 @@ details[open] .accordion-content {
     }
 
     body.dark-theme #map-container #map-view #top-bar #clock .theme-toggle-in-clock {
-        background: rgba(20, 25, 38, 0.95);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
         color: #e2e8f0;
     }
 
     body.dark-theme #map-container #map-view #top-bar #clock .theme-toggle-in-clock:hover {
-        background: rgba(30, 35, 48, 0.98);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        transform: scale(1.05);
     }
     
     /* Bouton Retour - gauche */
@@ -3764,11 +3756,24 @@ details[open] .accordion-content {
     #map-container #map-view #top-bar > #clock {
         display: inline-flex !important; 
         align-items: center;
+        position: fixed !important;
         top: calc(12px + env(safe-area-inset-top));
         left: 50%;
         transform: translateX(-50%);
-        gap: 0;
+        gap: 2px;
         color: #1a1a2e;
+        height: 36px;
+        padding: 0 12px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 18px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04);
+        pointer-events: auto;
+        border: none;
+        z-index: 1000;
     }
     #map-container #map-view #top-bar > #clock svg {
         width: 14px;
