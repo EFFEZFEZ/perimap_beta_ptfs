@@ -1432,6 +1432,13 @@ async function executeItinerarySearch(source, sourceElements) {
         hour: hourSelect.value,
         minute: minuteSelect.value
     };
+
+    // V204: Sécuriser la date demandée pour éviter de repartir la veille
+    const todayIso = new Date().toISOString().split('T')[0];
+    if (!searchTime.date || searchTime.date < todayIso) {
+        searchTime.date = todayIso;
+        try { dateSelect.value = todayIso; } catch (e) {}
+    }
     
     // Debug: vérifier l'heure réellement sélectionnée
     console.log('🕐 Heure sélectionnée:', {
