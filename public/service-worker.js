@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v167'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V167: Refactor : bouton thème dans le clock
+const CACHE_VERSION = 'v168'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V168: Fix style clock et visibilité bouton thème
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
