@@ -1433,8 +1433,9 @@ async function executeItinerarySearch(source, sourceElements) {
         minute: minuteSelect.value
     };
 
-    // V204: Sécuriser la date demandée pour éviter de repartir la veille
-    const todayIso = new Date().toISOString().split('T')[0];
+    // V204 + correctif fuseau: calculer la date du jour en local (pas en UTC)
+    const nowLocal = new Date();
+    const todayIso = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
     if (!searchTime.date || searchTime.date < todayIso) {
         searchTime.date = todayIso;
         try { dateSelect.value = todayIso; } catch (e) {}

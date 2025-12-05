@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v207'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V207: Corrections date locale (pas de décalage +1 jour)
+const CACHE_VERSION = 'v208'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V208: Date du jour en local (pas de veille à minuit)
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
