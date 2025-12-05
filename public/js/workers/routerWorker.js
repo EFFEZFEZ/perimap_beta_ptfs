@@ -55,6 +55,19 @@ async function handleInit(payload = {}) {
     workerDataManager.buildRouteGeometryIndex();
     workerDataManager.isLoaded = true;
     
+    // V192: Debug calendar pour vérifier les jours de service
+    console.log('📅 [Worker] Calendar chargé:', workerDataManager.calendar?.length || 0, 'entrées');
+    if (workerDataManager.calendar?.length > 0) {
+        const sample = workerDataManager.calendar[0];
+        console.log('📅 [Worker] Exemple calendar:', {
+            service_id: sample.service_id,
+            saturday: sample.saturday,
+            sunday: sample.sunday,
+            start_date: sample.start_date,
+            end_date: sample.end_date
+        });
+    }
+    
     // DEBUG: Vérifier stopTimesByStop
     const stopTimesByStopKeys = Object.keys(workerDataManager.stopTimesByStop || {});
     console.log('🔧 [Worker] stopTimesByStop reçu:', stopTimesByStopKeys.length, 'stops');
