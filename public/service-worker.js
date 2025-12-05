@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v163'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V163: release 3.17.0 + cache refresh
+const CACHE_VERSION = 'v164'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V164: release 3.17.1 + toggle thème carte
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;

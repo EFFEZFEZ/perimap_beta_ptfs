@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.17.0-22c55e?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/version-3.17.1-22c55e?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/PWA-Ready-00c8ff?style=flat-square" alt="PWA">
   <img src="https://img.shields.io/badge/license-MIT-gray?style=flat-square" alt="License">
 </p>

@@ -266,25 +266,15 @@ function initTheme() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Wire theme toggle (main header button)
-    const tbtn = document.getElementById('theme-toggle-btn');
-    if (tbtn) {
-        tbtn.addEventListener('click', () => {
+    // Wire all theme toggles (header + carte)
+    const themeToggles = Array.from(document.querySelectorAll('[data-theme-toggle]'));
+    themeToggles.forEach(btn => {
+        btn.addEventListener('click', () => {
             const nextIsDark = !document.body.classList.contains('dark-theme');
             applyThemeState(nextIsDark);
             try { localStorage.setItem('ui-theme', nextIsDark ? 'dark' : 'light'); } catch (e) { /* ignore */ }
         }, { passive: true });
-    }
-
-    // Wire theme toggle for map view button
-    const tbtnMap = document.getElementById('theme-toggle-btn-map');
-    if (tbtnMap) {
-        tbtnMap.addEventListener('click', () => {
-            const nextIsDark = !document.body.classList.contains('dark-theme');
-            applyThemeState(nextIsDark);
-            try { localStorage.setItem('ui-theme', nextIsDark ? 'dark' : 'light'); } catch (e) { /* ignore */ }
-        }, { passive: true });
-    }
+    });
 
     // Initialize UI theme immediately (no preloader)
     initTheme();

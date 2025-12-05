@@ -3393,6 +3393,59 @@ details[open] .accordion-content {
     margin-right: 0.25rem;
 }
 
+/* Groupe d'actions côté droit (status + toggle thème) */
+#top-right-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.map-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 12px;
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    font-weight: 700;
+    color: #1a1a2e;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    pointer-events: auto;
+}
+
+.map-theme-toggle .theme-toggle-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.map-theme-toggle .theme-toggle-label {
+    font-size: 13px;
+}
+
+.map-theme-toggle:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.map-theme-toggle:active {
+    transform: translateY(0);
+}
+
+body.dark-theme .map-theme-toggle {
+    background: rgba(20, 25, 38, 0.95);
+    color: #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme .map-theme-toggle:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
 /* Style unifié pour tous les éléments - même hauteur, même style pill */
 .topbar-pill {
     display: inline-flex;
@@ -3568,50 +3621,6 @@ details[open] .accordion-content {
     #map-view #top-bar > * {
         pointer-events: auto;
     }
-
-    /* Desktop: Bouton thème fusionné DANS le clock */
-    #map-container #map-view #top-bar #clock .theme-toggle-in-clock {
-        width: 36px;
-        height: 36px;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-radius: 50%;
-        border: 1px solid rgba(0, 0, 0, 0.06);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        font-size: 18px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        margin-left: -12px;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1001;
-        flex-shrink: 0;
-    }
-
-    #map-container #map-view #top-bar #clock .theme-toggle-in-clock:hover {
-        background: rgba(255, 255, 255, 0.98);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        transform: scale(1.05);
-    }
-
-    #map-container #map-view #top-bar #clock .theme-toggle-in-clock:active {
-        transform: scale(0.95);
-    }
-
-    body.dark-theme #map-container #map-view #top-bar #clock .theme-toggle-in-clock {
-        background: rgba(20, 25, 38, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        color: #e2e8f0;
-    }
-
-    body.dark-theme #map-container #map-view #top-bar #clock .theme-toggle-in-clock:hover {
-        background: rgba(30, 35, 48, 0.98);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    }
     
     /* Tous les éléments gardent le même style pill défini globalement */
 }
@@ -3699,41 +3708,6 @@ details[open] .accordion-content {
         pointer-events: auto;
         border: none;
     }
-
-    /* Bouton thème fusionné DANS le clock */
-    #map-container #map-view #top-bar #clock .theme-toggle-in-clock {
-        width: 32px;
-        height: 32px;
-        background: transparent;
-        border: none;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        margin: 0 -4px;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1001;
-        flex-shrink: 0;
-        pointer-events: auto;
-    }
-
-    #map-container #map-view #top-bar #clock .theme-toggle-in-clock:hover {
-        transform: scale(1.05);
-    }
-
-    #map-container #map-view #top-bar #clock .theme-toggle-in-clock:active {
-        transform: scale(0.95);
-    }
-
-    body.dark-theme #map-container #map-view #top-bar #clock .theme-toggle-in-clock {
-        color: #e2e8f0;
-    }
-
-    body.dark-theme #map-container #map-view #top-bar #clock .theme-toggle-in-clock:hover {
-        transform: scale(1.05);
-    }
     
     /* Bouton Retour - gauche */
     #map-container #map-view #top-bar > #btn-back-to-dashboard-from-map {
@@ -3752,28 +3726,15 @@ details[open] .accordion-content {
         height: 14px;
     }
     
-    /* Horloge - centre - avec le bouton thème fusionné */
+    /* Horloge - centre */
     #map-container #map-view #top-bar > #clock {
         display: inline-flex !important; 
         align-items: center;
-        position: fixed !important;
         top: calc(12px + env(safe-area-inset-top));
         left: 50%;
         transform: translateX(-50%);
-        gap: 2px;
+        gap: 6px;
         color: #1a1a2e;
-        height: 36px;
-        padding: 0 12px;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-radius: 18px;
-        font-size: 13px;
-        font-weight: 600;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04);
-        pointer-events: auto;
-        border: none;
-        z-index: 1000;
     }
     #map-container #map-view #top-bar > #clock svg {
         width: 14px;
@@ -3796,6 +3757,43 @@ details[open] .accordion-content {
         color: #22c55e;
     }
     #map-container #map-view #top-bar > #status-info #data-status { display: none; }
+
+    /* Groupe droite : status + toggle thème (compact mobile) */
+    #top-right-controls {
+        position: fixed;
+        top: calc(12px + env(safe-area-inset-top));
+        right: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        pointer-events: auto;
+        z-index: 1000;
+    }
+
+    #top-right-controls #status-info {
+        position: relative;
+        top: 0;
+        right: 0;
+        height: 36px;
+        padding: 0 12px;
+        margin-left: 0;
+        gap: 6px;
+    }
+
+    #top-right-controls #status-info #data-status { display: none; }
+
+    #top-right-controls .map-theme-toggle {
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        border-radius: 50%;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+
+    #top-right-controls .map-theme-toggle .theme-toggle-label {
+        display: none;
+    }
     
     /* V76: Le bouton filtrer est maintenant en dehors du top-bar, styles définis globalement */
     

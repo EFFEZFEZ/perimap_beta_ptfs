@@ -10,17 +10,21 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 <span id="current-time">--:--:--</span>
                 <span id="date-indicator">--</span>
-                <button id="theme-toggle-btn-map" class="theme-toggle-in-clock" aria-label="Basculer thème sombre" title="Thème sombre" aria-pressed="false">
-                    <span id="theme-toggle-icon-map">🌙</span>
-                </button>
             </div>
 
-            <div id="status-info">
-                <span id="bus-count">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
-                    0 bus
-                </span>
-                <span id="data-status">En attente...</span>
+            <div id="top-right-controls">
+                <div id="status-info">
+                    <span id="bus-count">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                        0 bus
+                    </span>
+                    <span id="data-status">En attente...</span>
+                </div>
+
+                <button id="map-theme-toggle-btn" class="topbar-pill map-theme-toggle" data-theme-toggle="true" aria-label="Basculer le thème" aria-pressed="false" title="Thème sombre">
+                    <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
+                    <span class="theme-toggle-label">Thème</span>
+                </button>
             </div>
         </div>
 

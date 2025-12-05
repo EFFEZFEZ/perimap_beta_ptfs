@@ -9,28 +9,16 @@ export class UIManager {
     applyThemeState(useDarkParam, renderers = []) {
         const useDark = !!useDarkParam;
         document.body.classList.toggle('dark-theme', useDark);
-        
-        // Update main theme button
-        const btn = document.getElementById('theme-toggle-btn');
-        if (btn) {
+        const toggleButtons = Array.from(document.querySelectorAll('[data-theme-toggle]'));
+        toggleButtons.forEach(btn => {
             btn.setAttribute('aria-pressed', useDark ? 'true' : 'false');
             btn.title = useDark ? 'Thème clair' : 'Thème sombre';
-        }
-        const icon = document.getElementById('theme-toggle-icon');
-        if (icon) {
-            icon.textContent = useDark ? '☀️' : '🌙';
-        }
+        });
 
-        // Update map view theme button
-        const btnMap = document.getElementById('theme-toggle-btn-map');
-        if (btnMap) {
-            btnMap.setAttribute('aria-pressed', useDark ? 'true' : 'false');
-            btnMap.title = useDark ? 'Thème clair' : 'Thème sombre';
-        }
-        const iconMap = document.getElementById('theme-toggle-icon-map');
-        if (iconMap) {
-            iconMap.textContent = useDark ? '☀️' : '🌙';
-        }
+        const icons = Array.from(document.querySelectorAll('.theme-toggle-icon'));
+        icons.forEach(icon => {
+            icon.textContent = useDark ? '☀️' : '🌙';
+        });
 
         try {
             ['map', 'detail-map', 'results-map'].forEach(id => {
