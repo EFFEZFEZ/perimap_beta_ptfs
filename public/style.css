@@ -3569,28 +3569,30 @@ details[open] .accordion-content {
         pointer-events: auto;
     }
 
-    /* Desktop: Controls en haut à droite du map - espacé du status-info */
+    /* Desktop: Controls fusionnés avec le clock */
     #map-container #map-view #top-bar > .top-bar-controls {
-        position: absolute !important;
-        z-index: 1000;
-        right: 180px;
-        top: 14px;
+        position: relative !important;
+        z-index: 1001;
+        right: auto;
+        left: auto;
+        top: auto;
         display: flex;
-        gap: 10px;
+        gap: 0;
         align-items: center;
         pointer-events: auto;
+        margin-left: -12px;
     }
 
     #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border-radius: 50%;
         border: 1px solid rgba(0, 0, 0, 0.06);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        font-size: 20px;
+        font-size: 18px;
         transition: all 0.2s ease;
     }
 
@@ -3704,29 +3706,33 @@ details[open] .accordion-content {
         border: none;
     }
 
-    /* Contrôles du top-bar (thème) - à gauche du status-info sur mobile */
+    /* Contrôles du top-bar (thème) - fusionné avec le clock sur mobile */
     #map-container #map-view #top-bar > .top-bar-controls {
         position: fixed !important;
-        z-index: 1000;
-        right: 130px;
-        top: 12px;
+        z-index: 1001;
+        right: auto;
+        left: calc(50% - 6px);
+        transform: translateX(-50%);
+        top: 20px;
         display: flex;
-        gap: 10px;
+        gap: 0;
         align-items: center;
         pointer-events: auto;
     }
 
     #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map {
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border-radius: 50%;
         border: none;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04);
-        font-size: 18px;
+        font-size: 16px;
         transition: all 0.2s ease;
+        margin-left: -8px;
+        z-index: 1001;
     }
 
     #map-container #map-view #top-bar > .top-bar-controls #theme-toggle-btn-map:hover {
