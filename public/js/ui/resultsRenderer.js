@@ -6,7 +6,7 @@
 import { ICONS } from '../config/icons.js';
 
 export function createResultsRenderer(deps) {
-  const { resultsListContainer, resultsModeTabs, getAllItineraries, getArrivalState, setArrivalRenderedCount, onLoadMoreDepartures, onLoadMoreArrivals, getDataManager } = deps;
+  const { resultsListContainer, resultsModeTabs, getAllItineraries, getArrivalState, setArrivalRenderedCount, onLoadMoreDepartures, onLoadMoreArrivals, getDataManager, getSearchTime } = deps;
 
   function getItineraryType(itinerary) {
     if (!itinerary) return 'BUS';
@@ -134,56 +134,89 @@ export function createResultsRenderer(deps) {
   }
 
   /**
-   * V64: Trouve les prochains départs GTFS pour un itinéraire bus
+   * V212: Trouve les prochains départs GTFS pour un itinéraire bus
+   * Utilise la date de recherche et cherche les arrêts par nom OU coordonnées
    * @param {Object} itinerary - L'itinéraire principal
    * @returns {Array} Liste des prochains départs avec {departureTime, depMinutes}
    */
   function findGtfsNextDepartures(itinerary) {
     const dataManager = getDataManager ? getDataManager() : null;
-    if (!dataManager || !itinerary) return [];
+    if (!dataManager || !dataManager.isLoaded || !itinerary) return [];
     
     // Trouver le premier segment BUS
     const busStep = (itinerary.steps || []).find(s => s.type === 'BUS');
     if (!busStep) return [];
     
-    const routeShortName = busStep.routeShortName || busStep.route?.route_short_name;
+    const routeShortName = busStep.routeShortName || busStep.route?.route_short_name || busStep.lineName;
     const departureStopName = busStep.departureStop;
     const depTimeStr = itinerary.departureTime;
     
-    if (!routeShortName || !departureStopName || !depTimeStr) return [];
+    if (!routeShortName || !depTimeStr) return [];
     
     // Convertir l'heure de départ en minutes
     const depMinutes = parseTimeToMinutes(depTimeStr);
     if (depMinutes === null) return [];
     
+    // V212: Utiliser la date de recherche au lieu de maintenant
+    const searchTime = getSearchTime ? getSearchTime() : null;
+    let searchDate;
+    if (searchTime?.date && searchTime.date !== 'today' && searchTime.date !== "Aujourd'hui") {
+      const parts = String(searchTime.date).split(/[-/]/).map(Number);
+      if (parts.length >= 3) {
+        searchDate = new Date(parts[0], parts[1] - 1, parts[2]);
+      }
+    }
+    if (!searchDate || isNaN(searchDate.getTime())) {
+      searchDate = new Date();
+    }
+    
     // Chercher l'arrêt de départ dans GTFS
-    const matchingStops = dataManager.findStopsByName(departureStopName, 10);
-    if (!matchingStops.length) return [];
+    // V212: Essayer par nom d'abord, puis par coordonnées si disponibles
+    let stopIds = [];
     
-    const stopIds = matchingStops.map(s => s.stop_id);
+    if (departureStopName) {
+      const matchingStops = dataManager.findStopsByName(departureStopName, 15);
+      stopIds = matchingStops.map(s => s.stop_id);
+    }
     
-    // Trouver la route GTFS
-    const route = dataManager.routesByShortName[routeShortName];
+    // Si pas trouvé par nom et coordonnées disponibles, chercher par proximité
+    if (stopIds.length === 0 && busStep.departureCoords) {
+      const nearbyStops = dataManager.findNearbyStops?.(busStep.departureCoords.lat, busStep.departureCoords.lng, 200) || [];
+      stopIds = nearbyStops.map(s => s.stop_id);
+    }
+    
+    if (stopIds.length === 0) return [];
+    
+    // Trouver la route GTFS - essayer plusieurs variantes du nom
+    const routeNormalized = routeShortName.toUpperCase().replace(/\s+/g, '');
+    let route = dataManager.routesByShortName?.[routeShortName] 
+             || dataManager.routesByShortName?.[routeNormalized];
+    
+    // Fallback: chercher dans toutes les routes
+    if (!route && dataManager.routes) {
+      route = dataManager.routes.find(r => {
+        const rName = (r.route_short_name || '').toUpperCase().replace(/\s+/g, '');
+        return rName === routeNormalized || rName.includes(routeNormalized) || routeNormalized.includes(rName);
+      });
+    }
+    
     if (!route) return [];
     
-    // Calculer la fenêtre de temps (prochain 1h30 après le premier départ)
+    // Calculer la fenêtre de temps (prochain 2h après le premier départ)
     const windowStart = depMinutes * 60;
-    const windowEnd = (depMinutes + 90) * 60;
+    const windowEnd = (depMinutes + 120) * 60;
     
-    // Récupérer les départs GTFS pour cet arrêt
-    const now = new Date();
-    const currentSeconds = now.getHours() * 3600 + now.getMinutes() * 60;
-    const serviceIds = dataManager.getServiceIds(now);
-    
+    // V212: Services actifs pour la DATE de recherche
+    const serviceIds = dataManager.getServiceIds(searchDate);
     if (serviceIds.size === 0) return [];
     
     const departures = [];
     
     for (const stopId of stopIds) {
-      const stopTimes = dataManager.stopTimesByStop[stopId] || [];
+      const stopTimes = dataManager.stopTimesByStop?.[stopId] || [];
       
       for (const st of stopTimes) {
-        const trip = dataManager.tripsByTripId[st.trip_id];
+        const trip = dataManager.tripsByTripId?.[st.trip_id];
         if (!trip) continue;
         
         // Vérifier la même ligne
@@ -191,17 +224,17 @@ export function createResultsRenderer(deps) {
         
         // Vérifier service actif
         const isActive = Array.from(serviceIds).some(sid => 
-          dataManager.serviceIdsMatch(trip.service_id, sid)
+          dataManager.serviceIdsMatch?.(trip.service_id, sid)
         );
         if (!isActive) continue;
         
-        const depSeconds = dataManager.timeToSeconds(st.departure_time);
+        const depSeconds = dataManager.timeToSeconds?.(st.departure_time) || 0;
         const depMins = Math.floor(depSeconds / 60);
         
         // Dans la fenêtre et après le premier départ affiché
         if (depSeconds >= windowStart && depSeconds <= windowEnd && depMins > depMinutes) {
           departures.push({
-            departureTime: dataManager.formatTime(depSeconds),
+            departureTime: dataManager.formatTime?.(depSeconds) || st.departure_time,
             depMinutes: depMins,
             tripId: st.trip_id
           });

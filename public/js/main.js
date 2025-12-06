@@ -383,7 +383,8 @@ async function initializeApp() {
         onSelectItinerary: (itinerary, cardEl) => onSelectItinerary(itinerary, cardEl),
         onLoadMoreDepartures: () => loadMoreDepartures(), // V60: Charger plus de départs
         onLoadMoreArrivals: () => loadMoreArrivals(), // V132: Charger plus d'arrivées
-        getDataManager: () => dataManager // V64: Accès aux données GTFS pour prochains départs
+        getDataManager: () => dataManager, // V64: Accès aux données GTFS pour prochains départs
+        getSearchTime: () => lastSearchTime // V212: Expose la date/heure de recherche pour enrichissement GTFS
     });
 
     apiManager = new ApiManager(GOOGLE_API_KEY);
