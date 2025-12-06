@@ -26,6 +26,10 @@ export default async function handler(req, res) {
             res.status(upstream.status).json(payload);
             return;
         }
+        
+        // Cache CDN Vercel : 5 min (s-maxage) + stale pendant revalidation
+        // Les adresses géographiques sont stables, cache agressif OK
+        res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=60');
         res.status(200).json(payload);
     } catch (error) {
         res.status(502).json({ error: 'Geocode proxy error', details: error.message });

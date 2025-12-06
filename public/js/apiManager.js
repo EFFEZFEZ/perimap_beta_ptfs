@@ -837,13 +837,17 @@ export class ApiManager {
      * Méthode privée pour calculer uniquement le bus
      * ✅ V178: Utilise le proxy Vercel pour masquer la clé API
      * ✅ V48: Gère les alias via coordonnées
+     * ✅ V226: Utilise GET pour activer le cache CDN Vercel
      * @private
      */
     async _fetchBusRoute(fromPlaceId, toPlaceId, searchTime = null, fromCoords = null, toCoords = null) {
-        // ✅ V178: Utiliser le proxy Vercel
-        const API_URL = this.useProxy 
-            ? `${this.apiEndpoints.routes}?action=directions`
-            : 'https://routes.googleapis.com/directions/v2:computeRoutes';
+        // ✅ V226: Construire l'URL GET pour le cache CDN
+        if (this.useProxy) {
+            return this._fetchBusRouteGET(fromPlaceId, toPlaceId, searchTime, fromCoords, toCoords);
+        }
+
+        // Fallback mode direct (dev local sans proxy)
+        const API_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
 
         // ✅ V48: Utiliser les coordonnées pour les alias, sinon placeId
         const origin = fromCoords 
@@ -857,36 +861,29 @@ export class ApiManager {
             origin,
             destination,
             travelMode: "TRANSIT",
-            computeAlternativeRoutes: true,  // Demander plusieurs alternatives
+            computeAlternativeRoutes: true,
             transitPreferences: {
-                allowedTravelModes: ["BUS"],  // Uniquement bus (pas train, métro, tram)
-                routingPreference: "FEWER_TRANSFERS"  // V63: Prioriser moins de correspondances
+                allowedTravelModes: ["BUS"],
+                routingPreference: "FEWER_TRANSFERS"
             },
             languageCode: "fr",
             units: "METRIC"
-            // Note: requestedReferenceRoutes n'est PAS supporté pour TRANSIT
         };
 
-        // Ajout du temps de départ/arrivée
         if (searchTime) {
             const dateTime = this._buildDateTime(searchTime);
             if (searchTime.type === 'arriver') {
                 body.arrivalTime = dateTime;
-                console.log(`🎯 V222 API arrivalTime: ${dateTime}`);
             } else {
                 body.departureTime = dateTime;
             }
         }
 
-        // ✅ V178: Headers différents selon mode proxy ou direct
         const headers = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': this.apiKey,
+            'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs.steps'
         };
-        
-        if (!this.useProxy) {
-            headers['X-Goog-Api-Key'] = this.apiKey;
-            headers['X-Goog-FieldMask'] = 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs.steps';
-        }
 
         const response = await fetch(API_URL, {
             method: 'POST',
@@ -897,7 +894,6 @@ export class ApiManager {
         if (!response.ok) {
             const errorText = await response.text();
             console.error("❌ Erreur API Routes (bus):", errorText);
-            
             if (response.status === 404 || errorText.includes("NOT_FOUND")) {
                 throw new Error("Aucun bus disponible");
             }
@@ -905,13 +901,118 @@ export class ApiManager {
         }
 
         const data = await response.json();
-        
         if (!data.routes || data.routes.length === 0) {
             throw new Error("Aucun itinéraire en bus trouvé");
         }
 
         console.log(`✅ ${data.routes.length} itinéraire(s) bus trouvé(s)`);
         return data;
+    }
+
+    /**
+     * ✅ V226: Fetch bus route via GET pour activer le cache CDN Vercel
+     * @private
+     */
+    async _fetchBusRouteGET(fromPlaceId, toPlaceId, searchTime = null, fromCoords = null, toCoords = null) {
+        const params = new URLSearchParams();
+
+        // Origin: coords "lat,lng" ou placeId
+        if (fromCoords) {
+            params.set('origin', `${fromCoords.lat},${fromCoords.lng}`);
+        } else {
+            params.set('origin', fromPlaceId);
+        }
+
+        // Destination: coords "lat,lng" ou placeId
+        if (toCoords) {
+            params.set('destination', `${toCoords.lat},${toCoords.lng}`);
+        } else {
+            params.set('destination', toPlaceId);
+        }
+
+        // Temps (arrondi à 5 min pour optimiser le cache)
+        if (searchTime) {
+            const dateTime = this._buildDateTimeRounded(searchTime);
+            params.set('time', dateTime);
+            params.set('timeType', searchTime.type === 'arriver' ? 'arrival' : 'departure');
+            console.log(`🎯 V226 GET ${searchTime.type}: ${dateTime}`);
+        }
+
+        const url = `${this.apiEndpoints.routes}?action=directions&${params.toString()}`;
+        console.log(`🚌 V226 GET Cache-enabled: ${url.substring(0, 100)}...`);
+
+        const response = await fetch(url, { method: 'GET' });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("❌ Erreur API Routes GET (bus):", errorText);
+            if (response.status === 404 || errorText.includes("NOT_FOUND")) {
+                throw new Error("Aucun bus disponible");
+            }
+            throw new Error(`Erreur API Routes: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.routes || data.routes.length === 0) {
+            throw new Error("Aucun itinéraire en bus trouvé");
+        }
+
+        // Log si réponse du cache
+        const cacheStatus = response.headers.get('x-vercel-cache');
+        if (cacheStatus) {
+            console.log(`📦 Cache Vercel: ${cacheStatus}`);
+        }
+
+        console.log(`✅ ${data.routes.length} itinéraire(s) bus trouvé(s)`);
+        return data;
+    }
+
+    /**
+     * ✅ V226: Construit DateTime arrondi à 5 minutes pour optimiser le cache
+     * @private
+     */
+    _buildDateTimeRounded(searchTime) {
+        const { date, hour, minute } = searchTime;
+        
+        const toLocalDate = (value) => {
+            if (!value || value === 'today' || value === "Aujourd'hui") {
+                return new Date();
+            }
+            const parts = String(value).split(/[-/]/).map(Number);
+            if (parts.length >= 3 && parts.every(n => Number.isFinite(n))) {
+                const [y, m, d] = parts;
+                return new Date(y, m - 1, d);
+            }
+            return new Date(value);
+        };
+
+        let dateObj = toLocalDate(date);
+        if (isNaN(dateObj.getTime())) {
+            dateObj = new Date();
+        }
+        
+        const hourInt = parseInt(hour) || 0;
+        let minuteInt = parseInt(minute) || 0;
+        
+        // ✅ V226: Arrondir aux 5 minutes inférieures pour maximiser les cache hits
+        minuteInt = Math.floor(minuteInt / 5) * 5;
+        
+        dateObj.setHours(hourInt, minuteInt, 0, 0);
+        
+        // Construire ISO avec timezone
+        const tzOffset = -dateObj.getTimezoneOffset();
+        const sign = tzOffset >= 0 ? '+' : '-';
+        const offsetHours = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2, '0');
+        const offsetMinutes = String(Math.abs(tzOffset) % 60).padStart(2, '0');
+        
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+        
+        // Format simplifié sans secondes pour URL plus courte
+        return `${year}-${month}-${day}T${hours}:${minutes}${sign}${offsetHours}:${offsetMinutes}`;
     }
 
     /**
@@ -969,16 +1070,19 @@ export class ApiManager {
      * Calcule un itinéraire à vélo
      * ✅ V178: Utilise le proxy Vercel pour masquer la clé API
      * ✅ V48: Gère les alias via coordonnées
+     * ✅ V226: Utilise GET pour activer le cache CDN Vercel
      */
     async fetchBicycleRoute(fromPlaceId, toPlaceId, fromCoords = null, toCoords = null) {
         console.log(`🚴 API Google Routes (VÉLO): ${fromPlaceId} → ${toPlaceId}`);
 
-        // ✅ V178: Utiliser le proxy Vercel
-        const API_URL = this.useProxy 
-            ? `${this.apiEndpoints.routes}?action=bicycle`
-            : 'https://routes.googleapis.com/directions/v2:computeRoutes';
+        // ✅ V226: Utiliser GET pour le cache CDN
+        if (this.useProxy) {
+            return this._fetchSimpleRouteGET('bicycle', fromPlaceId, toPlaceId, fromCoords, toCoords);
+        }
 
-        // ✅ V48: Utiliser les coordonnées pour les alias, sinon placeId
+        // Fallback mode direct
+        const API_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+
         const origin = fromCoords 
             ? { location: { latLng: { latitude: fromCoords.lat, longitude: fromCoords.lng } } }
             : { placeId: fromPlaceId };
@@ -994,15 +1098,11 @@ export class ApiManager {
             units: "METRIC"
         };
 
-        // ✅ V178: Headers différents selon mode proxy ou direct
         const headers = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': this.apiKey,
+            'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs.steps'
         };
-        
-        if (!this.useProxy) {
-            headers['X-Goog-Api-Key'] = this.apiKey;
-            headers['X-Goog-FieldMask'] = 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs.steps';
-        }
 
         const response = await fetch(API_URL, {
             method: 'POST',
@@ -1025,16 +1125,19 @@ export class ApiManager {
      * Calcule un itinéraire à pied
      * ✅ V178: Utilise le proxy Vercel pour masquer la clé API
      * ✅ V48: Gère les alias via coordonnées
+     * ✅ V226: Utilise GET pour activer le cache CDN Vercel
      */
     async fetchWalkingRoute(fromPlaceId, toPlaceId, fromCoords = null, toCoords = null) {
         console.log(`🚶 API Google Routes (MARCHE): ${fromPlaceId} → ${toPlaceId}`);
 
-        // ✅ V178: Utiliser le proxy Vercel
-        const API_URL = this.useProxy 
-            ? `${this.apiEndpoints.routes}?action=walking`
-            : 'https://routes.googleapis.com/directions/v2:computeRoutes';
+        // ✅ V226: Utiliser GET pour le cache CDN
+        if (this.useProxy) {
+            return this._fetchSimpleRouteGET('walking', fromPlaceId, toPlaceId, fromCoords, toCoords);
+        }
 
-        // ✅ V48: Utiliser les coordonnées pour les alias, sinon placeId
+        // Fallback mode direct
+        const API_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+
         const origin = fromCoords 
             ? { location: { latLng: { latitude: fromCoords.lat, longitude: fromCoords.lng } } }
             : { placeId: fromPlaceId };
@@ -1050,15 +1153,11 @@ export class ApiManager {
             units: "METRIC"
         };
 
-        // ✅ V178: Headers différents selon mode proxy ou direct
         const headers = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': this.apiKey,
+            'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs.steps'
         };
-        
-        if (!this.useProxy) {
-            headers['X-Goog-Api-Key'] = this.apiKey;
-            headers['X-Goog-FieldMask'] = 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs.steps';
-        }
 
         const response = await fetch(API_URL, {
             method: 'POST',
@@ -1074,6 +1173,50 @@ export class ApiManager {
 
         const data = await response.json();
         console.log("✅ Itinéraire marche calculé");
+        return data;
+    }
+
+    /**
+     * ✅ V226: Fetch route simple (vélo/marche) via GET pour cache CDN
+     * @private
+     */
+    async _fetchSimpleRouteGET(mode, fromPlaceId, toPlaceId, fromCoords = null, toCoords = null) {
+        const params = new URLSearchParams();
+
+        // Origin
+        if (fromCoords) {
+            params.set('origin', `${fromCoords.lat},${fromCoords.lng}`);
+        } else {
+            params.set('origin', fromPlaceId);
+        }
+
+        // Destination
+        if (toCoords) {
+            params.set('destination', `${toCoords.lat},${toCoords.lng}`);
+        } else {
+            params.set('destination', toPlaceId);
+        }
+
+        const url = `${this.apiEndpoints.routes}?action=${mode}&${params.toString()}`;
+        console.log(`🚴🚶 V226 GET ${mode}: ${url.substring(0, 80)}...`);
+
+        const response = await fetch(url, { method: 'GET' });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ Erreur API Routes GET (${mode}):`, errorText);
+            throw new Error(`Erreur ${mode}: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Log cache status
+        const cacheStatus = response.headers.get('x-vercel-cache');
+        if (cacheStatus) {
+            console.log(`📦 Cache Vercel (${mode}): ${cacheStatus}`);
+        }
+
+        console.log(`✅ Itinéraire ${mode} calculé`);
         return data;
     }
 

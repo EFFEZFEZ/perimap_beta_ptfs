@@ -95,6 +95,8 @@ export default async function handler(req, res) {
                 }));
 
             console.log('[places proxy] Returning', predictions.length, 'predictions');
+            // Cache CDN court : 60s (suggestions = dynamiques mais souvent répétées)
+            res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=30');
             res.status(200).json({ predictions });
             return;
         }
@@ -132,6 +134,8 @@ export default async function handler(req, res) {
             }
 
             if (data.location) {
+                // Cache CDN Vercel : 24h (coordonnées GPS = immuables)
+                res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=3600');
                 res.status(200).json({ 
                     lat: data.location.latitude, 
                     lng: data.location.longitude,
