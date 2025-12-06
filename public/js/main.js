@@ -1669,6 +1669,8 @@ async function loadMoreDepartures() {
     }
     
     // Si on a trouvé un dernier départ, on l'utilise comme base
+    // V209: On ajoute seulement +1 min car l'API Google ajoute déjà des décalages internes (+15/+30/+50)
+    // Avant on ajoutait +5 min, ce qui créait des sauts d'horaire (7h26 → 9h22)
     if (busItineraries.length > 0) {
         const lastDep = busItineraries[busItineraries.length - 1].departureTime;
         const match = lastDep?.match(/(\d{1,2}):(\d{2})/);
@@ -1680,7 +1682,7 @@ async function loadMoreDepartures() {
             // Il faut ajuster la date. Simplification: on prend l'heure de lastSearchTime
             // Si lastDep < lastSearchTime, c'est probablement le lendemain
             
-            baseDateObj.setHours(h, m + 5, 0, 0); // +5 min
+            baseDateObj.setHours(h, m + 1, 0, 0); // +1 min seulement (l'API ajoute déjà des décalages)
             
             // Si on passe de 23h à 00h, setHours gère le changement de jour automatiquement
             // MAIS il faut être sûr que baseDateObj était au bon jour avant
