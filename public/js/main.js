@@ -2879,7 +2879,9 @@ function processIntelligentResults(intelligentResults, searchTime) {
 
     // V115: Passer le searchMode à deduplicateItineraries pour garder les bons horaires
     const searchMode = searchTime?.type || 'partir';
-    let finalList = deduplicateItineraries(itineraries, searchMode);
+    // V216: DÉSACTIVÉ - On garde TOUS les trajets, même avec la même structure mais horaires différents
+    // let finalList = deduplicateItineraries(itineraries, searchMode);
+    let finalList = [...itineraries];
 
     // Tri + pagination spécifique au mode "arriver"
     if (searchTime && searchTime.type === 'arriver') {
