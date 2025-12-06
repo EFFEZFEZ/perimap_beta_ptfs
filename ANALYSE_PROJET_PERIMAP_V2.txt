@@ -1,0 +1,311 @@
+================================================================================
+               ANALYSE TECHNIQUE APPROFONDIE - PÉRIMAP V220
+                     Mise à jour : 6 décembre 2025
+================================================================================
+
+================================================================================
+1. RÉSUMÉ EXÉCUTIF
+================================================================================
+
+Périmap est une PWA de planification de trajets bus pour le réseau Péribus
+(Grand Périgueux). Version actuelle : V220 (Service Worker).
+
+STACK TECHNIQUE :
+- Frontend : Vanilla JS (ES Modules), Leaflet, CSS Grid/Flexbox
+- Backend : Proxies Vercel (Node.js) - /api/routes, /api/places, /api/geocode
+- Données : GTFS statiques + Google Routes API (temps réel)
+- Cache : IndexedDB + Service Worker
+
+CE QUI FONCTIONNE (après 8h de debug) :
+✅ Mode "partir à" : 8 appels API décalés sur 3h, max 8 résultats
+✅ Mode "arriver à" : 1 appel API, filtrage par heure actuelle (pas demandée)
+✅ Déduplication intelligente par heure+ligne+arrêt
+✅ Extraction correcte des heures de départ depuis Google Routes API
+
+================================================================================
+2. ARCHITECTURE DU CODE - FLUX DE DONNÉES CRITIQUES
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        FLUX DE RECHERCHE D'ITINÉRAIRE                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  [1] UTILISATEUR
+       │
+       ▼
+  [2] uiManager.js → Collecte from/to/searchTime
+       │
+       ▼
+  [3] main.js::executeItinerarySearch()
+       │
+       ├──► [4a] router.js (GTFS local) → 0 résultats (souvent)
+       │
+       └──► [4b] apiManager.js::fetchItinerary() ◄── CRITIQUE
+                  │
+                  ├── Mode "partir" : 8 appels API décalés (T+0 à T+180min)
+                  │
+                  └── Mode "arriver" : 1 seul appel API (V219)
+                        │
+                        ▼
+              [5] extractDepartureTime() ◄── BUG CORRIGÉ V217
+                  │   (extrait l'heure depuis transitDetails)
+                  ▼
+              [6] Déduplication par uniqueKey ◄── BUG CORRIGÉ V217
+                  │   (clé = "depTime-lineName-depStopName")
+                  ▼
+              [7] Tri par heure de départ
+                  │
+                  ▼
+              [8] Limite à 8 résultats (V218)
+                  │
+                  ▼
+  [9] main.js::processIntelligentResults()
+       │
+       ▼
+  [10] ranking.js::filterExpiredDepartures() ◄── BUG CORRIGÉ V220
+       │   (Mode arriver : filtre par heure ACTUELLE)
+       ▼
+  [11] ranking.js::filterLateArrivals()
+       │   (Mode arriver : filtre arrivées > heure demandée)
+       ▼
+  [12] resultsRenderer.js → Affichage
+
+================================================================================
+3. FICHIERS CRITIQUES - NE PAS CASSER
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ FICHIER              │ RÔLE                     │ ZONES SENSIBLES           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ apiManager.js        │ Appels Google Routes API │ • extractDepartureTime()  │
+│ (1117 lignes)        │ Déduplication            │ • uniqueKey construction  │
+│                      │ Multi-appels décalés     │ • _offsetSearchTime()     │
+│                      │                          │ • Mode arriver (1 appel)  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ranking.js           │ Filtrage/tri résultats   │ • filterExpiredDepartures │
+│ (374 lignes)         │                          │   → V220: heure actuelle  │
+│                      │                          │     si mode arriver       │
+│                      │                          │ • filterLateArrivals()    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ main.js              │ Orchestration            │ • executeItinerarySearch  │
+│ (4607 lignes)        │                          │ • processIntelligentResults│
+│                      │                          │ • loadMoreDepartures()    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ dataManager.js       │ Données GTFS             │ • getTripsBetweenStops()  │
+│ (1570 lignes)        │ Recherche locale         │ • getServiceIds()         │
+│                      │                          │ • timeToSeconds()         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ router.js            │ Routage GTFS local       │ • computeHybridItinerary  │
+│                      │ (souvent 0 résultats)    │ • correspondances         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ service-worker.js    │ Cache PWA                │ • CACHE_VERSION           │
+│                      │                          │   (incrémenté à chaque    │
+│                      │                          │    déploiement)           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+4. BUGS MAJEURS CORRIGÉS - HISTORIQUE DES 8H DE DEBUG
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ BUG                          │ CAUSE                    │ FIX               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Saut d'horaires              │ Mauvais chemin pour      │ V217: Helper      │
+│ (14:04 → 15:53)              │ extraire depTime         │ extractDeparture- │
+│                              │ route.legs[0].localized  │ Time() qui        │
+│                              │ Values... = vide pour    │ parcourt steps[]  │
+│                              │ TRANSIT                  │ TRANSIT           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Déduplication trop           │ uniqueKey = ""-lineName  │ V217: Clé =       │
+│ agressive                    │ (depTime vide)           │ depTime-line-stop │
+│ 39 routes → 3                │                          │                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Mode arriver = 0 bus         │ 8 appels avec arrivalTime│ V219: 1 seul      │
+│                              │ décalés dans le PASSÉ    │ appel en mode     │
+│                              │ (T-20, T-40...) = aucun  │ arriver           │
+│                              │ résultat                 │                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Mode arriver filtre          │ filterExpiredDepartures  │ V220: En mode     │
+│ tous les bus                 │ comparait départ vs      │ arriver, comparer │
+│                              │ heure DEMANDÉE (arrivée) │ à heure ACTUELLE  │
+│                              │ Ex: 15:32 < 17:10 → filtr│                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+5. CHEMINS D'EXTRACTION DE DONNÉES GOOGLE ROUTES API
+================================================================================
+
+STRUCTURE RÉPONSE GOOGLE ROUTES API (mode TRANSIT) :
+
+route
+├── duration: "3660s"
+├── distanceMeters: 12500
+├── polyline: { encodedPolyline: "..." }
+└── legs[]
+    └── [0]
+        ├── localizedValues
+        │   └── departureTime  ◄── VIDE pour TRANSIT !
+        │       └── time.text: ""
+        └── steps[]
+            ├── [0] travelMode: "WALK" (marche vers arrêt)
+            ├── [1] travelMode: "TRANSIT" ◄── C'EST LÀ
+            │   └── transitDetails
+            │       ├── transitLine
+            │       │   ├── nameShort: "A"
+            │       │   └── name: "Ligne A"
+            │       ├── localizedValues
+            │       │   ├── departureTime
+            │       │   │   └── time.text: "14:04" ◄── BONNE VALEUR
+            │       │   └── arrivalTime
+            │       │       └── time.text: "14:52"
+            │       └── stopDetails
+            │           ├── departureStop.name: "Gare SNCF"
+            │           └── arrivalStop.name: "Mairie"
+            └── [2] travelMode: "WALK" (marche finale)
+
+RÈGLE D'OR : Pour les routes TRANSIT, toujours parcourir steps[] et chercher
+             travelMode === 'TRANSIT', puis extraire de transitDetails.
+
+================================================================================
+6. LOGIQUE MODE "PARTIR" vs MODE "ARRIVER"
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              MODE "PARTIR À"                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ • Utilisateur veut PARTIR à une heure précise                               │
+│ • 8 appels API décalés : T+0, T+20, T+40, T+60, T+90, T+120, T+150, T+180  │
+│ • API reçoit departureTime = heure de départ souhaitée                      │
+│ • Filtrage : garder départs >= heure demandée                               │
+│ • Tri : départ croissant (le plus tôt en premier)                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              MODE "ARRIVER À"                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ • Utilisateur veut ARRIVER avant une heure précise                          │
+│ • 1 SEUL appel API (V219) - Google gère les alternatives                    │
+│ • API reçoit arrivalTime = heure d'arrivée souhaitée                        │
+│ • Filtrage V220 :                                                           │
+│   - Départs : garder ceux >= heure ACTUELLE (pas demandée !)               │
+│   - Arrivées : garder ceux <= heure demandée                                │
+│ • Tri : arrivée DÉCROISSANTE (le plus proche de l'heure cible en premier)  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+7. DÉDUPLICATION - RÈGLES
+================================================================================
+
+OBJECTIF : Éviter d'afficher le même trajet plusieurs fois (même bus, même
+           arrêts) juste parce qu'il apparaît dans plusieurs appels API.
+
+CLÉ UNIQUE (V217) :
+  uniqueKey = `${depTime}-${lineName}-${depStopName}`
+
+EXEMPLES :
+  "14:04-A-Gare SNCF"     ✓ Gardé
+  "14:04-A-Gare SNCF"     ✗ Doublon, ignoré
+  "14:24-A-Gare SNCF"     ✓ Gardé (heure différente)
+  "14:04-B-Gare SNCF"     ✓ Gardé (ligne différente)
+  "14:04-A-Place Tourny"  ✓ Gardé (arrêt différent)
+
+PIÈGE CORRIGÉ V217 :
+  Si depTime = "" (vide), tous les trajets ont la même clé "" → 1 seul gardé !
+
+================================================================================
+8. CONSTANTES IMPORTANTES À CONNAÎTRE
+================================================================================
+
+apiManager.js :
+  - MAX_BUS_RESULTS = 8 (slice(0, 8) ligne ~718)
+  - Offsets mode partir : [0, 20, 40, 60, 90, 120, 150, 180] minutes
+
+ranking.js :
+  - MIN_BUS_ITINERARIES = 5 (warning si moins)
+  - Marge de filtrage : -2 minutes (ligne ~181)
+
+main.js :
+  - ARRIVAL_PAGE_SIZE = 6 (pagination mode arriver)
+  - ENABLE_GTFS_ROUTER = true (V189+)
+
+service-worker.js :
+  - CACHE_VERSION = 'v220' (incrémenté à CHAQUE déploiement)
+
+================================================================================
+9. CHECKLIST DEBUG - SAUTS D'HORAIRES
+================================================================================
+
+Si les horaires sautent (ex: 14:04 → 15:53 sans bus entre) :
+
+1. VÉRIFIER LES LOGS CONSOLE :
+   • "📋 Horaires: 14:04, 14:24, 14:52..." → extraction OK
+   • "📋 Horaires: , , ..." → extraction CASSÉE (V217)
+
+2. VÉRIFIER LA DÉDUPLICATION :
+   • "🚍 V218: 8/21 trajets" → OK
+   • "🚍 V218: 1/21 trajets" → uniqueKey probablement cassée
+
+3. VÉRIFIER LE FILTRAGE :
+   • "🕐 V205: Filtrage des trajets avant 14:00" → mode partir OK
+   • "🕐 V220: Mode ARRIVER - Filtrage... heure actuelle" → mode arriver OK
+   • "🚫 X trajet(s) passé(s) filtré(s)" → normal si X < total
+
+4. VÉRIFIER LE MODE :
+   • "⏰ Mode: partir" ou "⏰ Mode: arriver" dans les logs
+
+5. POINTS DE RUPTURE POTENTIELS :
+   • apiManager.js ligne ~660 : extractDepartureTime()
+   • apiManager.js ligne ~700 : construction uniqueKey
+   • ranking.js ligne ~160 : filterExpiredDepartures
+
+================================================================================
+10. AMÉLIORATIONS FUTURES RECOMMANDÉES
+================================================================================
+
+HAUTE PRIORITÉ :
+[ ] Tests unitaires pour ranking.js (filterExpiredDepartures, etc.)
+[ ] Tests d'intégration pour apiManager.fetchItinerary()
+[ ] Logging structuré (JSON) pour faciliter le debug
+
+MOYENNE PRIORITÉ :
+[ ] Cache des résultats Google Routes (éviter re-appels identiques)
+[ ] Métriques de performance (temps de réponse API, taux d'erreur)
+[ ] Mode hors-ligne amélioré (cache des derniers trajets cherchés)
+
+BASSE PRIORITÉ :
+[ ] Refactoring main.js (4607 lignes → découper en modules)
+[ ] TypeScript pour type safety
+[ ] Documentation JSDoc complète
+
+================================================================================
+11. COMMANDES GIT UTILES
+================================================================================
+
+# Voir les changements récents sur un fichier critique
+git log --oneline -20 -- public/js/apiManager.js
+
+# Comparer avec une version précédente
+git diff v217..v220 -- public/js/apiManager.js
+
+# Revenir à une version fonctionnelle (en cas de régression)
+git checkout v217 -- public/js/apiManager.js
+
+# Créer un tag de version stable
+git tag -a v220-stable -m "Mode arriver fonctionnel"
+
+================================================================================
+12. CONTACT & MAINTENANCE
+================================================================================
+
+Repository : https://github.com/EFFEZFEZ/p-rimap-sans-api-
+Production : https://périmap.fr (Vercel)
+
+En cas de bug horaires :
+1. Vérifier CACHE_VERSION dans service-worker.js
+2. Forcer refresh navigateur (Ctrl+Shift+R)
+3. Vérifier les logs console pour identifier l'étape cassée
+4. Se référer à cette analyse pour comprendre le flux
+
+================================================================================
+                            FIN DE L'ANALYSE V2
+================================================================================

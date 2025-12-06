@@ -359,6 +359,163 @@ Ce projet est sous licence **MIT**. Voir le fichier [LICENSE](LICENSE) pour plus
 
 ---
 
+## 🔧 Documentation Technique - IMPÉRATIFS DE DÉVELOPPEMENT
+
+> **⚠️ SECTION CRITIQUE** - Lire avant toute modification du code
+
+### Architecture des Flux d'Itinéraires
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        FLUX DE RECHERCHE D'ITINÉRAIRE                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Utilisateur → uiManager.js → main.js::executeItinerarySearch()
+                                         │
+         ┌───────────────────────────────┴───────────────────────────────┐
+         │                                                               │
+    router.js (GTFS local)                              apiManager.js::fetchItinerary()
+    (souvent 0 résultats car                                    │
+     trajets avec correspondances)                    ┌─────────┴─────────┐
+                                                      │                   │
+                                              Mode "partir"      Mode "arriver"
+                                              8 appels API       1 appel API
+                                              décalés            unique (V219)
+                                                      │
+                                                      ▼
+                                        extractDepartureTime() ← CRITIQUE V217
+                                                      │
+                                                      ▼
+                                        Déduplication par uniqueKey ← CRITIQUE V217
+                                                      │
+                                                      ▼
+                                              main.js::processIntelligentResults()
+                                                      │
+                                                      ▼
+                                        ranking.js::filterExpiredDepartures() ← CRITIQUE V220
+                                                      │
+                                                      ▼
+                                              Affichage résultats
+```
+
+### 🚨 Fichiers Critiques - NE JAMAIS MODIFIER SANS COMPRENDRE
+
+| Fichier | Lignes critiques | Fonction | Bug potentiel si cassé |
+|---------|------------------|----------|------------------------|
+| `apiManager.js` | 650-720 | `extractDepartureTime()` | Horaires vides, déduplication cassée |
+| `apiManager.js` | 695-705 | Construction `uniqueKey` | Tous trajets dédupliqués sauf 1 |
+| `apiManager.js` | 620-650 | Stratégie mode partir/arriver | 0 résultats en mode arriver |
+| `ranking.js` | 140-190 | `filterExpiredDepartures()` | Tous bus filtrés en mode arriver |
+| `ranking.js` | 195-210 | `filterLateArrivals()` | Arrivées tardives non filtrées |
+| `service-worker.js` | 1 | `CACHE_VERSION` | Changements non déployés |
+
+### 🔍 Extraction des Heures de Départ (V217)
+
+**PROBLÈME RÉSOLU** : L'API Google Routes renvoie les heures différemment selon le mode de transport.
+
+```javascript
+// ❌ MAUVAIS CHEMIN (vide pour TRANSIT) :
+route.legs[0].localizedValues.departureTime.time.text  // → ""
+
+// ✅ BON CHEMIN (V217) :
+route.legs[0].steps.find(s => s.travelMode === 'TRANSIT')
+  .transitDetails.localizedValues.departureTime.time.text  // → "14:04"
+```
+
+**Fonction critique** (`apiManager.js` ~ligne 660) :
+```javascript
+const extractDepartureTime = (route) => {
+    // Chercher dans les steps TRANSIT
+    const transitStep = route.legs?.[0]?.steps?.find(s => s.travelMode === 'TRANSIT');
+    if (transitStep?.transitDetails) {
+        const transit = transitStep.transitDetails;
+        return transit.localizedValues?.departureTime?.time?.text || '';
+    }
+    return '';
+};
+```
+
+### 🎯 Mode "Partir" vs Mode "Arriver"
+
+| Aspect | Mode "Partir à" | Mode "Arriver à" |
+|--------|-----------------|------------------|
+| **Appels API** | 8 décalés (T+0 à T+180min) | 1 seul (V219) |
+| **Paramètre API** | `departureTime` | `arrivalTime` |
+| **Filtrage départs** | >= heure demandée | >= heure **actuelle** (V220) |
+| **Filtrage arrivées** | N/A | <= heure demandée |
+| **Tri** | Départ croissant | Arrivée décroissante |
+
+**ERREUR CORRIGÉE V220** : En mode "arriver à 17h10", les bus de 15h32 étaient filtrés car `15:32 < 17:10`. Or en mode arriver, il faut comparer à l'heure **actuelle**, pas demandée !
+
+### 🔄 Déduplication des Résultats (V217)
+
+**Clé unique** = `${depTime}-${lineName}-${depStopName}`
+
+```javascript
+// Exemples de clés :
+"14:04-A-Gare SNCF"     // ✓ Gardé
+"14:04-A-Gare SNCF"     // ✗ Doublon
+"14:24-A-Gare SNCF"     // ✓ Heure différente
+"14:04-B-Gare SNCF"     // ✓ Ligne différente
+```
+
+**Piège** : Si `depTime = ""` (extraction cassée), toutes les clés = `"-A-Gare"` → 1 seul résultat !
+
+### 🐛 Checklist Debug - Sauts d'Horaires
+
+Si les horaires sautent (ex: 14:04 → 15:53 sans bus entre) :
+
+1. **Vérifier logs console** :
+   - `📋 Horaires: 14:04, 14:24...` → OK
+   - `📋 Horaires: , , ...` → Extraction cassée (V217)
+
+2. **Vérifier déduplication** :
+   - `🚍 V218: 8/21 trajets` → OK
+   - `🚍 V218: 1/21 trajets` → uniqueKey cassée
+
+3. **Vérifier filtrage** :
+   - `🕐 V220: Mode ARRIVER - heure actuelle` → OK
+   - `🚫 X trajet(s) filtré(s)` → Normal si X < total
+
+4. **Points de rupture** :
+   - `apiManager.js:660` - extractDepartureTime()
+   - `apiManager.js:700` - uniqueKey
+   - `ranking.js:160` - filterExpiredDepartures
+
+### 📋 Constantes Importantes
+
+```javascript
+// apiManager.js
+MAX_BUS_RESULTS = 8;  // slice(0, 8)
+OFFSETS_PARTIR = [0, 20, 40, 60, 90, 120, 150, 180];  // minutes
+
+// ranking.js
+MIN_BUS_ITINERARIES = 5;  // warning si moins
+FILTER_MARGIN = -2;  // minutes de marge
+
+// main.js
+ARRIVAL_PAGE_SIZE = 6;
+ENABLE_GTFS_ROUTER = true;
+
+// service-worker.js
+CACHE_VERSION = 'v220';  // ⚠️ INCRÉMENTER À CHAQUE DEPLOY
+```
+
+### 🚀 Déploiement
+
+1. **Modifier le code**
+2. **Incrémenter CACHE_VERSION** dans `service-worker.js`
+3. **Git commit & push**
+4. **Vérifier Vercel** (déploiement auto)
+5. **Tester en navigation privée** ou forcer refresh (Ctrl+Shift+R)
+
+### 📚 Fichiers d'Analyse
+
+- `ANALYSE_PROJET_PERIMAP.txt` - Analyse business/stratégie
+- `ANALYSE_PROJET_PERIMAP_V2.txt` - **Analyse technique détaillée** (ce document)
+
+---
+
 ## Roadmap de développement
 
 ### En cours (v128+)
