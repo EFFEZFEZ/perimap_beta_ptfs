@@ -654,6 +654,32 @@ export class ApiManager {
             this.fetchWalkingRoute(fromPlaceId, toPlaceId, fromCoords, toCoords)
         ]);
 
+        // V217: Helper pour extraire l'heure de départ d'une route Google
+        const extractDepartureTime = (route) => {
+            // Essayer d'abord le chemin direct
+            let depTime = route.legs?.[0]?.localizedValues?.departureTime?.time?.text;
+            if (depTime) return depTime;
+            
+            // Sinon chercher dans les steps TRANSIT
+            const transitStep = route.legs?.[0]?.steps?.find(s => s.travelMode === 'TRANSIT');
+            if (transitStep?.transitDetails) {
+                const transit = transitStep.transitDetails;
+                depTime = transit.localizedValues?.departureTime?.time?.text;
+                if (depTime) return depTime;
+                
+                // Fallback: stopDetails.departureTime
+                const stopDep = transit.stopDetails?.departureTime;
+                if (stopDep) {
+                    // Format ISO -> HH:MM
+                    const d = new Date(stopDep);
+                    if (!isNaN(d.getTime())) {
+                        return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                    }
+                }
+            }
+            return '';
+        };
+
         // 1️⃣ Traitement BUS - Fusionner et dédupliquer
         if (busResults.status === 'fulfilled') {
             const allBusRoutes = [];
@@ -662,11 +688,15 @@ export class ApiManager {
             for (const result of busResults.value) {
                 if (result.status === 'fulfilled' && result.value?.routes?.length > 0) {
                     for (const route of result.value.routes) {
-                        // Clé unique = heure départ + ligne (pour éviter doublons)
-                        const depTime = route.legs?.[0]?.localizedValues?.departureTime?.time?.text || '';
+                        // V217: Utiliser le helper pour extraire l'heure
+                        const depTime = extractDepartureTime(route);
                         const transitStep = route.legs?.[0]?.steps?.find(s => s.travelMode === 'TRANSIT');
-                        const lineName = transitStep?.transitDetails?.transitLine?.name || '';
-                        const uniqueKey = `${depTime}-${lineName}`;
+                        const lineName = transitStep?.transitDetails?.transitLine?.nameShort || 
+                                        transitStep?.transitDetails?.transitLine?.name || '';
+                        
+                        // V217: Clé unique = heure départ + ligne + arrêt départ (pour plus de précision)
+                        const depStopName = transitStep?.transitDetails?.stopDetails?.departureStop?.name || '';
+                        const uniqueKey = `${depTime}-${lineName}-${depStopName}`;
                         
                         if (!seenDepartures.has(uniqueKey)) {
                             seenDepartures.add(uniqueKey);
@@ -677,10 +707,10 @@ export class ApiManager {
             }
             
             if (allBusRoutes.length > 0) {
-                // Trier par heure de départ (format HH:MM)
+                // V217: Trier par heure de départ en utilisant le helper
                 allBusRoutes.sort((a, b) => {
-                    const depA = a.legs?.[0]?.localizedValues?.departureTime?.time?.text || '99:99';
-                    const depB = b.legs?.[0]?.localizedValues?.departureTime?.time?.text || '99:99';
+                    const depA = extractDepartureTime(a) || '99:99';
+                    const depB = extractDepartureTime(b) || '99:99';
                     return depA.localeCompare(depB);
                 });
                 
@@ -696,10 +726,10 @@ export class ApiManager {
                 const transferCount = Math.max(0, transitSteps.length - 1);
                 
                 results.bus = { data: busData, duration: durationMinutes, transfers: transferCount };
-                console.log(`🚍 V198: ${allBusRoutes.length} trajets trouvés (tous renvoyés)`);
+                console.log(`🚍 V217: ${allBusRoutes.length} trajets trouvés (tous renvoyés)`);
                 
-                // Log des heures pour vérification
-                const heures = allBusRoutes.map(r => r.legs?.[0]?.localizedValues?.departureTime?.time?.text).join(', ');
+                // V217: Log des heures pour vérification (avec le helper)
+                const heures = allBusRoutes.map(r => extractDepartureTime(r)).filter(Boolean).join(', ');
                 console.log(`📋 Horaires: ${heures}`);
                 
                 // Score simplifié
