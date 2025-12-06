@@ -616,28 +616,34 @@ export class ApiManager {
         };
 
         // ========================================
-        // V197: 4 APPELS DÉCALÉS = ~8-10 HORAIRES
-        // Pour compenser les trajets TER/322 rejetés
-        // V202: Adaptation selon le mode (partir/arriver)
+        // V210: 8 APPELS DÉCALÉS = ~15-20 HORAIRES sur 3h
+        // Pour maximiser les trajets par appel et éviter le gaspillage d'API
         // ========================================
         
         let searchTimes;
         if (searchTime && searchTime.type === 'arriver') {
             // Pour "Arriver à", on cherche dans le PASSÉ pour avoir des options plus tôt
-            // Ex: Arriver à 10h -> on cherche aussi arriver à 9h45, 9h30, 9h10
             searchTimes = [
-                searchTime,                              // T-0 min
-                this._offsetSearchTime(searchTime, -15), // T-15 min
-                this._offsetSearchTime(searchTime, -30), // T-30 min
-                this._offsetSearchTime(searchTime, -50), // T-50 min
+                searchTime,                               // T-0 min
+                this._offsetSearchTime(searchTime, -20),  // T-20 min
+                this._offsetSearchTime(searchTime, -40),  // T-40 min
+                this._offsetSearchTime(searchTime, -60),  // T-1h
+                this._offsetSearchTime(searchTime, -90),  // T-1h30
+                this._offsetSearchTime(searchTime, -120), // T-2h
+                this._offsetSearchTime(searchTime, -150), // T-2h30
+                this._offsetSearchTime(searchTime, -180), // T-3h
             ];
         } else {
-            // Pour "Partir à", on cherche dans le FUTUR
+            // Pour "Partir à", on cherche dans le FUTUR sur 3h
             searchTimes = [
-                searchTime,                              // T+0 min
-                this._offsetSearchTime(searchTime, 15), // T+15 min
-                this._offsetSearchTime(searchTime, 30), // T+30 min
-                this._offsetSearchTime(searchTime, 50), // T+50 min
+                searchTime,                               // T+0 min
+                this._offsetSearchTime(searchTime, 20),   // T+20 min
+                this._offsetSearchTime(searchTime, 40),   // T+40 min
+                this._offsetSearchTime(searchTime, 60),   // T+1h
+                this._offsetSearchTime(searchTime, 90),   // T+1h30
+                this._offsetSearchTime(searchTime, 120),  // T+2h
+                this._offsetSearchTime(searchTime, 150),  // T+2h30
+                this._offsetSearchTime(searchTime, 180),  // T+3h
             ];
         }
         
