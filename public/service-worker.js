@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v221'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V221: Refactorisation modules extraits (routeDrawing, itineraryProcessor)
+const CACHE_VERSION = 'v222'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V222: 1 seul appel bus (-70% coût API)
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
