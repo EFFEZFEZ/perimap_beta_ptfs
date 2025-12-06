@@ -1,7 +1,6 @@
 /**
  * resultsRenderer.js
- * Rendu des itinéraires + pagination arrivée.
- * V65: Enrichissement GTFS - trouve les prochains départs réels depuis les données locales
+ * V214: Rendu simplifié - chaque itinéraire affiché séparément, pas de groupement
  */
 import { ICONS } from '../config/icons.js';
 
@@ -18,243 +17,13 @@ export function createResultsRenderer(deps) {
   }
 
   /**
-   * V63: Crée une signature de trajet pour regrouper les horaires
-   * Deux trajets avec les mêmes bus/arrêts mais horaires différents ont la même signature
-   */
-  function createRouteSignature(itinerary) {
-    if (!itinerary) return 'null';
-    const type = getItineraryType(itinerary);
-    
-    if (type === 'BIKE' || type === 'WALK') {
-      // Vélo et marche : pas de regroupement, toujours unique
-      return `${type}_${itinerary.duration}_${Math.random()}`;
-    }
-    
-    const segments = (itinerary.summarySegments || [])
-      .map(s => s.name || s.routeShortName || 'X')
-      .join('>');
-    
-    const steps = (itinerary.steps || [])
-      .filter(s => s.type === 'BUS')
-      .map(s => {
-        const route = s.routeShortName || s.route?.route_short_name || '';
-        const from = normalizeStopName(s.departureStop);
-        const to = normalizeStopName(s.arrivalStop);
-        return `${route}:${from}-${to}`;
-      })
-      .join('|');
-    
-    return `${type}::${segments}::${steps}`;
-  }
-
-  function normalizeStopName(name) {
-    if (!name) return '';
-    return name.toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]/g, '')
-      .slice(0, 20);
-  }
-
-  /**
-   * V63: Parse l'heure "HH:MM" en minutes depuis minuit
+   * Parse l'heure "HH:MM" en minutes depuis minuit
    */
   function parseTimeToMinutes(timeStr) {
-    if (!timeStr || typeof timeStr !== 'string') return null;
+    if (!timeStr || typeof timeStr !== 'string') return Infinity;
     const match = timeStr.match(/(\d{1,2}):(\d{2})/);
-    if (!match) return null;
+    if (!match) return Infinity;
     return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
-  }
-
-  /**
-   * V63: Regroupe les itinéraires identiques et collecte leurs horaires
-   */
-  function groupItinerariesByRoute(list) {
-    const groups = new Map();
-    
-    list.forEach(itinerary => {
-      const signature = createRouteSignature(itinerary);
-      
-      if (!groups.has(signature)) {
-        groups.set(signature, {
-          mainItinerary: itinerary,
-          allDepartures: []
-        });
-      }
-      
-      const group = groups.get(signature);
-      const depMinutes = parseTimeToMinutes(itinerary.departureTime);
-      
-      if (depMinutes !== null) {
-        group.allDepartures.push({
-          departureTime: itinerary.departureTime,
-          arrivalTime: itinerary.arrivalTime,
-          depMinutes: depMinutes,
-          itinerary: itinerary
-        });
-      }
-    });
-    
-    // Trier les départs de chaque groupe et garder le premier comme principal
-    groups.forEach((group) => {
-      group.allDepartures.sort((a, b) => a.depMinutes - b.depMinutes);
-      if (group.allDepartures.length > 0) {
-        group.mainItinerary = group.allDepartures[0].itinerary;
-      }
-    });
-    
-    return Array.from(groups.values());
-  }
-
-  /**
-   * V212: Formate les prochains départs en chips élégants style TBM
-   * Utilise les données GTFS locales pour enrichir
-   */
-  function formatNextDepartures(allDepartures, maxShow = 6) {
-    if (allDepartures.length <= 1) return '';
-    
-    const nextOnes = allDepartures.slice(1, maxShow + 1);
-    if (nextOnes.length === 0) return '';
-    
-    const formatted = nextOnes.map(dep => {
-      const diffFromFirst = dep.depMinutes - allDepartures[0].depMinutes;
-      if (diffFromFirst <= 0) return null;
-      return `<span class="next-departures-time">+${diffFromFirst}min</span>`;
-    }).filter(Boolean);
-    
-    if (formatted.length === 0) return '';
-    
-    const moreCount = allDepartures.length - 1 - nextOnes.length;
-    let html = formatted.join(' ');
-    if (moreCount > 0) {
-      html += ` <span class="next-departures-more">+${moreCount}</span>`;
-    }
-    
-    return html;
-  }
-
-  /**
-   * V212: Trouve les prochains départs GTFS pour un itinéraire bus
-   * Utilise la date de recherche et cherche les arrêts par nom OU coordonnées
-   * @param {Object} itinerary - L'itinéraire principal
-   * @returns {Array} Liste des prochains départs avec {departureTime, depMinutes}
-   */
-  function findGtfsNextDepartures(itinerary) {
-    const dataManager = getDataManager ? getDataManager() : null;
-    if (!dataManager || !dataManager.isLoaded || !itinerary) return [];
-    
-    // Trouver le premier segment BUS
-    const busStep = (itinerary.steps || []).find(s => s.type === 'BUS');
-    if (!busStep) return [];
-    
-    const routeShortName = busStep.routeShortName || busStep.route?.route_short_name || busStep.lineName;
-    const departureStopName = busStep.departureStop;
-    const depTimeStr = itinerary.departureTime;
-    
-    if (!routeShortName || !depTimeStr) return [];
-    
-    // Convertir l'heure de départ en minutes
-    const depMinutes = parseTimeToMinutes(depTimeStr);
-    if (depMinutes === null) return [];
-    
-    // V212: Utiliser la date de recherche au lieu de maintenant
-    const searchTime = getSearchTime ? getSearchTime() : null;
-    let searchDate;
-    if (searchTime?.date && searchTime.date !== 'today' && searchTime.date !== "Aujourd'hui") {
-      const parts = String(searchTime.date).split(/[-/]/).map(Number);
-      if (parts.length >= 3) {
-        searchDate = new Date(parts[0], parts[1] - 1, parts[2]);
-      }
-    }
-    if (!searchDate || isNaN(searchDate.getTime())) {
-      searchDate = new Date();
-    }
-    
-    // Chercher l'arrêt de départ dans GTFS
-    // V212: Essayer par nom d'abord, puis par coordonnées si disponibles
-    let stopIds = [];
-    
-    if (departureStopName) {
-      const matchingStops = dataManager.findStopsByName(departureStopName, 15);
-      stopIds = matchingStops.map(s => s.stop_id);
-    }
-    
-    // Si pas trouvé par nom et coordonnées disponibles, chercher par proximité
-    if (stopIds.length === 0 && busStep.departureCoords) {
-      const nearbyStops = dataManager.findNearbyStops?.(busStep.departureCoords.lat, busStep.departureCoords.lng, 200) || [];
-      stopIds = nearbyStops.map(s => s.stop_id);
-    }
-    
-    if (stopIds.length === 0) return [];
-    
-    // Trouver la route GTFS - essayer plusieurs variantes du nom
-    const routeNormalized = routeShortName.toUpperCase().replace(/\s+/g, '');
-    let route = dataManager.routesByShortName?.[routeShortName] 
-             || dataManager.routesByShortName?.[routeNormalized];
-    
-    // Fallback: chercher dans toutes les routes
-    if (!route && dataManager.routes) {
-      route = dataManager.routes.find(r => {
-        const rName = (r.route_short_name || '').toUpperCase().replace(/\s+/g, '');
-        return rName === routeNormalized || rName.includes(routeNormalized) || routeNormalized.includes(rName);
-      });
-    }
-    
-    if (!route) return [];
-    
-    // Calculer la fenêtre de temps (prochain 2h après le premier départ)
-    const windowStart = depMinutes * 60;
-    const windowEnd = (depMinutes + 120) * 60;
-    
-    // V212: Services actifs pour la DATE de recherche
-    const serviceIds = dataManager.getServiceIds(searchDate);
-    if (serviceIds.size === 0) return [];
-    
-    const departures = [];
-    
-    for (const stopId of stopIds) {
-      const stopTimes = dataManager.stopTimesByStop?.[stopId] || [];
-      
-      for (const st of stopTimes) {
-        const trip = dataManager.tripsByTripId?.[st.trip_id];
-        if (!trip) continue;
-        
-        // Vérifier la même ligne
-        if (trip.route_id !== route.route_id) continue;
-        
-        // Vérifier service actif
-        const isActive = Array.from(serviceIds).some(sid => 
-          dataManager.serviceIdsMatch?.(trip.service_id, sid)
-        );
-        if (!isActive) continue;
-        
-        const depSeconds = dataManager.timeToSeconds?.(st.departure_time) || 0;
-        const depMins = Math.floor(depSeconds / 60);
-        
-        // Dans la fenêtre et après le premier départ affiché
-        if (depSeconds >= windowStart && depSeconds <= windowEnd && depMins > depMinutes) {
-          departures.push({
-            departureTime: dataManager.formatTime?.(depSeconds) || st.departure_time,
-            depMinutes: depMins,
-            tripId: st.trip_id
-          });
-        }
-      }
-    }
-    
-    // Trier et dédupliquer
-    departures.sort((a, b) => a.depMinutes - b.depMinutes);
-    
-    const uniqueDepartures = [];
-    const seenMinutes = new Set();
-    for (const dep of departures) {
-      if (!seenMinutes.has(dep.depMinutes)) {
-        seenMinutes.add(dep.depMinutes);
-        uniqueDepartures.push(dep);
-      }
-    }
-    
-    return uniqueDepartures.slice(0, 10); // V212: Max 10 prochains départs
   }
 
   /**
@@ -285,13 +54,11 @@ export function createResultsRenderer(deps) {
 
     resultsListContainer.innerHTML = '';
     
-    // V142: Utiliser TOUTE la liste, pas de pagination
+    // V214: Liste simple, pas de groupement
     let list;
     if (isArrival) {
-      // Mode ARRIVER: utiliser arrivalRankedAll complet (déjà trié par arrivée décroissante)
       list = (mode === 'ALL') ? [...arrivalRankedAll] : arrivalRankedAll.filter(i => i.type === mode);
     } else {
-      // Mode PARTIR: allFetched est déjà trié par départ croissant
       list = (mode === 'ALL') ? [...allFetched] : allFetched.filter(i => i.type === mode);
     }
 
@@ -300,53 +67,23 @@ export function createResultsRenderer(deps) {
       return;
     }
 
-    // V142: FORCER l'ordre BUS → BIKE → WALK toujours
-    // Mais PRÉSERVER l'ordre de tri au sein de chaque catégorie
+    // V214: Ordre BUS → BIKE → WALK, chaque itinéraire affiché individuellement
     const busItins = list.filter(i => getItineraryType(i) === 'BUS');
     const bikeItins = list.filter(i => getItineraryType(i) === 'BIKE');
     const walkItins = list.filter(i => getItineraryType(i) === 'WALK');
     
-    // Recomposer la liste ordonnée: BUS en premier, puis les autres
-    const orderedList = [...busItins, ...bikeItins, ...walkItins];
-    
-    // Grouper par structure de trajet (mêmes lignes/arrêts, horaires différents)
-    const groupedList = groupItinerariesByRoute(orderedList);
-    
-    // V142: Re-séparer les groupes pour garder l'ordre BUS → BIKE → WALK
-    const busGroups = [];
-    const bikeGroups = [];
-    const walkGroups = [];
-    
-    groupedList.forEach(group => {
-      const type = getItineraryType(group.mainItinerary);
-      if (type === 'BUS') busGroups.push(group);
-      else if (type === 'BIKE') bikeGroups.push(group);
-      else if (type === 'WALK') walkGroups.push(group);
-    });
-    
-    // V142: Trier les groupes bus par heure de départ/arrivée du mainItinerary
+    // Trier les bus par heure
     if (isArrival) {
-      // Tri arrivée décroissante (plus tard → plus tôt)
-      busGroups.sort((a, b) => {
-        const arrA = parseTimeToMinutes(a.mainItinerary.arrivalTime);
-        const arrB = parseTimeToMinutes(b.mainItinerary.arrivalTime);
-        return arrB - arrA;
-      });
+      busItins.sort((a, b) => parseTimeToMinutes(b.arrivalTime) - parseTimeToMinutes(a.arrivalTime));
     } else {
-      // Tri départ croissant (plus tôt → plus tard)
-      busGroups.sort((a, b) => {
-        const depA = parseTimeToMinutes(a.mainItinerary.departureTime);
-        const depB = parseTimeToMinutes(b.mainItinerary.departureTime);
-        return depA - depB;
-      });
+      busItins.sort((a, b) => parseTimeToMinutes(a.departureTime) - parseTimeToMinutes(b.departureTime));
     }
 
     let hasBusTitle = false, hasBikeTitle = false, hasWalkTitle = false;
     let globalIndex = 0;
 
-    // Fonction pour rendre un groupe
-    const renderGroup = (group, forceTitle = '') => {
-      const itinerary = group.mainItinerary;
+    // V214: Fonction pour rendre UN itinéraire (plus de groupes)
+    const renderItinerary = (itinerary, forceTitle = '') => {
       const type = getItineraryType(itinerary);
       
       const wrapper = document.createElement('div');
@@ -377,22 +114,18 @@ export function createResultsRenderer(deps) {
       } else if (type === 'WALK') {
         summaryHtml = `<div class='route-summary-bus-icon route-summary-walk-only-icon'>${ICONS.WALK}</div><span class='route-type-label'>Trajet à pied</span><span class='route-type-distance'>${itinerary.steps[0]?.distance || ''}</span>`;
       } else {
-        // V94: Style IDFM - Points entre les étapes, pas de marche au début dans l'aperçu
+        // Style IDFM - Points entre les étapes
         const segments = itinerary.summarySegments || [];
         const hasWalkAtEnd = hasSignificantWalk(itinerary);
         
-        // Construire le résumé style IDFM : Ligne • Ligne • (marche)
         segments.forEach((seg, i) => {
           const label = seg.name || 'Route';
           summaryHtml += `<div class='route-line-badge' style='background-color:${seg.color};color:${seg.textColor};'>${label}</div>`;
-          
-          // Ajouter un point séparateur entre les lignes (pas après la dernière)
           if (i < segments.length - 1) {
             summaryHtml += `<span class='route-summary-dot'>•</span>`;
           }
         });
         
-        // Si marche significative à la fin, ajouter l'icône marche après les lignes
         if (hasWalkAtEnd) {
           summaryHtml += `<span class='route-summary-dot'>•</span>`;
           summaryHtml += `<div class='route-summary-walk-icon'>${ICONS.WALK}</div>`;
@@ -407,36 +140,10 @@ export function createResultsRenderer(deps) {
         ? `<span class='route-time' style='color:var(--text-secondary);font-weight:500;'>(Trajet)</span>`
         : `<span class='route-time'>${itinerary.departureTime} &gt; ${itinerary.arrivalTime}</span>`;
 
-      // V64: Enrichir avec les prochains départs GTFS si c'est un bus
-      let nextDeparturesLine = '';
-      const dataManager = getDataManager ? getDataManager() : null;
-      if (type === 'BUS' && dataManager) {
-        // D'abord essayer les départs groupés depuis Google
-        let allDepartures = group.allDepartures || [];
-        
-        // Si pas assez de départs depuis Google, enrichir avec GTFS
-        if (allDepartures.length <= 1) {
-          const gtfsDepartures = findGtfsNextDepartures(itinerary);
-          if (gtfsDepartures.length > 0) {
-            // Ajouter le premier départ (celui de l'itinéraire)
-            const firstDepMinutes = parseTimeToMinutes(itinerary.departureTime);
-            allDepartures = [
-              { departureTime: itinerary.departureTime, depMinutes: firstDepMinutes },
-              ...gtfsDepartures
-            ];
-          }
-        }
-        
-        const nextDeparturesHtml = formatNextDepartures(allDepartures);
-        if (nextDeparturesHtml) {
-          nextDeparturesLine = `<div class='route-next-departures'><span class='next-departures-label'>Aussi à :</span> ${nextDeparturesHtml}</div>`;
-        }
-      }
-
+      // V214: Plus de "AUSSI À" - chaque trajet est affiché séparément
       card.innerHTML = `
         <div class='route-summary-line'>${summaryHtml}</div>
         <div class='route-footer'>${timeHtml}<span class='route-duration'>${ecoHtml}</span></div>
-        ${nextDeparturesLine}
       `;
 
       card.addEventListener('click', () => deps.onSelectItinerary(itinerary, card));
@@ -450,12 +157,10 @@ export function createResultsRenderer(deps) {
       globalIndex++;
     };
 
-    // V149: Afficher les groupes dans l'ordre BUS → BIKE → WALK
-    if (busGroups.length > 0) {
-      busGroups.forEach(g => renderGroup(g));
-    }
-    bikeGroups.forEach(g => renderGroup(g));
-    walkGroups.forEach(g => renderGroup(g));
+    // V214: Afficher chaque itinéraire individuellement
+    busItins.forEach(it => renderItinerary(it));
+    bikeItins.forEach(it => renderItinerary(it));
+    walkItins.forEach(it => renderItinerary(it));
     
     // V149: Bouton "Générer + de trajets" pour charger plus de bus
     const loadMoreBtn = document.createElement('button');
