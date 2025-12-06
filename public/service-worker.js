@@ -9,7 +9,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v212'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V211: 8 appels API sur 3h pour charger plus de trajets d'un coup
+const CACHE_VERSION = 'v213'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V211: 8 appels API sur 3h pour charger plus de trajets d'un coup
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;

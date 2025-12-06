@@ -107,10 +107,10 @@ export function createResultsRenderer(deps) {
   }
 
   /**
-   * V91: Formate les prochains départs en chips élégants style TBM
+   * V212: Formate les prochains départs en chips élégants style TBM
    * Utilise les données GTFS locales pour enrichir
    */
-  function formatNextDepartures(allDepartures, maxShow = 4) {
+  function formatNextDepartures(allDepartures, maxShow = 6) {
     if (allDepartures.length <= 1) return '';
     
     const nextOnes = allDepartures.slice(1, maxShow + 1);
@@ -127,7 +127,7 @@ export function createResultsRenderer(deps) {
     const moreCount = allDepartures.length - 1 - nextOnes.length;
     let html = formatted.join(' ');
     if (moreCount > 0) {
-      html += ` <span class="next-departures-more">+${moreCount} autres</span>`;
+      html += ` <span class="next-departures-more">+${moreCount}</span>`;
     }
     
     return html;
@@ -254,7 +254,7 @@ export function createResultsRenderer(deps) {
       }
     }
     
-    return uniqueDepartures.slice(0, 5); // Max 5 prochains départs
+    return uniqueDepartures.slice(0, 10); // V212: Max 10 prochains départs
   }
 
   /**
