@@ -1,569 +1,518 @@
-<p align="center">
+﻿<p align="center">
   <img src="https://i.ibb.co/99PZh9Zq/export6-removebg-preview.webp" alt="Périmap Logo" width="120" height="120">
 </p>
 
-<h1 align="center">Périmap</h1>
+<h1 align="center">🚌 Périmap</h1>
 
 <p align="center">
-  <strong>L'application moderne pour les transports en commun de Périgueux</strong>
+  <strong>L'application moderne et gratuite pour les transports en commun de Périgueux</strong>
 </p>
 
 <p align="center">
-  <a href="https://perimap.fr">perimap.fr</a> •
-  <a href="https://instagram.com/perimap.fr">Instagram</a> •
-  <a href="https://facebook.com/perimap.fr">Facebook</a>
+  <a href="https://perimap.fr">🌐 perimap.fr</a> •
+  <a href="https://instagram.com/perimap.fr">📸 Instagram</a> •
+  <a href="https://facebook.com/perimap.fr">👍 Facebook</a>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-3.25.0-22c55e?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/PWA-Ready-00c8ff?style=flat-square" alt="PWA">
+  <img src="https://img.shields.io/badge/GTFS-Péribus-orange?style=flat-square" alt="GTFS">
   <img src="https://img.shields.io/badge/license-MIT-gray?style=flat-square" alt="License">
 </p>
 
 ---
 
-## À propos
+## 📖 Table des matières
 
-**Périmap** est une application web progressive (PWA) gratuite et indépendante qui simplifie les déplacements en transports en commun dans le Grand Périgueux. Elle offre une alternative moderne à l'application officielle Péribus avec une interface épurée et des fonctionnalités avancées.
+1. [Pourquoi ce projet ?](#-pourquoi-ce-projet-)
+2. [Fonctionnalités actives](#-fonctionnalités-actives)
+3. [Comment ça fonctionne](#-comment-ça-fonctionne)
+4. [Architecture technique](#-architecture-technique)
+5. [Installation et Développement](#-installation--développement)
+6. [En construction](#-en-construction)
+7. [Roadmap](#-roadmap)
+8. [Identité visuelle](#-identité-visuelle)
+9. [Contribuer](#-contribuer)
 
-### Fonctionnalités principales
+---
+
+## 💡 Pourquoi ce projet ?
+
+### L'origine
+
+Je suis un utilisateur quotidien du réseau **Péribus** à Périgueux. Comme beaucoup, je lisais les fiches horaires, ou utilisait hawk. Mais je rencontrais régulièrement des **frustrations** :
+
+- ❌ Interface peu intuitive, et illisible 
+- ❌ Temps de chargement longs
+- ❌ Pas de visualisation claire des lignes sur une carte
+- ❌ Aucune centralisation des données
+- ❌ On ne peut pas planifier ses trajets sauf en lisant les fiches horaires longues, remplis, et illisibles
+- ❌ Difficile de savoir où est le bus en temps réel
+- ❌ Pas de mode hors-ligne
+
+### La solution
+
+J'ai décidé de créer **Périmap** : une application web moderne, rapide et gratuite qui offre une **meilleure expérience utilisateur** tout en utilisant les mêmes données officielles GTFS du réseau Péribus.
+
+### Les objectifs
+
+| Objectif | Statut |
+|----------|--------|
+| Interface moderne et intuitive | ✅ |
+| Carte interactive avec toutes les lignes | ✅ |
+| Position des bus en temps réel (estimée) | ✅ |
+| Calcul d'itinéraire multimodal | ✅ |
+| Fonctionne hors-ligne | ✅ |
+| 100% gratuit, sans pub, sans tracking | ✅ |
+| Open source | ✅ |
+
+---
+
+## ✅ Fonctionnalités actives
+
+### 🗺️ Carte interactive
 
 | Fonctionnalité | Description |
 |----------------|-------------|
-| **Carte interactive** | Visualisez les lignes et arrêts sur une carte Leaflet |
-| **Bus en temps réel** | Suivez la position des bus en direct |
-| **Calcul d'itinéraire** | Trouvez le meilleur trajet (bus, marche, vélo) |
-| **Horaires GTFS** | Consultez les horaires de tous les arrêts |
-| **Mode sombre** | Interface adaptée à vos préférences |
-| **Hors-ligne** | Fonctionne même sans connexion internet |
+| **Toutes les lignes** | 13 lignes Péribus avec leurs couleurs officielles |
+| **Tous les arrêts** | ~1300 arrêts cliquables avec infos |
+| **Tracés des lignes** | Polylines fidèles aux trajets réels |
+| **Mode sombre** | Carte adaptée au thème choisi |
+| **Géolocalisation** | Centrage sur votre position |
+
+### 🚌 Bus en temps réel
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| **Position estimée** | Calcul basé sur les horaires GTFS + interpolation |
+| **Animation fluide** | Les bus se déplacent sur la carte |
+| **Direction affichée** | Flèche indiquant le sens de circulation |
+| **Infos au clic** | Ligne, direction, prochain arrêt |
+
+> ⚠️ Les positions sont **estimées** à partir des horaires théoriques, pas du GPS réel des bus.
+
+### 🧭 Calcul d'itinéraire
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| **Multimodal** | Bus Péribus + marche à pied |
+| **Autocomplétion** | Recherche intelligente des lieux |
+| **Plusieurs options** | Jusqu'à 5 itinéraires proposés |
+| **Détail complet** | Horaires, correspondances, durée de marche |
+| **Tracé sur carte** | Visualisation du trajet complet |
+
+### 📅 Horaires
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| **Par arrêt** | Tous les passages à un arrêt |
+| **Par ligne** | Horaires complets d'une ligne |
+| **Temps réel** | Affichage "dans X min" |
+| **Fiches horaires** | PDF officiels téléchargeables |
+
+### 📱 PWA (Progressive Web App)
+
+| Fonctionnalité | Description |
+|----------------|-------------|
 | **Installable** | Ajoutez l'app sur votre écran d'accueil |
+| **Hors-ligne** | Fonctionne sans connexion internet |
+| **Rapide** | Données en cache, chargement instantané |
+| **Mises à jour auto** | Toujours la dernière version |
+
+### 🎨 Interface
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| **Mode sombre/clair** | Selon vos préférences ou automatique |
+| **Responsive** | Adapté mobile, tablette, desktop |
+| **Animations fluides** | Transitions soignées |
+| **Accessibilité** | Contrastes respectés, navigation clavier |
 
 ---
 
-## Identité visuelle
+## ⚙️ Comment ça fonctionne
 
-### Couleurs officielles
+### Architecture simplifiée
 
-<table>
-  <tr>
-    <td align="center" width="200">
-      <div style="background: #22c55e; width: 60px; height: 60px; border-radius: 12px; margin: 0 auto;"></div>
-      <br>
-      <strong>Vert Périmap</strong><br>
-      <code>#22c55e</code><br>
-      <em>Couleur primaire</em>
-    </td>
-    <td align="center" width="200">
-      <div style="background: #00c8ff; width: 60px; height: 60px; border-radius: 12px; margin: 0 auto;"></div>
-      <br>
-      <strong>Cyan</strong><br>
-      <code>#00c8ff</code><br>
-      <em>Couleur secondaire</em>
-    </td>
-    <td align="center" width="200">
-      <div style="background: linear-gradient(135deg, #22c55e, #00c8ff); width: 60px; height: 60px; border-radius: 12px; margin: 0 auto;"></div>
-      <br>
-      <strong>Gradient</strong><br>
-      <code>#22c55e → #00c8ff</code><br>
-      <em>Signature</em>
-    </td>
-  </tr>
-</table>
-
-### Palette complète
-
-```css
-/* Couleurs principales */
---pm-green: #22c55e;          /* Primaire - CTA, liens actifs */
---pm-green-hover: #16a34a;    /* Hover primaire */
---pm-cyan: #00c8ff;           /* Secondaire - Highlights */
---pm-cyan-hover: #0ea5e9;     /* Hover secondaire */
-
-/* Gradient signature */
---pm-gradient: linear-gradient(135deg, #22c55e 0%, #00c8ff 100%);
-
-/* Light Mode */
---pm-bg-page: #f8fafc;        /* Fond de page */
---pm-bg-card: #ffffff;        /* Cartes */
---pm-text-primary: #0f172a;   /* Texte principal */
---pm-text-secondary: #64748b; /* Texte secondaire */
---pm-border: #e2e8f0;         /* Bordures */
-
-/* Dark Mode */
---pm-bg-page: #0b1220;        /* Fond de page */
---pm-bg-card: #0f1724;        /* Cartes */
---pm-text-primary: #e6eef8;   /* Texte principal */
---pm-text-secondary: #9fb3c9; /* Texte secondaire */
---pm-border: rgba(255,255,255,0.08);
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        UTILISATEUR                              │
+│                    (navigateur web/PWA)                         │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      FRONTEND (Vanilla JS)                      │
+│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────────┐ │
+│  │    Carte    │  │  Itinéraire  │  │       Horaires          │ │
+│  │  Leaflet.js │  │    UI/UX     │  │     GTFS Parser         │ │
+│  └─────────────┘  └──────────────┘  └─────────────────────────┘ │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+          ┌───────────────────┼───────────────────┐
+          ▼                   ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────────┐
+│  DONNÉES GTFS   │ │   API Google    │ │     OpenStreetMap       │
+│  (statiques)    │ │  (via Vercel)   │ │    (tuiles carte)       │
+│                 │ │                 │ │                         │
+│  • stops.txt    │ │  • Places API   │ │  • CARTO Dark/Light     │
+│  • routes.txt   │ │  • Routes API   │ │  • Leaflet.js           │
+│  • trips.txt    │ │  • Geocode API  │ │                         │
+│  • stop_times   │ │                 │ │                         │
+│  • calendar     │ │ (proxy sécurisé │ │                         │
+│  • shapes       │ │  clé cachée)    │ │                         │
+└─────────────────┘ └─────────────────┘ └─────────────────────────┘
 ```
 
-### Typographie
+### Flux de données
 
-| Élément | Police | Poids | Taille |
-|---------|--------|-------|--------|
-| **H1** | Manrope | 800 (ExtraBold) | 2.5rem (40px) |
-| **H2** | Manrope | 700 (Bold) | 2rem (32px) |
-| **H3** | Manrope | 600 (SemiBold) | 1.5rem (24px) |
-| **Body** | Manrope | 400 (Regular) | 1rem (16px) |
-| **Small** | Manrope | 400 (Regular) | 0.875rem (14px) |
+#### 1️⃣ Chargement initial
+```
+Utilisateur ouvre l'app
+    → Service Worker vérifie le cache
+    → Charge les données GTFS (bundle JSON optimisé)
+    → Construit les index en mémoire
+    → Affiche la carte avec les lignes
+```
 
-**Fallback** : `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
+#### 2️⃣ Calcul d'itinéraire
+```
+Utilisateur saisit origine/destination
+    → Autocomplétion via Google Places API (proxy Vercel)
+    → Sélection des lieux
+    → Recherche des arrêts GTFS proches
+    → Algorithme hybride :
+        • GTFS local pour les bus
+        • Google Routes API pour la marche
+    → Affichage des résultats classés
+    → Tracé sur la carte
+```
 
-### Rayons de bordure
+#### 3️⃣ Position des bus
+```
+Toutes les 5 secondes :
+    → Récupère l'heure actuelle
+    → Pour chaque trip actif :
+        • Trouve la position entre 2 arrêts
+        • Interpole les coordonnées
+        • Calcule l'orientation
+    → Anime les marqueurs sur la carte
+```
 
-| Usage | Valeur |
-|-------|--------|
-| Boutons | 8px |
-| Cartes | 16px |
-| Modales | 24px |
-| Pills/Badges | 9999px (circulaire) |
+### Technologies utilisées
 
-### Animations
+| Catégorie | Technologie | Rôle |
+|-----------|-------------|------|
+| **Frontend** | JavaScript ES6+ (Vanilla) | Logique applicative |
+| **Carte** | Leaflet.js | Affichage cartographique |
+| **Tuiles** | CARTO (basé OSM) | Fond de carte |
+| **Données transport** | GTFS Péribus | Horaires, arrêts, lignes |
+| **Géocodage** | Google Places API | Autocomplétion adresses |
+| **Itinéraires piétons** | Google Routes API | Trajets à pied |
+| **Hébergement** | Vercel | CDN + Serverless Functions |
+| **PWA** | Service Worker | Cache et offline |
 
-| Type | Durée | Easing |
-|------|-------|--------|
-| Rapide (hover) | 150ms | `cubic-bezier(0.4, 0, 0.2, 1)` |
-| Normal | 250ms | `cubic-bezier(0.4, 0, 0.2, 1)` |
-| Lent (modales) | 350ms | `cubic-bezier(0.4, 0, 0.2, 1)` |
-| Bounce | 500ms | `cubic-bezier(0.34, 1.56, 0.64, 1)` |
+### Sécurité des APIs
+
+Les clés API Google ne sont **jamais exposées** côté client :
+
+```
+Client                    Vercel (Serverless)              Google
+  │                              │                            │
+  │  POST /api/places            │                            │
+  │  {query: "Gare"}             │                            │
+  │ ────────────────────────────>│                            │
+  │                              │   + API Key (env secret)   │
+  │                              │ ──────────────────────────>│
+  │                              │                            │
+  │                              │         Résultats          │
+  │                              │ <──────────────────────────│
+  │      Résultats filtrés       │                            │
+  │ <────────────────────────────│                            │
+```
 
 ---
 
-## Architecture technique
-
-### Stack technologique
-
-| Catégorie | Technologies |
-|-----------|--------------|
-| **Frontend** | HTML5, CSS3, JavaScript ES6+ (Vanilla) |
-| **Carte** | Leaflet.js, OpenStreetMap, CARTO |
-| **APIs** | Google Places, Google Routes |
-| **Données** | GTFS Péribus (statique) |
-| **PWA** | Service Worker, IndexedDB, Cache API |
-| **Hébergement** | Vercel |
-| **Domaine** | One.com |
+## 🏗️ Architecture technique
 
 ### Structure du projet
 
 ```
 perimap/
-├── public/
-│   ├── index.html              # Page principale (SPA)
-│   ├── about.html              # À propos + Admin
-│   ├── mentions-legales.html   # Mentions légales
-│   ├── style.css               # Styles principaux (~10K lignes)
-│   ├── manifest.json           # Manifest PWA
-│   ├── service-worker.js       # Cache & offline
+├── 📁 public/                    # Application frontend
+│   ├── index.html               # Page principale (SPA)
+│   ├── about.html               # À propos + Admin
+│   ├── mentions-legales.html    # Légal
+│   ├── style.css                # Styles (~10K lignes)
+│   ├── manifest.json            # PWA manifest
+│   ├── service-worker.js        # Cache et offline
 │   │
-│   ├── css/
-│   │   └── brand.css           # 🎨 Charte graphique
+│   ├── 📁 js/                   # JavaScript
+│   │   ├── app.js               # Point d'entrée, init
+│   │   ├── main.js              # Logique principale
+│   │   ├── config.js            # Configuration runtime
+│   │   ├── dataManager.js       # Gestion données GTFS
+│   │   ├── mapRenderer.js       # Carte Leaflet
+│   │   ├── apiManager.js        # APIs Google
+│   │   ├── timeManager.js       # Gestion temps
+│   │   ├── tripScheduler.js     # Positions bus
+│   │   ├── uiManager.js         # UI et thèmes
+│   │   ├── router.js            # Calcul itinéraires
+│   │   ├── 📁 workers/          # Web Workers
+│   │   ├── 📁 utils/            # Utilitaires
+│   │   └── 📁 ui/               # Composants UI
 │   │
-│   ├── js/
-│   │   ├── app.js              # Point d'entrée
-│   │   ├── main.js             # Logique principale
-│   │   ├── config.js           # Configuration runtime
-│   │   ├── dataManager.js      # Gestion données GTFS
-│   │   ├── mapRenderer.js      # Rendu carte Leaflet
-│   │   ├── apiManager.js       # APIs Google
-│   │   ├── timeManager.js      # Gestion temps
-│   │   ├── tripScheduler.js    # Calcul positions bus
-│   │   ├── uiManager.js        # UI & thèmes
-│   │   ├── geolocationManager.js
-│   │   │
-│   │   ├── config/             # Configuration statique
-│   │   ├── controllers/        # Contrôleurs vues
-│   │   ├── ui/                 # Composants UI
-│   │   ├── utils/              # Utilitaires
-│   │   └── workers/            # Web Workers
-│   │
-│   ├── views/                  # Templates HTML
+│   ├── 📁 views/                # Templates HTML
 │   │   ├── carte.html
-│   │   ├── hall.html
 │   │   ├── horaires.html
 │   │   ├── itineraire.html
-│   │   ├── trafic.html
-│   │   └── tarifs-*.html
+│   │   └── ...
 │   │
-│   ├── data/
-│   │   ├── gtfs/               # Données GTFS Péribus
-│   │   ├── map.geojson         # Tracés des lignes
-│   │   └── line-status.json    # État du trafic
+│   ├── 📁 data/                 # Données
+│   │   ├── 📁 gtfs/             # Données Péribus
+│   │   ├── map.geojson          # Tracés lignes
+│   │   └── line-status.json     # État trafic
 │   │
-│   └── icons/                  # Icônes PWA
+│   └── 📁 icons/                # Icônes PWA
 │
-├── scripts/
-│   └── preprocess-gtfs.mjs     # Prétraitement GTFS
+├── 📁 api/                      # Serverless Functions (Vercel)
+│   ├── places.js                # Proxy Google Places
+│   ├── routes.js                # Proxy Google Routes
+│   ├── geocode.js               # Proxy Geocoding
+│   └── admin-token.js           # Auth admin
 │
-└── README.md                   # Ce fichier
+├── 📁 server/                   # 🔴 BACKEND FUTUR (désactivé)
+│   └── ...                      # Voir section "En construction"
+│
+├── 📁 scripts/                  # Scripts utilitaires
+│   └── preprocess-gtfs.mjs      # Prétraitement GTFS
+│
+└── README.md                    # Ce fichier
 ```
 
-### Modules JavaScript
+### Modules principaux
 
 | Module | Responsabilité |
 |--------|----------------|
-| `app.js` | Initialisation, chargement GTFS |
-| `main.js` | Logique métier principale |
-| `dataManager.js` | Indexation et accès données GTFS |
-| `mapRenderer.js` | Affichage carte, markers, polylines |
-| `apiManager.js` | Appels Google Places/Routes (V222: 1 appel bus, -70% API) |
-| `timeManager.js` | Gestion temps réel/simulé |
-| `tripScheduler.js` | Calcul positions des bus |
-| `uiManager.js` | Thème dark/light, préférences |
-| `geolocationManager.js` | Géolocalisation utilisateur |
+| app.js | Initialisation, chargement GTFS, routing SPA |
+| dataManager.js | Parsing GTFS, indexation, requêtes |
+| mapRenderer.js | Carte Leaflet, marqueurs, polylines |
+| tripScheduler.js | Calcul positions bus en temps réel |
+| router.js | Algorithme d'itinéraire hybride |
+| apiManager.js | Appels API Google via proxies |
 
 ---
 
-## Installation & Développement
+## 🛠️ Installation et Développement
 
 ### Prérequis
 
-- Serveur HTTP local (VS Code Live Server, Python, etc.)
-- Navigateur moderne (Chrome, Firefox, Safari, Edge)
+- Node.js 18+ (optionnel, pour scripts)
+- Serveur HTTP local (Live Server, Python...)
+- Navigateur moderne
 
 ### Lancement local
 
 ```bash
-# Cloner le repo
+# 1. Cloner le repo
 git clone https://github.com/EFFEZFEZ/p-rimap-sans-api-.git
 cd p-rimap-sans-api-
 
-# Lancer avec Live Server (VS Code)
-# Ou avec Python :
+# 2. Lancer un serveur local
+# Option A : VS Code Live Server (recommandé)
+# Option B : Python
 python -m http.server 8080 --directory public
 
-# Ouvrir http://localhost:8080
+# 3. Ouvrir http://localhost:8080
+```
+
+### Variables d'environnement (Vercel)
+
+Pour le déploiement, configurer dans Vercel :
+
+```env
+GOOGLE_API_KEY=votre_clé_google_api
+ADMIN_TOKEN=token_pour_admin
 ```
 
 ### Mise à jour des données GTFS
 
 ```bash
-# Option 1 : Node.js
+# Télécharger les nouvelles données depuis le site Péribus
+# Puis lancer le prétraitement :
 node scripts/preprocess-gtfs.mjs
-
-# Option 2 : PowerShell
-# (voir README technique)
 ```
 
 ---
 
-## PWA & Installation
+## 🚧 En construction
 
-Périmap est une **Progressive Web App** installable :
+Le dossier server/ contient le code **préparé mais désactivé** pour un futur backend autonome.
 
-1. Ouvrir [perimap.fr](https://perimap.fr) dans votre navigateur
-2. **iOS** : Safari → Partager → "Sur l'écran d'accueil"
-3. **Android** : Chrome → Menu → "Installer l'application"
-4. **Desktop** : Chrome → Barre d'adresse → Icône d'installation
+### 🤔 Pourquoi un backend futur ?
 
-### Fonctionnalités PWA
+| Actuellement | Futur envisagé |
+|--------------|----------------|
+| API Google (quota gratuit) | Notre propre système |
+| Dépendance externe | Autonomie totale |
+| Pas de personnalisation | Favoris, historique, préférences |
 
-- ✅ Installable sur l'écran d'accueil
-- ✅ Fonctionne hors-ligne (horaires cachés)
-- ✅ Raccourcis rapides (Itinéraire, Horaires, Carte, Trafic)
-- ✅ Thème adapté au système
+### 📦 Ce qui est préparé
 
----
+```
+server/
+├── 📁 core/
+│   ├── 📁 pathfinding/          # 🗺️ Calcul d'itinéraires
+│   │   ├── raptor.js            # Algorithme RAPTOR (référence mondiale)
+│   │   ├── astar.js             # A* pour la marche
+│   │   └── graph.js             # Graphe de transport
+│   │
+│   ├── 📁 places/               # 📍 Autocomplétion maison
+│   │   ├── trie.js              # Structure Trie (recherche O(m))
+│   │   ├── fuzzy.js             # Recherche floue (fautes de frappe)
+│   │   └── indexer.js           # Indexation arrêts + POI
+│   │
+│   └── 📁 memory/               # 💾 Mémoire utilisateur
+│       ├── store.js             # Interface stockage
+│       ├── sqlite.js            # Adaptateur SQLite
+│       └── postgres.js          # Adaptateur PostgreSQL
+│
+├── 📁 api/                      # Routes REST
+├── 📁 middleware/               # Auth, CORS, Rate limiting
+├── 📁 utils/                    # Utilitaires
+└── README.md                    # Documentation détaillée
+```
 
-## Données utilisées
+### ❓ Pourquoi c'est désactivé ?
 
-### GTFS Péribus
+| Raison | Explication |
+|--------|-------------|
+| **Serveur requis** | Nécessite un serveur 24/7 (~5-15 euros/mois) |
+| **Google fonctionne** | Le système actuel est gratuit et fiable |
+| **Priorité** | Focus sur les fonctionnalités utilisateur d'abord |
 
-Les données de transport proviennent du **GTFS officiel du réseau Péribus** :
+### 🔧 Comment l'activer (futur)
 
-| Fichier | Contenu |
-|---------|---------|
-| `routes.txt` | Définition des lignes (A, B, C, D...) |
-| `trips.txt` | Courses avec direction |
-| `stops.txt` | Arrêts avec coordonnées |
-| `stop_times.txt` | Horaires de passage |
-| `calendar.txt` | Jours de service |
-| `shapes.txt` | Tracés géométriques |
-
-### Lignes du réseau
-
-| Ligne | Terminus | Couleur |
-|-------|----------|---------|
-| **A** | Boulazac ↔ Campus | Rouge |
-| **B** | Champcevinel ↔ Trélissac | Bleu |
-| **C** | Auchan ↔ Boulazac | Vert |
-| **D** | Gare ↔ Coulounieix | Orange |
-| **E-H** | Lignes complémentaires | Diverses |
-| **N** | Service de nuit | Violet |
-| **TAD** | Transport à la demande | Gris |
-
----
-
-## Confidentialité & Mentions légales
-
-### Données personnelles
-
-- ❌ **Aucune collecte** de données personnelles
-- ❌ **Aucun cookie** publicitaire ou de tracking
-- ❌ **Aucun outil** d'analyse tiers
-- ✅ Géolocalisation utilisée **uniquement localement**
-- ✅ Préférences stockées en **localStorage**
-
-### Informations légales
-
-- **Éditeur** : Projet personnel à but non lucratif
-- **Hébergeur** : Vercel Inc. (USA)
-- **Domaine** : One.com Group AB
-- **Contact** : perimapfr@gmail.com
-
-[Voir les mentions légales complètes](https://perimap.fr/mentions-legales.html)
+```bash
+cd server
+npm install
+cp .env.example .env  # Configurer
+npm run build-graph   # Pré-calculer le graphe
+npm start             # Démarrer le serveur
+```
 
 ---
 
-## Contribution
+## 🗺️ Roadmap
 
-Ce projet est open-source ! Contributions bienvenues :
+### ✅ Fait
 
-1. **Fork** le repository
-2. Créer une branche (`git checkout -b feature/ma-feature`)
-3. **Commit** (`git commit -m 'Add ma feature'`)
-4. **Push** (`git push origin feature/ma-feature`)
-5. Ouvrir une **Pull Request**
+- [x] Carte interactive avec toutes les lignes
+- [x] Position des bus en temps réel (estimée)
+- [x] Calcul d'itinéraire multimodal
+- [x] Mode hors-ligne (PWA)
+- [x] Mode sombre/clair
+- [x] Horaires par arrêt et par ligne
+- [x] Fiches horaires PDF
+- [x] Page info trafic
+- [x] Page tarifs
+
+### 🔄 En cours
+
+- [ ] Amélioration de la précision des positions bus
+- [ ] Optimisation du calcul d'itinéraire
+
+### 📋 Prévu (court terme)
+
+- [ ] Notifications de perturbations
+- [ ] Widget "prochain bus" sur l'écran d'accueil
+- [ ] Partage d'itinéraire
+
+### 🔮 Prévu (long terme)
+
+- [ ] Backend autonome (RAPTOR + autocomplétion maison)
+- [ ] Comptes utilisateur (favoris, historique)
+- [ ] Intégration vélos en libre service (si disponible)
+- [ ] API temps réel officielle (si Péribus la fournit)
+
+---
+
+## 🎨 Identité visuelle
+
+### Couleurs officielles
+
+| Couleur | Code | Usage |
+|---------|------|-------|
+| **Vert Périmap** | #22c55e | Primaire, boutons, liens |
+| **Cyan** | #00c8ff | Secondaire, accents |
+| **Gradient** | #22c55e vers #00c8ff | Signature visuelle |
+
+### Palette Dark Mode
+
+```css
+--pm-bg-page: #0b1220;
+--pm-bg-card: #0f1724;
+--pm-text-primary: #e6eef8;
+--pm-text-secondary: #9fb3c9;
+```
+
+### Palette Light Mode
+
+```css
+--pm-bg-page: #f8fafc;
+--pm-bg-card: #ffffff;
+--pm-text-primary: #0f172a;
+--pm-text-secondary: #64748b;
+```
+
+### Typographie
+
+- **Police** : Manrope (Google Fonts)
+- **Fallback** : -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
+
+---
+
+## 🤝 Contribuer
+
+Les contributions sont les bienvenues ! 
+
+### Comment contribuer
+
+1. **Fork** le projet
+2. **Créer** une branche (git checkout -b feature/ma-feature)
+3. **Commit** les changements (git commit -m 'Ajout de ma feature')
+4. **Push** (git push origin feature/ma-feature)
+5. **Ouvrir** une Pull Request
 
 ### Signaler un bug
 
-Ouvrir une [Issue GitHub](https://github.com/EFFEZFEZ/p-rimap-sans-api-/issues) avec :
+Ouvrez une issue avec :
 - Description du problème
 - Étapes pour reproduire
-- Navigateur et version
-- Screenshots si possible
+- Capture d'écran si possible
 
 ---
 
-## Licence
+## 📄 Licence
 
-Ce projet est sous licence **MIT**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+Ce projet est sous licence **MIT**. Voir le fichier LICENSE pour plus de détails.
 
 ---
 
-## Remerciements
+## 🙏 Remerciements
 
-- **Péribus / Grand Périgueux** pour les données GTFS publiques
-- **OpenStreetMap** pour les fonds de carte
-- **Google** pour les APIs Places et Routes
-- La communauté open-source pour les outils utilisés
+- **Péribus** pour les données GTFS ouvertes
+- **OpenStreetMap** pour les données cartographiques
+- **Leaflet.js** pour la bibliothèque de cartographie
+- La communauté open source
 
 ---
 
 <p align="center">
-  <strong>Fait avec soin pour les usagers du Grand Périgueux</strong>
+  <strong>Fait avec ❤️ à Périgueux</strong>
 </p>
 
 <p align="center">
   <a href="https://perimap.fr">perimap.fr</a>
 </p>
-
----
-
-## 🔧 Documentation Technique - IMPÉRATIFS DE DÉVELOPPEMENT
-
-> **⚠️ SECTION CRITIQUE** - Lire avant toute modification du code
-
-### Architecture des Flux d'Itinéraires
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        FLUX DE RECHERCHE D'ITINÉRAIRE                       │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-  Utilisateur → uiManager.js → main.js::executeItinerarySearch()
-                                         │
-         ┌───────────────────────────────┴───────────────────────────────┐
-         │                                                               │
-    router.js (GTFS local)                              apiManager.js::fetchItinerary()
-    (souvent 0 résultats car                                    │
-     trajets avec correspondances)                    ┌─────────┴─────────┐
-                                                      │                   │
-                                              Mode "partir"      Mode "arriver"
-                                              1 appel API        1 appel API
-                                              unique (V222)      unique (V222)
-                                                      │
-                                                      ▼
-                                        extractDepartureTime() ← CRITIQUE V217
-                                                      │
-                                                      ▼
-                                        Déduplication par uniqueKey ← CRITIQUE V217
-                                                      │
-                                                      ▼
-                                              main.js::processIntelligentResults()
-                                                      │
-                                                      ▼
-                                        ranking.js::filterExpiredDepartures() ← CRITIQUE V220
-                                                      │
-                                                      ▼
-                                              Affichage résultats
-```
-
-### 🚨 Fichiers Critiques - NE JAMAIS MODIFIER SANS COMPRENDRE
-
-| Fichier | Lignes critiques | Fonction | Bug potentiel si cassé |
-|---------|------------------|----------|------------------------|
-| `apiManager.js` | 650-720 | `extractDepartureTime()` | Horaires vides, déduplication cassée |
-| `apiManager.js` | 695-705 | Construction `uniqueKey` | Tous trajets dédupliqués sauf 1 |
-| `apiManager.js` | 620-650 | Stratégie 1 appel (V222) | Économie 70% API |
-| `ranking.js` | 140-190 | `filterExpiredDepartures()` (V223) | Utilise arrivalTime en mode arriver |
-| `ranking.js` | 195-210 | `filterLateArrivals()` | Arrivées tardives non filtrées |
-| `service-worker.js` | 1 | `CACHE_VERSION` | Changements non déployés |
-
-### 🔍 Extraction des Heures de Départ (V217)
-
-**PROBLÈME RÉSOLU** : L'API Google Routes renvoie les heures différemment selon le mode de transport.
-
-```javascript
-// ❌ MAUVAIS CHEMIN (vide pour TRANSIT) :
-route.legs[0].localizedValues.departureTime.time.text  // → ""
-
-// ✅ BON CHEMIN (V217) :
-route.legs[0].steps.find(s => s.travelMode === 'TRANSIT')
-  .transitDetails.localizedValues.departureTime.time.text  // → "14:04"
-```
-
-**Fonction critique** (`apiManager.js` ~ligne 660) :
-```javascript
-const extractDepartureTime = (route) => {
-    // Chercher dans les steps TRANSIT
-    const transitStep = route.legs?.[0]?.steps?.find(s => s.travelMode === 'TRANSIT');
-    if (transitStep?.transitDetails) {
-        const transit = transitStep.transitDetails;
-        return transit.localizedValues?.departureTime?.time?.text || '';
-    }
-    return '';
-};
-```
-
-### 🎯 Mode "Partir" vs Mode "Arriver"
-
-| Aspect | Mode "Partir à" | Mode "Arriver à" |
-|--------|-----------------|------------------|
-| **Appels API** | 1 seul (V222) | 1 seul (V222) |
-| **Paramètre API** | `departureTime` | `arrivalTime` |
-| **Filtrage** | départ >= heure demandée | arrivée >= heure actuelle (V223) |
-| **Résultats** | ~5-6 alternatives | ~5-6 alternatives |
-| **Tri** | Départ croissant | Arrivée décroissante |
-| **Économie API** | -70% (3 appels au lieu de 10) | -70% |
-
-**ERREUR CORRIGÉE V223** : En mode "arriver", le filtrage utilisait l'heure de **départ** au lieu de l'heure d'**arrivée**. Un bus partant à 14h28 mais arrivant à 16h30 était incorrectement filtré.
-
-### 🔄 Déduplication des Résultats (V217)
-
-**Clé unique** = `${depTime}-${lineName}-${depStopName}`
-
-```javascript
-// Exemples de clés :
-"14:04-A-Gare SNCF"     // ✓ Gardé
-"14:04-A-Gare SNCF"     // ✗ Doublon
-"14:24-A-Gare SNCF"     // ✓ Heure différente
-"14:04-B-Gare SNCF"     // ✓ Ligne différente
-```
-
-**Piège** : Si `depTime = ""` (extraction cassée), toutes les clés = `"-A-Gare"` → 1 seul résultat !
-
-### 🐛 Checklist Debug - Sauts d'Horaires
-
-Si les horaires sautent (ex: 14:04 → 15:53 sans bus entre) :
-
-1. **Vérifier logs console** :
-   - `📋 Horaires: 14:04, 14:24...` → OK
-   - `📋 Horaires: , , ...` → Extraction cassée (V217)
-
-2. **Vérifier déduplication** :
-   - `🚍 V218: 8/21 trajets` → OK
-   - `🚍 V218: 1/21 trajets` → uniqueKey cassée
-
-3. **Vérifier filtrage** :
-   - `🕐 V220: Mode ARRIVER - heure actuelle` → OK
-   - `🚫 X trajet(s) filtré(s)` → Normal si X < total
-
-4. **Points de rupture** :
-   - `apiManager.js:660` - extractDepartureTime()
-   - `apiManager.js:700` - uniqueKey
-   - `ranking.js:160` - filterExpiredDepartures
-
-### 📋 Constantes Importantes
-
-```javascript
-// apiManager.js (V222)
-MAX_BUS_RESULTS = 8;  // slice(0, 8)
-// V222: 1 seul appel API pour partir ET arriver
-// Google retourne 5-6 alternatives avec computeAlternativeRoutes: true
-
-// ranking.js (V223)
-MIN_BUS_ITINERARIES = 5;  // warning si moins
-FILTER_MARGIN = -2;  // minutes de marge
-// V223: Mode arriver filtre par arrivalTime (pas departureTime)
-
-// main.js
-ARRIVAL_PAGE_SIZE = 6;
-ENABLE_GTFS_ROUTER = true;
-
-// service-worker.js
-CACHE_VERSION = 'v223';  // ⚠️ INCRÉMENTER À CHAQUE DEPLOY
-```
-
-### 🚀 Déploiement
-
-1. **Modifier le code**
-2. **Incrémenter CACHE_VERSION** dans `service-worker.js`
-3. **Git commit & push**
-4. **Vérifier Vercel** (déploiement auto)
-5. **Tester en navigation privée** ou forcer refresh (Ctrl+Shift+R)
-
-### 📚 Fichiers d'Analyse
-
-- `ANALYSE_PROJET_PERIMAP.txt` - Analyse business/stratégie
-- `ANALYSE_PROJET_PERIMAP_V2.txt` - **Analyse technique détaillée** (ce document)
-
----
-
-## Roadmap de développement
-
-### En cours (v128+)
-
-| Priorité | Tâche | Statut |
-|----------|-------|--------|
-| Haute | Notifications push perturbations | Planifié |
-| Haute | Favoris arrêts/lignes | Planifié |
-| Moyenne | Widget iOS/Android | Recherche |
-| Moyenne | Intégration calendrier | Planifié |
-
-### Court terme (Q1 2025)
-
-- [ ] **Alertes personnalisées** : Notifications push pour vos lignes favorites
-- [ ] **Favoris** : Sauvegarder vos arrêts et trajets fréquents
-- [ ] **Historique** : Retrouver vos dernières recherches
-- [ ] **Partage d'itinéraire** : Envoyer un trajet par lien
-
-### Moyen terme (Q2 2025)
-
-- [ ] **Temps réel avancé** : Intégration API SIRI si disponible
-- [ ] **Accessibilité PMR** : Filtres et infos accessibilité
-- [ ] **Multi-langue** : Support anglais/espagnol
-- [ ] **Statistiques** : Tableau de bord personnel (km parcourus, CO2 économisé)
-
-### Long terme (2025+)
-
-- [ ] **Application native** : React Native ou Flutter
-- [ ] **Signalement** : Perturbations signalées par les usagers
-- [ ] **Gamification** : Badges et récompenses fidélité
-- [ ] **Extension réseau** : Support d'autres réseaux Nouvelle-Aquitaine
-
-### Idées en discussion
-
-| Idée | Faisabilité | Impact |
-|------|-------------|--------|
-| Mode AR (réalité augmentée) | Complexe | Wow effect |
-| Chatbot assistant | Moyen | Utile |
-| Apple Watch / Wear OS | Moyen | Niche |
-| Intégration Citymapper | Facile | Visibilité |
-
-### Contribution
-
-Vous avez une idée ? Ouvrez une [Issue GitHub](https://github.com/EFFEZFEZ/p-rimap-sans-api-/issues) !
-
-Les contributions sont les bienvenues via Pull Request.
-
-

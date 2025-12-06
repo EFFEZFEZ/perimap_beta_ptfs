@@ -1,0 +1,4 @@
+# Ce dossier contiendra:
+# - peribus.db (base SQLite)
+# - cache/graph.json (graphe pré-calculé)
+# - cache/places.json (index des lieux)

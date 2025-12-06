@@ -1,0 +1,42 @@
+{
+  "name": "peribus-server",
+  "version": "0.1.0",
+  "description": "Backend serveur pour Peribus - Pathfinding, Places, Mémoire utilisateur",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "build-graph": "node scripts/buildGraph.js",
+    "import-gtfs": "node scripts/importGtfs.js",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "express-rate-limit": "^7.1.5",
+    "better-sqlite3": "^9.2.2",
+    "dotenv": "^16.3.1",
+    "csv-parse": "^5.5.2",
+    "winston": "^3.11.0",
+    "fuse.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "peribus",
+    "pathfinding",
+    "gtfs",
+    "transit",
+    "raptor"
+  ],
+  "author": "Peribus Team",
+  "license": "MIT",
+  "private": true
+}
