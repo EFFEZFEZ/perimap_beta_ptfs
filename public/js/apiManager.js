@@ -616,23 +616,18 @@ export class ApiManager {
         };
 
         // ========================================
-        // V210: 8 APPELS DÉCALÉS = ~15-20 HORAIRES sur 3h
-        // Pour maximiser les trajets par appel et éviter le gaspillage d'API
+        // V219: STRATÉGIE DIFFÉRENTE SELON MODE
+        // - Mode "partir" : 8 appels décalés dans le futur
+        // - Mode "arriver" : 1 seul appel (Google gère les alternatives)
         // ========================================
         
         let searchTimes;
         if (searchTime && searchTime.type === 'arriver') {
-            // Pour "Arriver à", on cherche dans le PASSÉ pour avoir des options plus tôt
-            searchTimes = [
-                searchTime,                               // T-0 min
-                this._offsetSearchTime(searchTime, -20),  // T-20 min
-                this._offsetSearchTime(searchTime, -40),  // T-40 min
-                this._offsetSearchTime(searchTime, -60),  // T-1h
-                this._offsetSearchTime(searchTime, -90),  // T-1h30
-                this._offsetSearchTime(searchTime, -120), // T-2h
-                this._offsetSearchTime(searchTime, -150), // T-2h30
-                this._offsetSearchTime(searchTime, -180), // T-3h
-            ];
+            // V219: Mode ARRIVER - UN SEUL appel avec arrivalTime exact
+            // Google Routes renvoie automatiquement les trajets qui arrivent AVANT ou À cette heure
+            // Faire des offsets négatifs ne fait que demander des arrivées dans le passé = aucun résultat
+            searchTimes = [searchTime];
+            console.log(`⏰ V219 Mode ARRIVER: 1 appel avec arrivalTime=${searchTime.hour}:${searchTime.minute}`);
         } else {
             // Pour "Partir à", on cherche dans le FUTUR sur 3h
             searchTimes = [
@@ -877,6 +872,7 @@ export class ApiManager {
             const dateTime = this._buildDateTime(searchTime);
             if (searchTime.type === 'arriver') {
                 body.arrivalTime = dateTime;
+                console.log(`🎯 V219 API arrivalTime: ${dateTime}`);
             } else {
                 body.departureTime = dateTime;
             }
