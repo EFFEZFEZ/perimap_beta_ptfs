@@ -9,4 +9,6 @@ ENV JAVA_OPTS="-Xmx3G"
 
 # OTP2 attend soit --build --serve soit juste le chemin du répertoire
 # On utilise --build pour construire le graphe au démarrage, puis --serve
-CMD ["--build", "--serve", "/var/opentripplanner"]
+# L'entrypoint OTP ajoute déjà /var/opentripplanner comme répertoire par défaut.
+# On ne fournit donc que les options ici pour éviter de passer un chemin en double.
+CMD ["--build", "--serve"]
