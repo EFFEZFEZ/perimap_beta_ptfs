@@ -156,7 +156,8 @@ export class ApiManager {
         }
 
         const json = await resp.json();
-        return json.routes || [];
+        // Retourner un objet avec routes pour compatibilité avec processIntelligentResults
+        return { routes: json.routes || [] };
     }
 
     _checkPlaceAlias(input) {

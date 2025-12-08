@@ -2338,7 +2338,7 @@ function processIntelligentResults(intelligentResults, searchTime) {
     console.log("📥 Heure demandée:", `${searchTime?.hour}:${String(searchTime?.minute || 0).padStart(2,'0')}`);
     
     // Nouveau backend OTP: si 'routes' est présent, on convertit directement
-    if (intelligentResults?.routes) {
+    if (intelligentResults?.routes && Array.isArray(intelligentResults.routes)) {
         return intelligentResults.routes.map((r, idx) => ({
             type: 'BUS',
             duration: r.duration || 0,
@@ -2347,6 +2347,12 @@ function processIntelligentResults(intelligentResults, searchTime) {
             legs: r.legs || [],
             score: 100 - idx
         }));
+    }
+
+    // Validation: si pas de recommendations, retourner un tableau vide
+    if (!intelligentResults?.recommendations || !Array.isArray(intelligentResults.recommendations)) {
+        console.warn('⚠️ Pas de recommendations dans intelligentResults:', intelligentResults);
+        return [];
     }
 
     const itineraries = [];

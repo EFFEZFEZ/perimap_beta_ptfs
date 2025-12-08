@@ -39,6 +39,16 @@ async function startServer() {
       allowedHeaders: ['Content-Type', 'Authorization'],
     }));
 
+    // Headers pour éviter le cache agressif du navigateur
+    app.use((req, res, next) => {
+      if (req.path.endsWith('.js') || req.path.endsWith('.css')) {
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+      }
+      next();
+    });
+
     // Servir les fichiers statiques du frontend
     app.use(express.static(join(__dirname, 'public')));
 

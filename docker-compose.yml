@@ -17,7 +17,9 @@ services:
       start_period: 60s
 
   api:
-    build: ./server
+    build:
+      context: .
+      dockerfile: ./server/Dockerfile
     container_name: perimap-api
     ports:
       - "8080:3000"
