@@ -61,10 +61,13 @@ router.post('/', async (req, res) => {
 
     const otpUrl = `${OTP_BASE_URL}/plan?${searchParams.toString()}`;
 
+    console.log('[routes] Fetching OTP:', otpUrl);
+    
     const otpResponse = await fetch(otpUrl, { method: 'GET' });
     const otpJson = await otpResponse.json();
 
     if (!otpResponse.ok) {
+      console.error('[routes] OTP error response:', { status: otpResponse.status, body: otpJson });
       return res.status(502).json({
         error: 'OTP plan error',
         status: otpResponse.status,
@@ -73,6 +76,7 @@ router.post('/', async (req, res) => {
     }
 
     if (!otpJson?.plan?.itineraries || !Array.isArray(otpJson.plan.itineraries)) {
+      console.error('[routes] OTP invalid response - no itineraries:', otpJson);
       return res.status(502).json({ error: 'Réponse OTP invalide (plan manquant)' });
     }
 
@@ -81,8 +85,19 @@ router.post('/', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     return res.json({ routes });
   } catch (error) {
-    console.error('[routes] OTP proxy error:', error);
-    return res.status(502).json({ error: 'Routes proxy error', details: error.message });
+    console.error('[routes] OTP proxy error - URL:', `${OTP_BASE_URL}/plan`);
+    console.error('[routes] Full error:', {
+      message: error.message,
+      code: error.code,
+      cause: error.cause,
+      stack: error.stack?.split('\n').slice(0, 3).join('\n')
+    });
+    return res.status(502).json({ 
+      error: 'Routes proxy error', 
+      details: error.message,
+      code: error.code,
+      otpUrl: OTP_BASE_URL
+    });
   }
 });
 

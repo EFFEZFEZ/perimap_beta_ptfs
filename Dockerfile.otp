@@ -1,6 +1,12 @@
 FROM opentripplanner/opentripplanner:2.4.0
 
-# L'entrypoint par défaut attend juste un répertoire
-# OTP va auto-detecter et builder les graphes dans /var/opentripplanner/graphs/default
+# Installer curl pour le healthcheck
+USER root
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+USER 1000
 
 ENV JAVA_OPTS="-Xmx3G"
+
+# OTP2 attend soit --build --serve soit juste le chemin du répertoire
+# On utilise --build pour construire le graphe au démarrage, puis --serve
+CMD ["--build", "--serve", "/var/opentripplanner"]

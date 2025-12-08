@@ -9,6 +9,12 @@ services:
     volumes:
       - ./data/otp:/var/opentripplanner
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/otp/routers/default"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
 
   api:
     build: ./server
@@ -23,7 +29,8 @@ services:
       - GTFS_RT_URL=${GTFS_RT_URL}
       - CORS_ORIGINS=http://localhost:8080,http://localhost:3000,http://localhost:8888
     depends_on:
-      - otp
+      otp:
+        condition: service_healthy
     restart: always
     volumes:
       - ./server/data:/app/data

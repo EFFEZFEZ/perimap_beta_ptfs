@@ -11,6 +11,20 @@ const router = Router();
 
 const PHOTON_BASE_URL = process.env.PHOTON_BASE_URL || 'http://localhost:2322';
 
+// Limites géographiques de la Dordogne (département 24)
+const DORDOGNE_BOUNDS = {
+  south: 44.69,   // Sud de la Dordogne
+  north: 45.68,   // Nord de la Dordogne
+  west: 0.01,     // Ouest de la Dordogne
+  east: 1.54      // Est de la Dordogne
+};
+
+// Centre de la Dordogne (Périgueux)
+const DORDOGNE_CENTER = {
+  lat: 45.184,
+  lon: 0.716
+};
+
 router.get('/autocomplete', async (req, res) => {
   const { q, lat, lon, limit = 8 } = req.query;
 
@@ -19,11 +33,16 @@ router.get('/autocomplete', async (req, res) => {
   }
 
   try {
-    const params = new URLSearchParams({ q, limit: String(limit) });
-    if (lat && lon) {
-      params.set('lat', lat);
-      params.set('lon', lon);
-    }
+    const params = new URLSearchParams({ 
+      q, 
+      limit: String(Math.min(limit, 20)) // Demander plus pour filtrer ensuite
+    });
+    
+    // Prioriser les résultats autour de la Dordogne
+    const searchLat = lat || DORDOGNE_CENTER.lat;
+    const searchLon = lon || DORDOGNE_CENTER.lon;
+    params.set('lat', String(searchLat));
+    params.set('lon', String(searchLon));
 
     const url = `${PHOTON_BASE_URL}/api?${params.toString()}`;
     const response = await fetch(url);
@@ -31,8 +50,27 @@ router.get('/autocomplete', async (req, res) => {
       return res.status(502).json({ error: 'Photon error', status: response.status });
     }
     const data = await response.json();
-    const suggestions = (data.features || []).map(mapPhotonFeatureToSuggestion);
-    res.json({ suggestions });
+    
+    // Filtrer les résultats pour ne garder que la Dordogne et environs
+    const filtered = (data.features || [])
+      .map(mapPhotonFeatureToSuggestion)
+      .filter(s => {
+        // Garder si c'est dans les limites de la Dordogne
+        if (s.lat >= DORDOGNE_BOUNDS.south && s.lat <= DORDOGNE_BOUNDS.north &&
+            s.lon >= DORDOGNE_BOUNDS.west && s.lon <= DORDOGNE_BOUNDS.east) {
+          return true;
+        }
+        // Ou si c'est mentionné "Dordogne" dans la description
+        if (s.description?.toLowerCase().includes('dordogne') || 
+            s.description?.toLowerCase().includes('périgueux') ||
+            s.description?.toLowerCase().includes('perigueux')) {
+          return true;
+        }
+        return false;
+      })
+      .slice(0, limit);
+    
+    res.json({ suggestions: filtered });
   } catch (error) {
     console.error('[places] autocomplete error', error);
     res.status(502).json({ error: 'Autocomplete error', details: error.message });

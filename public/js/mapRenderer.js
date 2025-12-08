@@ -429,10 +429,9 @@ export class MapRenderer {
             const routeColor = route?.route_color ? `#${route.route_color}` : '#3B82F6';
             const textColor = route?.route_text_color ? `#${route.route_text_color}` : '#ffffff';
             
-            const stopTimes = tripScheduler.dataManager.stopTimesByTrip[bus.tripId];
-            const destination = tripScheduler.getTripDestination(stopTimes);
-            const nextStopName = bus.segment?.toStopInfo?.stop_name || 'Inconnu';
-            const nextStopETA = tripScheduler.getNextStopETA(bus.segment, bus.currentSeconds);
+            const destination = tripScheduler?.getTripDestination ? tripScheduler.getTripDestination() : 'Temps réel';
+            const nextStopName = bus.segment?.toStopInfo?.stop_name || 'Temps réel';
+            const nextStopETA = tripScheduler?.getNextStopETA ? tripScheduler.getNextStopETA(bus.segment, bus.currentSeconds) : null;
 
             const stateText = `En Ligne (vers ${destination})`;
             const nextStopText = nextStopName;
@@ -502,8 +501,8 @@ export class MapRenderer {
         
         // Notice temps réel
         const noticeP = document.createElement('p');
-        noticeP.className = 'realtime-notice theoretical';
-        noticeP.innerHTML = '<strong>⚠️ Données simulées :</strong> Position estimée à partir des horaires théoriques.';
+            noticeP.className = 'realtime-notice live';
+            noticeP.innerHTML = '<strong>✅ Temps réel :</strong> Données issues du flux GTFS-RT.';
         body.appendChild(noticeP);
 
         container.appendChild(body);
