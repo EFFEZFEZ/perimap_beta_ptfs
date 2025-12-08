@@ -2332,21 +2332,159 @@ function processGoogleRoutesResponse(data) {
 
 // (Déduplication déplacée vers itinerary/ranking.js)
 
+/**
+ * Transforme les legs OTP en format frontendfrontal
+ */
+function transformLegs(otpLegs) {
+    if (!otpLegs || !Array.isArray(otpLegs)) return [];
+    
+    return otpLegs.map(leg => {
+        const transformed = {
+            type: leg.mode?.toUpperCase() || 'WALK',
+            _isWalk: leg.mode === 'WALK',
+            _isBike: leg.mode === 'BICYCLE',
+            duration: formatDuration(leg.duration),
+            distance: formatDistance(leg.distanceMeters),
+            from: leg.from?.name || 'Départ',
+            to: leg.to?.name || 'Arrivée',
+            polyline: leg.polyline,
+            subSteps: [] // Pour compatibilité avec legacy rendering
+        };
+        
+        // Ajouter les détails de transit pour les bus
+        if (leg.mode === 'BUS' && leg.transitDetails) {
+            transformed.lineNumber = leg.transitDetails.routeShortName || '';
+            transformed.lineName = leg.transitDetails.routeLongName || '';
+            transformed.headsign = leg.transitDetails.headsign || '';
+            transformed.agency = leg.transitDetails.agencyName || '';
+        }
+        
+        // Transformer les steps OTP en substeps pour les WALK legs
+        if ((leg.mode === 'WALK' || leg.mode === 'BICYCLE') && leg.steps && Array.isArray(leg.steps)) {
+            transformed.subSteps = leg.steps.map(step => ({
+                distance: formatDistance(step.distance),
+                maneuver: step.relativeDirection || 'CONTINUE',
+                streetName: step.streetName || '',
+                absoluteDirection: step.absoluteDirection || ''
+            }));
+        }
+        
+        return transformed;
+    });
+}
+
+/**
+ * Formate la durée en minutes pour l'affichage
+ */
+function formatDuration(seconds) {
+    if (!seconds) return '0 min';
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}` : `${hours}h`;
+}
+
+/**
+ * Formate la distance pour l'affichage
+ */
+function formatDistance(meters) {
+    if (!meters) return '0 m';
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    const km = (meters / 1000).toFixed(1);
+    return `${km} km`;
+}
+
+/**
+ * Retourne la couleur d'une ligne de bus
+ */
+function getLineColor(lineNumber) {
+    const colors = {
+        'A': '#1abc9c',
+        'B': '#3498db',
+        'C': '#e74c3c',
+        'D': '#f39c12',
+        'e1': '#9b59b6',
+        'e2': '#1abc9c',
+        'e3': '#3498db',
+        'e4': '#e74c3c',
+    };
+    return colors[lineNumber] || '#95a5a6';
+}
+
 function processIntelligentResults(intelligentResults, searchTime) {
     console.log("=== DÉBUT PROCESS INTELLIGENT RESULTS ===");
     console.log("📥 Mode de recherche:", searchTime?.type || 'partir');
     console.log("📥 Heure demandée:", `${searchTime?.hour}:${String(searchTime?.minute || 0).padStart(2,'0')}`);
+    console.log("📥 intelligentResults:", intelligentResults);
+    
+    // Si null/undefined, retourner array vide
+    if (!intelligentResults) {
+        console.warn('⚠️ intelligentResults est null/undefined');
+        return [];
+    }
     
     // Nouveau backend OTP: si 'routes' est présent, on convertit directement
     if (intelligentResults?.routes && Array.isArray(intelligentResults.routes)) {
-        return intelligentResults.routes.map((r, idx) => ({
-            type: 'BUS',
-            duration: r.duration || 0,
-            distance: r.distanceMeters || 0,
-            polyline: r.polyline,
-            legs: r.legs || [],
-            score: 100 - idx
-        }));
+        return intelligentResults.routes.map((r, idx) => {
+            // Extraire les heures du premier et dernier leg
+            const legs = r.legs || [];
+            const firstLeg = legs[0];
+            const lastLeg = legs[legs.length - 1];
+            
+            // Calculer les heures de départ et arrivée
+            const durationSeconds = r.duration || 0;
+            const durationMinutes = Math.round(durationSeconds / 60);
+            
+            // Créer des heures approximatives si pas de données exactes
+            // On utilise searchTime comme référence
+            let departureTime = '08:00';
+            let arrivalTime = '08:52';
+            
+            if (searchTime?.hour !== undefined && searchTime?.minute !== undefined) {
+                const startHour = parseInt(searchTime.hour) || 8;
+                const startMin = parseInt(searchTime.minute) || 0;
+                const startTotal = startHour * 60 + startMin;
+                const endTotal = startTotal + durationMinutes;
+                
+                const endHour = Math.floor(endTotal / 60) % 24;
+                const endMin = endTotal % 60;
+                
+                departureTime = `${String(startHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`;
+                arrivalTime = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+            }
+            
+            // Détecter le type d'itinéraire (BUS si contient un bus, sinon WALK)
+            const hasBus = legs.some(leg => leg.mode === 'BUS');
+            const hasBike = legs.some(leg => leg.mode === 'BICYCLE');
+            const itinType = hasBus ? 'BUS' : (hasBike ? 'BIKE' : 'WALK');
+            
+            // Créer summarySegments pour les lignes de bus
+            const summarySegments = legs
+                .filter(leg => leg.mode === 'BUS' && leg.transitDetails)
+                .map(leg => ({
+                    type: 'BUS',
+                    name: leg.transitDetails.routeShortName || 'Bus',
+                    color: getLineColor(leg.transitDetails.routeShortName || ''),
+                    textColor: '#fff'
+                }));
+            
+            // Créer un objet steps pour backward compatibility
+            const steps = transformLegs(legs);
+            
+            return {
+                type: itinType,
+                duration: `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}`,
+                distance: r.distanceMeters || 0,
+                polyline: r.polyline,
+                legs: steps,
+                steps: steps,
+                summarySegments,
+                departureTime,
+                arrivalTime,
+                score: 100 - idx
+            };
+        });
     }
 
     // Validation: si pas de recommendations, retourner un tableau vide
@@ -3578,6 +3716,11 @@ function drawRouteOnResultsMap(itinerary) {
  * Génère le HTML des détails pour l'accordéon PC (Bus)
  */
 function renderItineraryDetailHTML(itinerary) {
+    // Protection: si pas de steps, retourner un message
+    if (!itinerary || !itinerary.steps) {
+        console.warn('⚠️ renderItineraryDetailHTML: itinerary ou steps manquant', itinerary);
+        return '<p class="error-message">Données d\'itinéraire manquantes</p>';
+    }
     
     const stepsHtml = itinerary.steps.map((step, index) => {
         // ✅ V45: Logique de marche (et vélo) restaurée avec <details>

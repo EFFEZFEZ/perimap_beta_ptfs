@@ -62,28 +62,58 @@ router.post('/', async (req, res) => {
     const otpUrl = `${OTP_BASE_URL}/plan?${searchParams.toString()}`;
 
     console.log('[routes] Fetching OTP:', otpUrl);
+    console.log('[routes] About to fetch, timestamp:', Date.now());
     
-    const otpResponse = await fetch(otpUrl, { method: 'GET' });
-    const otpJson = await otpResponse.json();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
+      const otpResponse = await fetch(otpUrl, { method: 'GET', signal: controller.signal });
+      console.log('[routes] Fetch completed, timestamp:', Date.now());
+      clearTimeout(timeoutId);
+      console.log('[routes] OTP response status:', otpResponse.status);
+      
+      const otpText = await otpResponse.text();
+      console.log('[routes] OTP response size:', otpText.length);
+      console.log('[routes] OTP response sample:', otpText.slice(0, 300));
+      
+      const otpJson = JSON.parse(otpText);
+      console.log('[routes] OTP json parsed OK');
 
-    if (!otpResponse.ok) {
-      console.error('[routes] OTP error response:', { status: otpResponse.status, body: otpJson });
-      return res.status(502).json({
-        error: 'OTP plan error',
-        status: otpResponse.status,
-        details: otpJson?.error || otpJson,
+      if (!otpResponse.ok) {
+        console.error('[routes] OTP error response:', { status: otpResponse.status, body: otpJson });
+        return res.status(502).json({
+          error: 'OTP plan error',
+          status: otpResponse.status,
+          details: otpJson?.error || otpJson,
+        });
+      }
+
+      if (!otpJson?.plan?.itineraries || !Array.isArray(otpJson.plan.itineraries)) {
+        console.error('[routes] OTP invalid response - no itineraries:', otpJson);
+        return res.status(502).json({ error: 'Réponse OTP invalide (plan manquant)' });
+      }
+
+      const routes = otpJson.plan.itineraries.map(mapItineraryToClient);
+      
+      console.log('[routes] Mapped routes count:', routes.length);
+      if (routes.length > 0) {
+        console.log('[routes] First route legs count:', routes[0]?.legs?.length || 0);
+        if (routes[0]?.legs?.length > 0) {
+          console.log('[routes] First leg:', JSON.stringify(routes[0].legs[0]).slice(0, 200));
+        }
+      }
+
+      res.setHeader('Cache-Control', 'no-store');
+      return res.json({ routes });
+    } catch (fetchError) {
+      console.error('[routes] Fetch/parse error:', {
+        message: fetchError.message,
+        code: fetchError.code,
+        stack: fetchError.stack?.split('\n').slice(0, 2).join('\n')
       });
+      throw fetchError;
     }
-
-    if (!otpJson?.plan?.itineraries || !Array.isArray(otpJson.plan.itineraries)) {
-      console.error('[routes] OTP invalid response - no itineraries:', otpJson);
-      return res.status(502).json({ error: 'Réponse OTP invalide (plan manquant)' });
-    }
-
-    const routes = otpJson.plan.itineraries.map(mapItineraryToClient);
-
-    res.setHeader('Cache-Control', 'no-store');
-    return res.json({ routes });
   } catch (error) {
     console.error('[routes] OTP proxy error - URL:', `${OTP_BASE_URL}/plan`);
     console.error('[routes] Full error:', {
