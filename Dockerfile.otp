@@ -1,0 +1,6 @@
+FROM opentripplanner/opentripplanner:2.4.0
+
+# L'entrypoint par défaut attend juste un répertoire
+# OTP va auto-detecter et builder les graphes dans /var/opentripplanner/graphs/default
+
+ENV JAVA_OPTS="-Xmx3G"

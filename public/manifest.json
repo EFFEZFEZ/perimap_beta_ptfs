@@ -30,22 +30,6 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/icons/screenshot-wide.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "PériMap sur desktop - Calcul d'itinéraire"
-    },
-    {
-      "src": "/icons/screenshot-mobile.png",
-      "sizes": "750x1334",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "PériMap sur mobile - Horaires Péribus"
-    }
-  ],
   "shortcuts": [
     {
       "name": "Calculer un itinéraire",

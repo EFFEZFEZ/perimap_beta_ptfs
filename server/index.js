@@ -1,122 +1,66 @@
+// Copyright © 2025 Périmap - Tous droits réservés
 /**
  * index.js
- * Point d'entrée du serveur Peribus
- * 
- * 🔴 STATUT: DÉSACTIVÉ - Code préparé pour le futur
- * 
- * Pour activer:
- * 1. Configurer les variables d'environnement (.env)
- * 2. Exécuter: npm install
- * 3. Exécuter: npm run build-graph
- * 4. Exécuter: npm start
+ * Point d'entrée du serveur Perimap (Express + OTP/Photon proxies)
  */
 
-// ============================================================
-// 🔴 DÉSACTIVÉ - Décommenter pour activer le serveur
-// ============================================================
-
-/*
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 import { config, validateConfig } from './config.js';
 import { createLogger } from './utils/logger.js';
-import { setupRateLimit } from './middleware/rateLimit.js';
-import { setupCors } from './middleware/cors.js';
 import apiRouter from './api/index.js';
-import { PathfindingEngine } from './core/pathfinding/index.js';
-import { PlacesEngine } from './core/places/index.js';
-import { UserMemoryStore } from './core/memory/index.js';
-import { loadGtfsData } from './utils/gtfsLoader.js';
 
 const logger = createLogger('server');
 
 async function startServer() {
   try {
-    // Valider la configuration
     validateConfig();
     logger.info('✅ Configuration validée');
 
-    // Créer l'application Express
     const app = express();
 
-    // Middleware de sécurité
-    app.use(helmet());
+    app.use(helmet({ contentSecurityPolicy: false }));
     app.use(compression());
     app.use(express.json({ limit: '1mb' }));
-    
-    // CORS
-    setupCors(app);
-    
-    // Rate limiting
-    setupRateLimit(app);
+    app.use(express.urlencoded({ extended: true }));
 
-    // Charger les données GTFS
-    logger.info('📂 Chargement des données GTFS...');
-    const gtfsData = await loadGtfsData(config.paths.gtfs);
-    logger.info(`✅ ${gtfsData.stops.length} arrêts chargés`);
+    app.use(cors({
+      origin: config.server.corsOrigins,
+      methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    }));
 
-    // Initialiser les moteurs
-    logger.info('🔧 Initialisation des moteurs...');
-    
-    const pathfindingEngine = new PathfindingEngine(gtfsData, config.pathfinding);
-    await pathfindingEngine.buildGraph();
-    logger.info('✅ Moteur de pathfinding prêt');
+    // Servir les fichiers statiques du frontend
+    app.use(express.static(join(__dirname, 'public')));
 
-    const placesEngine = new PlacesEngine(gtfsData.stops, config.places);
-    await placesEngine.buildIndex();
-    logger.info('✅ Moteur de places prêt');
-
-    const userMemory = new UserMemoryStore(config.database, config.userMemory);
-    await userMemory.initialize();
-    logger.info('✅ Mémoire utilisateur prête');
-
-    // Injecter les moteurs dans l'app
-    app.locals.pathfinding = pathfindingEngine;
-    app.locals.places = placesEngine;
-    app.locals.userMemory = userMemory;
-    app.locals.gtfsData = gtfsData;
-
-    // Routes API
     app.use('/api', apiRouter);
 
-    // Health check
-    app.get('/health', (req, res) => {
-      res.json({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        memory: process.memoryUsage(),
-      });
+    app.get('/health', (_req, res) => {
+      res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
     });
 
-    // Gestion des erreurs
-    app.use((err, req, res, next) => {
+    app.use((err, _req, res, _next) => {
       logger.error('Erreur non gérée:', err);
-      res.status(500).json({
-        error: 'Erreur interne du serveur',
-        message: config.server.env === 'development' ? err.message : undefined,
-      });
+      res.status(500).json({ error: 'Erreur interne du serveur' });
     });
 
-    // Démarrer le serveur
     const server = app.listen(config.server.port, config.server.host, () => {
-      logger.info(`🚀 Serveur Peribus démarré sur http://${config.server.host}:${config.server.port}`);
-      logger.info(`📍 Environnement: ${config.server.env}`);
+      logger.info(`🚀 Serveur Perimap sur http://${config.server.host}:${config.server.port}`);
     });
 
-    // Gestion de l'arrêt propre
     process.on('SIGTERM', () => {
       logger.info('SIGTERM reçu, arrêt du serveur...');
-      server.close(() => {
-        userMemory.close();
-        process.exit(0);
-      });
+      server.close(() => process.exit(0));
     });
-
   } catch (error) {
     logger.error('❌ Erreur au démarrage:', error);
     process.exit(1);
@@ -124,32 +68,3 @@ async function startServer() {
 }
 
 startServer();
-*/
-
-// ============================================================
-// Message d'information quand le fichier est exécuté
-// ============================================================
-
-console.log(`
-╔═══════════════════════════════════════════════════════════════╗
-║                                                               ║
-║   🚌 PERIBUS SERVER - Module Backend                          ║
-║                                                               ║
-║   🔴 STATUT: DÉSACTIVÉ                                        ║
-║                                                               ║
-║   Ce serveur est préparé pour une utilisation future.         ║
-║   Il fournira:                                                ║
-║   - 🗺️  Pathfinding (calcul d'itinéraires)                    ║
-║   - 📍 Autocomplétion de lieux                                ║
-║   - 💾 Mémoire utilisateur (favoris, historique)              ║
-║                                                               ║
-║   Pour activer:                                               ║
-║   1. Décommenter le code dans index.js                        ║
-║   2. npm install                                              ║
-║   3. npm run build-graph                                      ║
-║   4. npm start                                                ║
-║                                                               ║
-║   Voir README.md pour plus d'informations.                    ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-`);

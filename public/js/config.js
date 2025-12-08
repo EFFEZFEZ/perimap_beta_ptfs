@@ -1,40 +1,12 @@
 /**
  * config.js
- * Centralise la récupération de configuration runtime.
+ * Centralise la configuration runtime pour le backend auto-hébergé.
  * 
- * ✅ V178: Sécurisation - La clé API Google n'est plus exposée côté client.
- * Tous les appels Google passent par les proxies Vercel:
- * - /api/routes : Google Routes API (itinéraires)
- * - /api/places : Google Places API (autocomplétion)
- * - /api/geocode : Google Geocoding API (reverse geocode)
+ * Backend: OpenTripPlanner + Photon + GTFS-RT
+ * - /api/routes : OTP (itinéraires multimodaux)
+ * - /api/places : Photon (géocodage et autocomplétion)
+ * - /api/realtime : GTFS-RT (positions des bus en temps réel)
  */
-
-/**
- * Indique si le mode proxy est activé (clé API côté serveur)
- * @returns {boolean} true si on utilise les proxies Vercel
- */
-export function useServerProxy() {
-  // En production, on utilise toujours le proxy
-  // En dev local, on peut avoir une clé dans window.__APP_CONFIG
-  if (window.__APP_CONFIG && window.__APP_CONFIG.googleApiKey) {
-    return false; // Mode dev avec clé locale
-  }
-  return true; // Mode production avec proxy
-}
-
-/**
- * Récupère la clé API Google (uniquement pour dev local)
- * En production, retourne une chaîne vide car on utilise le proxy
- * @returns {string} La clé API ou chaîne vide
- */
-export function getGoogleApiKey() {
-  // Mode dev uniquement
-  if (window.__APP_CONFIG && window.__APP_CONFIG.googleApiKey) {
-    return window.__APP_CONFIG.googleApiKey;
-  }
-  // En production, pas de clé côté client (proxy utilisé)
-  return '';
-}
 
 /**
  * Récupère le token admin pour GitHub API
@@ -58,23 +30,21 @@ export function getAdminToken() {
 }
 
 /**
- * URLs des proxies API Vercel
+ * URLs des endpoints du backend auto-hébergé
  */
 export const API_ENDPOINTS = {
-  routes: '/api/routes',
-  places: '/api/places',
-  geocode: '/api/geocode'
+    routes: '/api/routes',
+    places: '/api/places',
+    realtime: '/api/realtime'
 };
 
 /**
  * Retourne la configuration globale de l'application
- * @returns {Object} Configuration avec googleApiKey, adminToken, etc.
+ * @returns {Object} Configuration avec adminToken, endpoints backend, etc.
  */
 export function getAppConfig() {
   return {
-    googleApiKey: getGoogleApiKey(),
     adminToken: getAdminToken(),
-    useProxy: useServerProxy(),
     apiEndpoints: API_ENDPOINTS,
     arrivalPageSize: 6,
     minBusItineraries: 3,

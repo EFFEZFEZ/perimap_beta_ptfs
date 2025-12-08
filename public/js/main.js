@@ -503,7 +503,7 @@ async function initializeApp() {
         
         updateDataStatus('Données chargées', 'loaded');
         checkAndSetupTimeMode();
-        updateData(); 
+        updateData().catch(err => console.error('updateData error:', err)); 
         
     } catch (error) {
         console.error('Erreur lors de l\'initialisation GTFS:', error);
@@ -922,7 +922,7 @@ function initBottomSheetControls() {
 }
 
 function setupStaticEventListeners() {
-    try { apiManager.loadGoogleMapsAPI(); } catch (error) { console.error("Impossible de charger l'API Google:", error); }
+    // Backend auto-hébergé activé - pas d'API Google
     populateTimeSelects();
 
     // Gérer les liens hash (#horaires, #trafic, etc.)
@@ -2048,7 +2048,13 @@ async function handleAutocomplete(query, container, onSelect) {
         return;
     }
     try {
-        const suggestions = await apiManager.getPlaceAutocomplete(query);
+        // Essaie de passer la position actuelle pour prioriser les résultats
+        let lat = null, lon = null;
+        if (geolocationManager && geolocationManager.lastKnownLocation) {
+            lat = geolocationManager.lastKnownLocation.lat;
+            lon = geolocationManager.lastKnownLocation.lng;
+        }
+        const suggestions = await apiManager.getPlaceAutocomplete(query, lat, lon);
         renderSuggestions(suggestions, container, onSelect);
     } catch (error) {
         console.warn("Erreur d'autocomplétion:", error);
@@ -2331,6 +2337,18 @@ function processIntelligentResults(intelligentResults, searchTime) {
     console.log("📥 Mode de recherche:", searchTime?.type || 'partir');
     console.log("📥 Heure demandée:", `${searchTime?.hour}:${String(searchTime?.minute || 0).padStart(2,'0')}`);
     
+    // Nouveau backend OTP: si 'routes' est présent, on convertit directement
+    if (intelligentResults?.routes) {
+        return intelligentResults.routes.map((r, idx) => ({
+            type: 'BUS',
+            duration: r.duration || 0,
+            distance: r.distanceMeters || 0,
+            polyline: r.polyline,
+            legs: r.legs || [],
+            score: 100 - idx
+        }));
+    }
+
     const itineraries = [];
     const sortedRecommendations = [...intelligentResults.recommendations].sort((a, b) => b.score - a.score);
 
@@ -4328,7 +4346,7 @@ function handleRouteFilterChange() {
     if (dataManager.geoJson) {
         mapRenderer.displayMultiColorRoutes(dataManager.geoJson, dataManager, visibleRoutes);
     }
-    updateData();
+    updateData().catch(err => console.error('updateData error:', err));
 }
 
 function handleSearchInput(e) {
@@ -4376,20 +4394,17 @@ function onSearchResultClick(stop) {
 /**
  * Fonction de mise à jour principale (pour la carte temps réel)
  */
-function updateData() {
-    if (!timeManager || !tripScheduler || !busPositionCalculator || !mapRenderer) {
+async function updateData() {
+    if (!timeManager || !tripScheduler || !mapRenderer) {
         return;
     }
 
     const currentSeconds = timeManager.getCurrentSeconds();
-    const currentDate = timeManager.getCurrentDate(); 
-    
     updateClock(currentSeconds);
     
-    const activeBuses = tripScheduler.getActiveTrips(currentSeconds, currentDate);
-    const allBusesWithPositions = busPositionCalculator.calculateAllPositions(activeBuses);
+    const activeBuses = await tripScheduler.getActiveTrips();
 
-    allBusesWithPositions.forEach(bus => {
+    activeBuses.forEach(bus => {
         if (bus && bus.route) {
             const routeId = bus.route.route_id;
             bus.currentStatus = (lineStatuses[routeId] && lineStatuses[routeId].status) 
@@ -4398,7 +4413,7 @@ function updateData() {
         }
     });
     
-    const visibleBuses = allBusesWithPositions
+    const visibleBuses = activeBuses
         .filter(bus => bus !== null)
         .filter(bus => bus.route && visibleRoutes.has(bus.route.route_id)); 
     

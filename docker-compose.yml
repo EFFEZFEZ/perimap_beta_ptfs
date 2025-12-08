@@ -1,0 +1,30 @@
+services:
+  otp:
+    build:
+      context: .
+      dockerfile: Dockerfile.otp
+    container_name: perimap-otp
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./data/otp:/var/opentripplanner
+    restart: always
+
+  api:
+    build: ./server
+    container_name: perimap-api
+    ports:
+      - "8080:3000"
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - OTP_BASE_URL=http://otp:8080/otp/routers/default
+      - PHOTON_BASE_URL=https://photon.komoot.io
+      - GTFS_RT_URL=${GTFS_RT_URL}
+      - CORS_ORIGINS=http://localhost:8080,http://localhost:3000,http://localhost:8888
+    depends_on:
+      - otp
+    restart: always
+    volumes:
+      - ./server/data:/app/data
+      - ./public:/app/public

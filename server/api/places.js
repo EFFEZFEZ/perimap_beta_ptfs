@@ -1,197 +1,87 @@
+// Copyright © 2025 Périmap - Tous droits réservés
 /**
  * api/places.js
- * API d'autocomplétion de lieux
- * 
- * 🔴 STATUT: DÉSACTIVÉ - Code préparé pour le futur
+ * Proxy Photon pour recherche et géocodage inverse
  */
 
-/*
 import { Router } from 'express';
+import fetch from 'node-fetch';
 
 const router = Router();
 
-/**
- * GET /api/places/autocomplete
- * Recherche de lieux par texte (autocomplétion)
- * 
- * Query:
- * - q: string (requis) - Texte de recherche
- * - lat: number (optionnel) - Latitude pour boost proximité
- * - lon: number (optionnel) - Longitude pour boost proximité
- * - types: string (optionnel) - Types de lieux séparés par virgule (stop,poi,address)
- * - limit: number (optionnel, défaut 10)
- */
-/*
-router.get('/autocomplete', async (req, res, next) => {
+const PHOTON_BASE_URL = process.env.PHOTON_BASE_URL || 'http://localhost:2322';
+
+router.get('/autocomplete', async (req, res) => {
+  const { q, lat, lon, limit = 8 } = req.query;
+
+  if (!q || q.length < 2) {
+    return res.status(400).json({ error: 'Requête trop courte (min 2 caractères)' });
+  }
+
   try {
-    const { places, userMemory } = req.app.locals;
-    const { q, lat, lon, types, limit = 10 } = req.query;
-
-    if (!q || q.length < 2) {
-      return res.status(400).json({
-        error: 'Requête trop courte (min 2 caractères)',
-      });
-    }
-
-    // Contexte utilisateur pour personnaliser les résultats
-    let userContext = null;
-    if (req.userId && userMemory) {
-      userContext = await userMemory.getUserContext(req.userId);
-    }
-
-    // Options de recherche
-    const searchOptions = {
-      userContext,
-    };
-
-    // Position pour boost proximité
+    const params = new URLSearchParams({ q, limit: String(limit) });
     if (lat && lon) {
-      searchOptions.location = {
-        lat: parseFloat(lat),
-        lon: parseFloat(lon),
-      };
+      params.set('lat', lat);
+      params.set('lon', lon);
     }
 
-    // Filtrer par types
-    if (types) {
-      searchOptions.types = types.split(',');
+    const url = `${PHOTON_BASE_URL}/api?${params.toString()}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      return res.status(502).json({ error: 'Photon error', status: response.status });
     }
-
-    // Recherche
-    const suggestions = places.search(q, searchOptions);
-
-    res.json({
-      suggestions: suggestions.slice(0, parseInt(limit)),
-      query: q,
-    });
-
+    const data = await response.json();
+    const suggestions = (data.features || []).map(mapPhotonFeatureToSuggestion);
+    res.json({ suggestions });
   } catch (error) {
-    next(error);
+    console.error('[places] autocomplete error', error);
+    res.status(502).json({ error: 'Autocomplete error', details: error.message });
   }
 });
 
-/**
- * GET /api/places/nearby
- * Recherche de lieux à proximité d'une position
- * 
- * Query:
- * - lat: number (requis)
- * - lon: number (requis)
- * - radius: number (optionnel, défaut 500m)
- * - types: string (optionnel)
- * - limit: number (optionnel, défaut 10)
- */
-/*
-router.get('/nearby', async (req, res, next) => {
+router.get('/reverse', async (req, res) => {
+  const { lat, lon } = req.query;
+  if (!lat || !lon) {
+    return res.status(400).json({ error: 'lat et lon requis' });
+  }
   try {
-    const { places } = req.app.locals;
-    const { lat, lon, radius = 500, types, limit = 10 } = req.query;
-
-    if (!lat || !lon) {
-      return res.status(400).json({
-        error: 'lat et lon requis',
-      });
+    const params = new URLSearchParams({ lat, lon, limit: '1' });
+    const url = `${PHOTON_BASE_URL}/reverse?${params.toString()}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      return res.status(502).json({ error: 'Photon reverse error', status: response.status });
     }
-
-    const options = {
-      radius: parseInt(radius),
-      limit: parseInt(limit),
-    };
-
-    if (types) {
-      options.types = types.split(',');
+    const data = await response.json();
+    const feature = data.features?.[0];
+    if (!feature) {
+      return res.status(404).json({ error: 'Aucun résultat' });
     }
-
-    const nearby = places.searchNearby(
-      parseFloat(lat),
-      parseFloat(lon),
-      options
-    );
-
-    res.json({
-      places: nearby,
-      center: { lat: parseFloat(lat), lon: parseFloat(lon) },
-      radius: parseInt(radius),
-    });
-
+    res.json({ place: mapPhotonFeatureToSuggestion(feature) });
   } catch (error) {
-    next(error);
+    console.error('[places] reverse error', error);
+    res.status(502).json({ error: 'Reverse error', details: error.message });
   }
 });
 
-/**
- * GET /api/places/:id
- * Détails d'un lieu spécifique
- */
-/*
-router.get('/:id', async (req, res, next) => {
-  try {
-    const { places } = req.app.locals;
-    const { id } = req.params;
+function mapPhotonFeatureToSuggestion(feature) {
+  const props = feature.properties || {};
+  const coord = feature.geometry?.coordinates || [];
+  return {
+    id: buildPhotonId(props),
+    description: props.name || props.label || 'Lieu',
+    lat: coord[1],
+    lon: coord[0],
+    city: props.city || props.town || props.village,
+    country: props.country,
+    type: props.osm_value,
+  };
+}
 
-    const place = places.getPlace(id);
-
-    if (!place) {
-      return res.status(404).json({
-        error: 'Lieu non trouvé',
-      });
-    }
-
-    res.json({ place });
-
-  } catch (error) {
-    next(error);
+function buildPhotonId(props) {
+  if (props.osm_type && props.osm_id) {
+    return `${props.osm_type}:${props.osm_id}`;
   }
-});
+  return props.osm_id ? String(props.osm_id) : 'photon';
+}
 
-/**
- * GET /api/places/reverse
- * Géocodage inverse (coordonnées -> adresse)
- */
-/*
-router.get('/reverse', async (req, res, next) => {
-  try {
-    const { places } = req.app.locals;
-    const { lat, lon } = req.query;
-
-    if (!lat || !lon) {
-      return res.status(400).json({
-        error: 'lat et lon requis',
-      });
-    }
-
-    // Trouver le lieu le plus proche
-    const nearby = places.searchNearby(
-      parseFloat(lat),
-      parseFloat(lon),
-      { radius: 100, limit: 1 }
-    );
-
-    if (nearby.length === 0) {
-      // Fallback: retourner les coordonnées
-      return res.json({
-        place: {
-          id: `coords_${lat}_${lon}`,
-          type: 'coordinates',
-          name: `${parseFloat(lat).toFixed(5)}, ${parseFloat(lon).toFixed(5)}`,
-          lat: parseFloat(lat),
-          lon: parseFloat(lon),
-        },
-      });
-    }
-
-    res.json({
-      place: nearby[0],
-    });
-
-  } catch (error) {
-    next(error);
-  }
-});
-
-export default router;
-*/
-
-// Placeholder
-const router = {};
 export default router;

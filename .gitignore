@@ -1,28 +1,6 @@
-# GTFS Data Files (Données brutes et générées)
-public/data/gtfs/*.txt
-public/data/map.geojson
-public/data/gtfs/gtfs.bundle.json
-*.bundle
-*.bundle.json
-
-# Keep directory structure (Garder la structure des dossiers)
-!public/data/gtfs/.gitkeep
-!public/data/.gitkeep
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Logs
+﻿data/otp/*.osm.pbf
+data/otp/*.zip
+data/otp/graphs/
+data/photon/
+node_modules/
 *.log
-npm-debug.log*
-
-# Temporary files
-*.tmp
-*.temp

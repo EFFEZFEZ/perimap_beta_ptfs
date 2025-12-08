@@ -171,7 +171,10 @@ async function staleWhileRevalidate(request, cacheName) {
   // Revalidation en arrière-plan
   const networkPromise = fetch(request)
     .then(response => {
-      if (response.ok) cache.put(request, response.clone());
+      // N'essaie de cacher que les requêtes HTTP(S)
+      if (response.ok && request.url.startsWith('http')) {
+        cache.put(request, response.clone());
+      }
       return response;
     })
     .catch(() => null);

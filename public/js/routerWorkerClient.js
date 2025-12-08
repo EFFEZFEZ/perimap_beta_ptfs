@@ -1,129 +1,58 @@
-const WORKER_MODULE_PATH = './workers/routerWorker.js';
+// Copyright © 2025 Périmap - Tous droits réservés
+/**
+ * routerWorkerClient.js
+ * Compat shim: redirige les calculs vers le backend /api/routes
+ */
 
 export class RouterWorkerClient {
-    constructor({ dataManager, icons, googleApiKey, geocodeProxyUrl }) {
-        this.worker = null;
-        this.isSupported = typeof Worker !== 'undefined';
-        this.requestId = 0;
-        this.pending = new Map();
-        this.readyPromise = null;
-        this.icons = icons;
-        this.googleApiKey = googleApiKey;
-        this.geocodeProxyUrl = geocodeProxyUrl || (typeof window !== 'undefined' ? `${window.location.origin}/api/geocode` : '/api/geocode');
-        if (this.isSupported && dataManager) {
-            this.readyPromise = this.initializeWorker(dataManager);
-        }
-    }
-
-    async initializeWorker(dataManager) {
-        try {
-            this.worker = new Worker(new URL(WORKER_MODULE_PATH, import.meta.url), { type: 'module' });
-        } catch (error) {
-            console.warn('RouterWorkerClient: impossible de créer le worker', error);
-            this.isSupported = false;
-            return Promise.reject(error);
-        }
-
-        this.worker.onmessage = (event) => {
-            const { type, requestId, payload, error } = event.data || {};
-            if (type === 'ready') {
-                const resolver = this.pending.get('init');
-                if (resolver) {
-                    resolver.resolve(true);
-                    this.pending.delete('init');
-                }
-                return;
-            }
-            if (type === 'init-error') {
-                const resolver = this.pending.get('init');
-                if (resolver) {
-                    resolver.reject(new Error(error || 'router worker init error'));
-                    this.pending.delete('init');
-                }
-                return;
-            }
-            if (!requestId) {
-                return;
-            }
-            const pendingEntry = this.pending.get(requestId);
-            if (!pendingEntry) return;
-            if (error) {
-                pendingEntry.reject(new Error(error));
-            } else {
-                pendingEntry.resolve(payload);
-            }
-            this.pending.delete(requestId);
-        };
-
-        this.worker.onerror = (event) => {
-            const resolver = this.pending.get('init');
-            if (resolver) {
-                resolver.reject(event.error || new Error('router worker crashed during init'));
-                this.pending.delete('init');
-            }
-            this.rejectAll(event.error || new Error('router worker crashed'));
-        };
-
-        const initPromise = new Promise((resolve, reject) => {
-            this.pending.set('init', { resolve, reject });
-        });
-
-        const snapshot = dataManager.createRoutingSnapshot();
-        const workerIcons = serializeWorkerIcons(this.icons);
-        this.worker.postMessage({
-            type: 'init',
-            payload: {
-                snapshot,
-                icons: workerIcons,
-                googleApiKey: this.googleApiKey,
-                geocodeProxyUrl: this.geocodeProxyUrl
-            }
-        });
-
-        return initPromise;
-    }
-
-    rejectAll(error) {
-        this.pending.forEach(({ reject }) => reject(error));
-        this.pending.clear();
-    }
+    constructor() {}
 
     async computeHybridItinerary(params) {
-        if (!this.isSupported || !this.worker) {
-            throw new Error('RouterWorkerClient indisponible');
+        // Params: { fromCoords, toCoords, searchTime }
+        const { fromCoords, toCoords, searchTime } = params || {};
+        if (!fromCoords || !toCoords) {
+            throw new Error('Coordonnées manquantes');
         }
-        await this.readyPromise;
-        return this.enqueueRequest('computeItinerary', params);
-    }
 
-    enqueueRequest(type, payload) {
-        const requestId = `req_${++this.requestId}`;
-        const promise = new Promise((resolve, reject) => {
-            this.pending.set(requestId, { resolve, reject });
+        const body = {
+            origin: { lat: fromCoords.lat, lon: fromCoords.lng },
+            destination: { lat: toCoords.lat, lon: toCoords.lng },
+            time: buildIso(searchTime),
+            timeType: searchTime?.type === 'arriver' ? 'arrival' : 'departure',
+            mode: 'TRANSIT'
+        };
+
+        const resp = await fetch('/api/routes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
         });
-        this.worker.postMessage({ type, requestId, payload });
-        return promise;
+        if (!resp.ok) {
+            const err = await safeJson(resp);
+            throw new Error(`Routes error ${resp.status}: ${err?.error || ''}`);
+        }
+        const json = await resp.json();
+        return json.routes || [];
     }
 
-    terminate() {
-        if (this.worker) {
-            this.worker.terminate();
-            this.worker = null;
-        }
-        this.rejectAll(new Error('Router worker terminated'));
-    }
+    terminate() {}
 }
 
-function serializeWorkerIcons(icons) {
-    if (!icons || typeof icons !== 'object') {
+function buildIso(searchTime) {
+    if (!searchTime) return new Date().toISOString();
+    const now = new Date();
+    const dateStr = searchTime.date && searchTime.date !== "Aujourd'hui"
+        ? searchTime.date
+        : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const hour = String(searchTime.hour || '00').padStart(2, '0');
+    const minute = String(searchTime.minute || '00').padStart(2, '0');
+    return `${dateStr}T${hour}:${minute}:00`;
+}
+
+async function safeJson(resp) {
+    try {
+        return await resp.json();
+    } catch (e) {
         return null;
     }
-    const allowedKeys = ['BUS', 'WALK', 'statusWarning'];
-    const safeIcons = {};
-    allowedKeys.forEach((key) => {
-        if (typeof icons[key] === 'string') {
-            safeIcons[key] = icons[key];
-        }
-    });
-    return safeIcons;
 }
