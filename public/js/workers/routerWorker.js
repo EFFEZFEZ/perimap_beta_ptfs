@@ -7,6 +7,110 @@ let isReady = false;
 let googleApiKey = null;
 let geocodeProxyUrl = '/api/geocode';
 
+/**
+ * ✅ PRODUCTION: Algorithme CSA (Connection Scan Algorithm) simplifié
+ * Recherche les horaires RÉELS dans stop_times.txt au lieu d'estimer
+ * 
+ * @param {string} departStopId - ID de l'arrêt de départ
+ * @param {string} arriveStopId - ID de l'arrêt d'arrivée
+ * @param {number} departureSec - Heure de départ en secondes depuis minuit
+ * @param {Date} date - Date de recherche
+ * @returns {Array} Connexions trouvées triées par heure de départ
+ */
+function connectionScanAlgorithm(departStopId, arriveStopId, departureSec, date) {
+    if (!workerDataManager || !workerDataManager.isLoaded) {
+        console.warn('[CSA] DataManager non chargé');
+        return [];
+    }
+    
+    const serviceIds = workerDataManager.getServiceIds(date);
+    if (!serviceIds || serviceIds.size === 0) {
+        console.warn('[CSA] Aucun service actif pour cette date');
+        return [];
+    }
+    
+    const connections = [];
+    const departStopIds = new Set([departStopId]);
+    const arriveStopIds = new Set([arriveStopId]);
+    
+    // Étendre avec les arrêts du cluster (StopPlace -> Quays)
+    const expandCluster = (idSet) => {
+        const extra = [];
+        idSet.forEach(id => {
+            const grouped = workerDataManager.groupedStopMap?.[id];
+            if (Array.isArray(grouped)) {
+                grouped.forEach(gid => extra.push(gid));
+            }
+        });
+        extra.forEach(x => idSet.add(x));
+    };
+    expandCluster(departStopIds);
+    expandCluster(arriveStopIds);
+    
+    // Scanner tous les trips actifs
+    for (const trip of workerDataManager.trips) {
+        // Vérifier si le service est actif
+        const isServiceActive = Array.from(serviceIds).some(activeServiceId => 
+            workerDataManager.serviceIdsMatch(trip.service_id, activeServiceId)
+        );
+        if (!isServiceActive) continue;
+        
+        const stopTimes = workerDataManager.stopTimesByTrip?.[trip.trip_id];
+        if (!stopTimes || stopTimes.length < 2) continue;
+        
+        // Chercher l'arrêt de départ
+        let boardingIdx = -1;
+        for (let i = 0; i < stopTimes.length; i++) {
+            if (departStopIds.has(stopTimes[i].stop_id)) {
+                const depSec = workerDataManager.timeToSeconds(stopTimes[i].departure_time);
+                // Ne considérer que les départs APRÈS l'heure demandée
+                if (depSec >= departureSec) {
+                    boardingIdx = i;
+                    break;
+                }
+            }
+        }
+        if (boardingIdx === -1) continue;
+        
+        // Chercher l'arrêt d'arrivée APRÈS le départ
+        let alightIdx = -1;
+        for (let i = boardingIdx + 1; i < stopTimes.length; i++) {
+            if (arriveStopIds.has(stopTimes[i].stop_id)) {
+                alightIdx = i;
+                break;
+            }
+        }
+        if (alightIdx === -1) continue;
+        
+        // ✅ HORAIRES RÉELS depuis stop_times.txt
+        const boardingST = stopTimes[boardingIdx];
+        const alightST = stopTimes[alightIdx];
+        const realDepartureSec = workerDataManager.timeToSeconds(boardingST.departure_time);
+        const realArrivalSec = workerDataManager.timeToSeconds(alightST.arrival_time);
+        
+        connections.push({
+            tripId: trip.trip_id,
+            routeId: trip.route_id,
+            shapeId: trip.shape_id,
+            boardingStopId: boardingST.stop_id,
+            alightingStopId: alightST.stop_id,
+            // ✅ HORAIRES RÉELS (pas calculés!)
+            departureSeconds: realDepartureSec,
+            arrivalSeconds: realArrivalSec,
+            departureTime: boardingST.departure_time,
+            arrivalTime: alightST.arrival_time,
+            stopTimes: stopTimes.slice(boardingIdx, alightIdx + 1),
+            route: workerDataManager.getRoute(trip.route_id)
+        });
+    }
+    
+    // Trier par heure de départ
+    connections.sort((a, b) => a.departureSeconds - b.departureSeconds);
+    
+    console.log(`[CSA] ${connections.length} connexions trouvées de ${departStopId} vers ${arriveStopId}`);
+    return connections;
+}
+
 self.addEventListener('message', async (event) => {
     const { type, payload, requestId } = event.data || {};
     if (type === 'init') {
@@ -34,6 +138,23 @@ self.addEventListener('message', async (event) => {
         } catch (error) {
             console.error('routerWorker compute error', error);
             self.postMessage({ type: 'result', requestId, error: error?.message || 'compute failed' });
+        }
+    }
+    
+    // ✅ PRODUCTION: Nouveau type de message pour CSA direct
+    if (type === 'findRealSchedule') {
+        if (!isReady || !workerDataManager) {
+            self.postMessage({ type: 'scheduleResult', requestId, error: 'Worker not ready' });
+            return;
+        }
+        try {
+            const { departStopId, arriveStopId, departureSec, date } = payload || {};
+            const dateObj = date ? new Date(date) : new Date();
+            const connections = connectionScanAlgorithm(departStopId, arriveStopId, departureSec, dateObj);
+            self.postMessage({ type: 'scheduleResult', requestId, payload: connections });
+        } catch (error) {
+            console.error('routerWorker findRealSchedule error', error);
+            self.postMessage({ type: 'scheduleResult', requestId, error: error?.message || 'CSA failed' });
         }
     }
 });

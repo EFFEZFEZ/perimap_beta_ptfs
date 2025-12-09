@@ -198,3 +198,41 @@ function preprocessStopTimesByStop(stopTimes = []) {
     });
     return bucket;
 }
+
+/**
+ * ✅ PRODUCTION: Normalise une couleur hex GTFS
+ * Ajoute le préfixe # si manquant, retourne la couleur par défaut si vide
+ * @param {string} color - Couleur hex (avec ou sans #)
+ * @param {string} defaultColor - Couleur par défaut
+ * @returns {string} Couleur hex normalisée avec #
+ */
+export function normalizeGtfsColor(color, defaultColor = '#3388ff') {
+    if (!color || typeof color !== 'string') {
+        return defaultColor;
+    }
+    const trimmed = color.trim();
+    if (!trimmed || trimmed === '#') {
+        return defaultColor;
+    }
+    // Vérifie si c'est un hex valide (3 ou 6 caractères)
+    const hexPattern = /^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+    if (!hexPattern.test(trimmed)) {
+        return defaultColor;
+    }
+    return trimmed.startsWith('#') ? trimmed : '#' + trimmed;
+}
+
+/**
+ * ✅ PRODUCTION: Extrait les couleurs normalisées d'une route
+ * @param {Object} route - Objet route GTFS
+ * @returns {Object} { routeColor, routeTextColor }
+ */
+export function getRouteColors(route) {
+    if (!route) {
+        return { routeColor: '#3388ff', routeTextColor: '#ffffff' };
+    }
+    return {
+        routeColor: normalizeGtfsColor(route.route_color, '#3388ff'),
+        routeTextColor: normalizeGtfsColor(route.route_text_color, '#ffffff')
+    };
+}

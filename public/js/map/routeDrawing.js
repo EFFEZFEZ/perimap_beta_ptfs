@@ -182,13 +182,29 @@ export function getLeafletStyleForStep(step) {
             dashArray: isDirectLine ? '10, 10' : undefined
         };
     }
-    // Vérifie le type Bus
+    // ✅ PRODUCTION: Utilise les couleurs GTFS réelles pour les bus
     if (step.type === 'BUS') {
-        const busColor = step.routeColor || 'var(--primary)';
+        // Priorité: routeColor du step > couleur par défaut
+        // La couleur vient de routes.txt (route_color) via gtfsProcessor
+        let busColor = step.routeColor;
+        
+        // Normaliser la couleur hex (ajouter # si manquant)
+        if (busColor && typeof busColor === 'string') {
+            busColor = busColor.trim();
+            if (busColor && !busColor.startsWith('#') && /^[A-Fa-f0-9]{6}$/.test(busColor)) {
+                busColor = '#' + busColor;
+            }
+        }
+        
+        // Fallback si couleur invalide
+        if (!busColor || busColor === '#' || busColor.length < 4) {
+            busColor = '#3388ff'; // Bleu par défaut GTFS
+        }
+        
         return {
             color: busColor,
-            weight: 5,
-            opacity: 0.8
+            weight: 6,
+            opacity: 0.9
         };
     }
     
@@ -487,6 +503,86 @@ export function drawRouteOnMap(itinerary, map, existingRouteLayer, markerLayer, 
     return routeLayer;
 }
 
+/**
+ * ✅ PRODUCTION: Extrait le segment de shape entre deux arrêts
+ * Utilise les shapes.txt GTFS au lieu de tracer des lignes droites
+ * 
+ * @param {Object} dataManager - Instance du DataManager
+ * @param {string} tripId - ID du trip
+ * @param {Object} startStop - Arrêt de départ {stop_lat, stop_lon}
+ * @param {Object} endStop - Arrêt d'arrivée {stop_lat, stop_lon}
+ * @returns {Array<Array<number>>|null} Array de [lat, lng] ou null si shape non trouvé
+ */
+export function getShapeSegmentBetweenStops(dataManager, tripId, startStop, endStop) {
+    if (!dataManager || !tripId) return null;
+    
+    // 1. Trouver le trip et son shape_id
+    const trip = dataManager.tripsByTripId?.[tripId];
+    if (!trip || !trip.shape_id) {
+        console.warn(`⚠️ Shape non trouvé pour trip ${tripId}`);
+        return null;
+    }
+    
+    // 2. Récupérer les points du shape
+    const shapePoints = dataManager.shapesById?.[trip.shape_id];
+    if (!shapePoints || shapePoints.length < 2) {
+        console.warn(`⚠️ Points shape manquants pour ${trip.shape_id}`);
+        return null;
+    }
+    
+    // 3. Convertir les coordonnées du shape [lon, lat] -> [lat, lng]
+    const shapeLatLngs = shapePoints.map(([lon, lat]) => [lat, lon]);
+    
+    // 4. Trouver les indices des points les plus proches des arrêts
+    const findNearestIndex = (points, targetLat, targetLng) => {
+        let bestIdx = 0;
+        let bestDist = Infinity;
+        for (let i = 0; i < points.length; i++) {
+            const [lat, lng] = points[i];
+            const dist = Math.sqrt(Math.pow(lat - targetLat, 2) + Math.pow(lng - targetLng, 2));
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestIdx = i;
+            }
+        }
+        return bestIdx;
+    };
+    
+    const startLat = parseFloat(startStop.stop_lat);
+    const startLng = parseFloat(startStop.stop_lon);
+    const endLat = parseFloat(endStop.stop_lat);
+    const endLng = parseFloat(endStop.stop_lon);
+    
+    if (isNaN(startLat) || isNaN(endLat)) return null;
+    
+    const startIdx = findNearestIndex(shapeLatLngs, startLat, startLng);
+    const endIdx = findNearestIndex(shapeLatLngs, endLat, endLng);
+    
+    // 5. Extraire le segment (gère les deux sens)
+    if (startIdx === endIdx) {
+        return [shapeLatLngs[startIdx]];
+    }
+    
+    if (startIdx < endIdx) {
+        return shapeLatLngs.slice(startIdx, endIdx + 1);
+    } else {
+        // Shape inversé
+        return shapeLatLngs.slice(endIdx, startIdx + 1).reverse();
+    }
+}
+
+/**
+ * ✅ PRODUCTION: Vérifie si un step a une polyline valide (pas juste une ligne droite)
+ * @param {Object} step - L'étape
+ * @returns {boolean}
+ */
+export function hasValidShapePolyline(step) {
+    if (!step) return false;
+    const latLngs = getPolylineLatLngs(step.polyline || step.polylines?.[0]);
+    // Une polyline shape valide a généralement plus de 2 points
+    return latLngs && latLngs.length > 2;
+}
+
 // === EXPORTS PAR DÉFAUT ===
 
 export default {
@@ -510,5 +606,9 @@ export default {
     addFallbackItineraryMarkers,
     
     // Dessin
-    drawRouteOnMap
+    drawRouteOnMap,
+    
+    // ✅ PRODUCTION: Shapes GTFS
+    getShapeSegmentBetweenStops,
+    hasValidShapePolyline
 };
