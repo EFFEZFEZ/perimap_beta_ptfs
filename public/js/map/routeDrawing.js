@@ -163,11 +163,23 @@ export function getLeafletStyleForStep(step) {
         };
     }
     if (step.type === 'WALK') {
+        // ✅ CORRECTION 4: Distinction visuelle vol d'oiseau vs tracé routier
+        // Pointillés UNIQUEMENT pour les segments sans routing API (vol d'oiseau)
+        // Vérifier plusieurs sources possibles du flag isDirectLine
+        const isDirectLine = 
+            step.polyline?.isDirectLine || 
+            step.polylines?.[0]?.isDirectLine ||
+            step._walkRouteSource === 'direct' || 
+            step._walkRouteSource === 'fallback' ||
+            step._source === 'direct' ||
+            step._source === 'fallback';
+        
         return {
             color: 'var(--primary)',
             weight: 5,
             opacity: 0.8,
-            dashArray: '10, 10' // Hachuré
+            // Pointillés pour vol d'oiseau, ligne continue si API routing
+            dashArray: isDirectLine ? '10, 10' : undefined
         };
     }
     // Vérifie le type Bus

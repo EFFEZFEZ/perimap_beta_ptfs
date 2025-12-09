@@ -462,14 +462,23 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         const boardingStopName = getStopDisplayName(boardingStop);
         const alightingStopName = getStopDisplayName(alightingStop);
 
-        let geometry = dataManager.getRouteGeometry(segment.routeId);
-        if (!geometry && segment.shapeId) {
+        // ✅ CORRECTION 3: Tracé bus précis avec shapes.txt (non plus "vol d'oiseau")
+        // Priorité 1: shape_id du trip (tracé exact de la ligne)
+        // Priorité 2: géométrie de la route
+        // Fallback: ligne droite uniquement si aucune géométrie disponible
+        let geometry = null;
+        if (segment.shapeId) {
             geometry = dataManager.getShapeGeoJSON(segment.shapeId, segment.routeId);
+        }
+        if (!geometry) {
+            geometry = dataManager.getRouteGeometry(segment.routeId);
         }
 
         let latLngPolyline = geometryToLatLngs(geometry);
         let slicedPolyline = slicePolylineBetween(latLngPolyline, boardingPoint, alightingPoint);
         if (!slicedPolyline || slicedPolyline.length < 2) {
+            // Fallback ligne droite UNIQUEMENT si shapes.txt manquant
+            console.warn('⚠️ shapes.txt manquant pour', segment.routeId, '- fallback ligne droite');
             slicedPolyline = [
                 [boardingPoint.lat, boardingPoint.lon],
                 [alightingPoint.lat, alightingPoint.lon]
@@ -486,6 +495,9 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
         }
         const busPolylineEncoded = encodePolyline(busPolylineLatLngs);
 
+        // ✅ CORRECTION 2: Utilisation des horaires GTFS réels (stop_times.txt)
+        // Les segment.departureSeconds et segment.arrivalSeconds proviennent directement de stop_times.txt
+        // et non d'une estimation distance/vitesse
         const durationSeconds = Math.max(0, segment.arrivalSeconds - segment.departureSeconds);
         
         // V62: Inclure les coordonnées des arrêts intermédiaires
@@ -1087,18 +1099,28 @@ async function computeHybridItineraryInternal(context, fromCoordsRaw, toCoordsRa
             }
 
             const durationSeconds = routeData.durationSeconds ?? computeWalkDurationSeconds(routeData.distanceMeters);
+            
+            // ✅ CORRECTION 4: Gestion marche avec support API routing externe
+            // Structure prête pour OSRM/Mapbox - affichage différencié (pointillés)
+            const isDirectLine = routeData.source === 'direct' || routeData.source === 'fallback';
+            
             return {
                 type: 'WALK',
                 icon: ICONS.WALK,
                 instruction,
-                polylines: routeData.encodedPolyline ? [{ encodedPolyline: routeData.encodedPolyline }] : [],
+                polylines: routeData.encodedPolyline ? [{ 
+                    encodedPolyline: routeData.encodedPolyline,
+                    // Marquer si c'est un vol d'oiseau ou un tracé routier réel
+                    isDirectLine: isDirectLine
+                }] : [],
                 subSteps: [],
                 totalDistanceMeters: Math.round(routeData.distanceMeters),
                 departureTime: '~',
                 arrivalTime: '~',
                 duration: durationSeconds ? `${Math.max(1, Math.round(durationSeconds / 60))} min` : '—',
                 _durationSeconds: durationSeconds,
-                _source: routeData.source || 'direct'
+                _source: routeData.source || 'direct',
+                _walkRouteSource: routeData.source // 'api', 'direct', ou 'fallback'
             };
         } catch (err) {
             console.warn('Erreur buildWalkStep (hybrid):', err);

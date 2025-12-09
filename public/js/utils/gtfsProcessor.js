@@ -56,6 +56,22 @@ export function buildGtfsIndexes(dataset = {}) {
     const shapes = dataset.shapes || [];
 
     routes.forEach((route) => {
+        // ✅ CORRECTION 1: Extraction stricte des couleurs officielles GTFS
+        // Ajouter le préfixe # si manquant pour les couleurs hex
+        if (route.route_color && !route.route_color.startsWith('#')) {
+            route.route_color = '#' + route.route_color;
+        }
+        if (route.route_text_color && !route.route_text_color.startsWith('#')) {
+            route.route_text_color = '#' + route.route_text_color;
+        }
+        // Valeurs par défaut si vides
+        if (!route.route_color || route.route_color === '#') {
+            route.route_color = '#3388ff'; // Bleu par défaut
+        }
+        if (!route.route_text_color || route.route_text_color === '#') {
+            route.route_text_color = '#ffffff'; // Blanc par défaut
+        }
+        
         routesById[route.route_id] = route;
         if (route.route_short_name) {
             routesByShortName[route.route_short_name] = route;
