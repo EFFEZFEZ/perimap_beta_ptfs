@@ -25,22 +25,6 @@ const OTP_BASE_URL = process.env.OTP_BASE_URL || 'http://localhost:8888/otp/rout
 const OTP_TIMEOUT_MS = parseInt(process.env.OTP_TIMEOUT_MS || '15000', 10);
 const OTP_MAX_ITINERARIES = parseInt(process.env.OTP_MAX_ITINERARIES || '5', 10);
 
-// Cache des couleurs GTFS (route_id -> { color, textColor, shortName, longName })
-let gtfsRouteColors = new Map();
-
-/**
- * Initialise le service OTP avec les données GTFS
- * @param {Map} routeColorsMap - Map route_id -> { color, textColor }
- */
-export function initOtpService(routeColorsMap) {
-    if (routeColorsMap instanceof Map) {
-        gtfsRouteColors = routeColorsMap;
-        logger.info(`✅ OTP Service initialisé avec ${gtfsRouteColors.size} couleurs de lignes`);
-    } else {
-        logger.warn('⚠️ OTP Service initialisé sans données de couleurs');
-    }
-}
-
 /**
  * Vérifie la connectivité avec OTP
  * @returns {Promise<{ ok: boolean, version?: string, error?: string }>}
@@ -91,7 +75,7 @@ function normalizeColor(color, defaultColor = '#3388ff') {
  */
 function getRouteColors(routeId) {
     // Utilise getRouteAttributes avec recherche fuzzy (ÉTAPE 2)
-    return getRouteAttributes(routeId, gtfsRouteColors);
+    return getRouteAttributes(routeId);
 }
 
 /**
@@ -451,7 +435,6 @@ export async function planItinerary(params) {
 }
 
 export default {
-    initOtpService,
     checkOtpHealth,
     planItinerary,
     OtpError,

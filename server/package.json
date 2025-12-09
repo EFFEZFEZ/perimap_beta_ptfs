@@ -20,6 +20,7 @@
     "gtfs-realtime-bindings": "^1.0.0",
     "dotenv": "^16.3.1",
     "csv-parse": "^5.5.2",
+    "csv-parser": "^3.0.0",
     "winston": "^3.11.0",
     "fuse.js": "^7.0.0",
     "node-fetch": "^3.3.2"

@@ -23,8 +23,8 @@ const __dirname = dirname(__filename);
 import { config, validateConfig } from './config.js';
 import { createLogger } from './utils/logger.js';
 import apiRouter from './api/index.js';
-import { loadRouteColors } from './utils/gtfsLoader.js';
-import { initOtpService, checkOtpHealth } from './services/otpService.js';
+import { loadRouteAttributes } from './utils/gtfsLoader.js';
+import { checkOtpHealth } from './services/otpService.js';
 
 const logger = createLogger('server');
 
@@ -34,12 +34,9 @@ async function startServer() {
     logger.info('✅ Configuration validée');
 
     // ✅ NOUVEAU: Charger les couleurs GTFS au démarrage
-    const gtfsDir = config.paths.gtfs;
-    logger.info(`📂 Chargement des données GTFS depuis ${gtfsDir}...`);
-    const routeColors = await loadRouteColors(gtfsDir);
-    
-    // Initialiser le service OTP avec les couleurs
-    initOtpService(routeColors);
+    logger.info(`📂 Chargement des données GTFS...`);
+    const routeColors = await loadRouteAttributes();
+    logger.info(`✅ ${routeColors.size} routes chargées avec leurs couleurs`);
     
     // Vérifier la connectivité OTP (non bloquant)
     checkOtpHealth().then(health => {
