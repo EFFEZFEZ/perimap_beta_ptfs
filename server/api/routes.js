@@ -166,15 +166,20 @@ function mapItineraryToClient(itinerary) {
       duration: toSeconds(leg.duration),
       distanceMeters: Math.round(leg.distance || 0),
       polyline: leg.legGeometry?.points || null,
+      // Horaires bruts OTP (en ms epoch) pour affichage HH:MM côté front
+      startTime: leg.startTime || null,
+      endTime: leg.endTime || null,
       from: {
         name: leg.from?.name,
         lat: leg.from?.lat,
         lon: leg.from?.lon,
+        stopId: leg.from?.stopId, // ✅ AJOUT: stop ID pour reconstruction polyline GTFS
       },
       to: {
         name: leg.to?.name,
         lat: leg.to?.lat,
         lon: leg.to?.lon,
+        stopId: leg.to?.stopId, // ✅ AJOUT: stop ID pour reconstruction polyline GTFS
       },
       transitDetails: isTransit
         ? {
@@ -183,6 +188,8 @@ function mapItineraryToClient(itinerary) {
             routeLongName: leg.routeLongName,
             agencyName: leg.agencyName,
             tripId: leg.tripId,
+            routeId: leg.routeId, // ✅ AJOUT: route ID pour récupérer shape GTFS
+            shapeId: leg.shapeId || leg.trip?.shapeId,
           }
         : undefined,
       steps: [], // Compat avec l'ancien frontend (liste attendue)
@@ -196,6 +203,8 @@ function mapItineraryToClient(itinerary) {
     duration: totalDuration,
     distanceMeters: Math.round(totalDistance),
     polyline: itinerary.legs?.[0]?.legGeometry?.points || null,
+    startTime: itinerary.startTime || null,
+    endTime: itinerary.endTime || null,
     legs: mappedLegs,
     fare: itinerary.fare?.fare?.regular?.cents
       ? { currency: itinerary.fare.fare.regular.currency, amountCents: itinerary.fare.fare.regular.cents }

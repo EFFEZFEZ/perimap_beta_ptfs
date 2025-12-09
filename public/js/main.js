@@ -43,10 +43,7 @@ import {
     formatMinutesToTimeString,
     addSecondsToTimeString,
     subtractSecondsFromTimeString,
-    computeTimeDifferenceMinutes,
-    formatGoogleTime,
-    formatGoogleDuration,
-    parseGoogleDuration
+    computeTimeDifferenceMinutes
 } from './utils/formatters.js';
 
 import { getCategoryForRoute, LINE_CATEGORIES, PDF_FILENAME_MAP, ROUTE_LONG_NAME_MAP } from './config/routes.js';
@@ -102,7 +99,7 @@ import { createResultsRenderer } from './ui/resultsRenderer.js';
 const BOTTOM_SHEET_DEFAULT_INDEX = 0;
 const BOTTOM_SHEET_DRAG_ZONE_PX = 110;
 const APP_CONFIG = getAppConfig();
-const GOOGLE_API_KEY = APP_CONFIG.googleApiKey; // dynamique (config.js), jamais hardcodé ici
+// GOOGLE_API_KEY removed - using OTP backend only
 ARRIVAL_PAGE_SIZE = APP_CONFIG.arrivalPageSize || ARRIVAL_PAGE_SIZE; // surcharge si fourni
 const BOTTOM_SHEET_SCROLL_UNLOCK_THRESHOLD = 4; // px tolerance before locking drag
 const BOTTOM_SHEET_EXPANDED_LEVEL_INDEX = 1; // Index du niveau expanded (80%)
@@ -392,7 +389,7 @@ async function initializeApp() {
         getSearchTime: () => lastSearchTime // V212: Expose la date/heure de recherche pour enrichissement GTFS
     });
 
-    apiManager = new ApiManager(GOOGLE_API_KEY);
+    apiManager = new ApiManager(); // No API key needed - using local OTP backend
     dataManager = new DataManager();
     routerContext = createRouterContext({ dataManager, apiManager, icons: ICONS });
 
@@ -469,7 +466,6 @@ async function initializeApp() {
                 routerWorkerClient = new RouterWorkerClient({
                     dataManager,
                     icons: ICONS,
-                    googleApiKey: GOOGLE_API_KEY,
                     geocodeProxyUrl
                 });
                 console.log('🔧 Router GTFS local activé');
@@ -2110,235 +2106,30 @@ function renderSuggestions(suggestions, container, onSelect) {
     container.style.display = 'block';
 }
 
-function processGoogleRoutesResponse(data) {
-    if (!data || !data.routes || data.routes.length === 0) {
-        console.warn("Réponse de l'API Routes (BUS) vide ou invalide.");
-        return [];
-    }
-    return data.routes.map(route => {
-        const leg = route.legs[0];
-        let isRegionalRoute = false; 
-        const itinerary = {
-            type: 'BUS', 
-            priority: 1, 
-            departureTime: "--:--", 
-            arrivalTime: "--:--",
-            duration: formatGoogleDuration(route.duration),
-            durationRaw: parseGoogleDuration(route.duration), 
-            polyline: route.polyline,
-            summarySegments: [], 
-            steps: []
-        };
-        let currentWalkStep = null;
 
-        for (const step of leg.steps) {
-            const duration = formatGoogleDuration(step.staticDuration);
-            const rawDuration = parseGoogleDuration(step.staticDuration);
-            const distanceMeters = step.distanceMeters || 0;
-            const distanceText = step.localizedValues?.distance?.text || '';
-            const instruction = step.navigationInstruction?.instructions || step.localizedValues?.instruction || "Marcher";
-            const maneuver = step.navigationInstruction?.maneuver || 'DEFAULT';
+// ❌ FONCTION SUPPRIMÉE: processGoogleRoutesResponse (Google API - not used with OTP backend)
 
-            if (step.travelMode === 'WALK') {
-                if (!currentWalkStep) {
-                    currentWalkStep = {
-                        type: 'WALK', icon: ICONS.WALK, instruction: "Marche",
-                        subSteps: [], polylines: [], totalDuration: 0, totalDistanceMeters: 0,
-                        departureTime: "--:--", arrivalTime: "--:--"
-                    };
-                }
-                currentWalkStep.subSteps.push({ instruction, distance: distanceText, duration, maneuver });
-                currentWalkStep.polylines.push(step.polyline);
-                currentWalkStep.totalDuration += rawDuration;
-                currentWalkStep.totalDistanceMeters += distanceMeters;
-
-            } else if (step.travelMode === 'TRANSIT' && step.transitDetails) {
-                const transit = step.transitDetails;
-                const stopDetails = transit.stopDetails || {};
-
-                if (currentWalkStep) {
-                    currentWalkStep.duration = formatGoogleDuration(currentWalkStep.totalDuration + 's');
-                    if (currentWalkStep.totalDistanceMeters > 1000) {
-                        currentWalkStep.distance = `${(currentWalkStep.totalDistanceMeters / 1000).toFixed(1)} km`;
-                    } else {
-                        currentWalkStep.distance = `${currentWalkStep.totalDistanceMeters} m`;
-                    }
-                    const nextDepTime = transit.localizedValues?.departureTime?.time?.text || formatGoogleTime(stopDetails.departureTime);
-                    currentWalkStep.arrivalTime = nextDepTime;
-                    currentWalkStep.durationRaw = currentWalkStep.totalDuration;
-                    itinerary.steps.push(currentWalkStep);
-                    currentWalkStep = null;
-                }
-                
-                const line = transit.transitLine;
-                if (line) {
-                    const shortName = line.nameShort || 'BUS';
-                    // V199: Désactivation du filtrage strict "Ligne non-locale"
-                    // On accepte tout ce que Google renvoie, sauf si c'est explicitement TER ou 322
-                    if (shortName === 'TER' || shortName === '322') {
-                         console.warn(`[Filtre] Trajet rejeté: Ligne interdite ("${shortName}") détectée.`);
-                         isRegionalRoute = true;
-                    } else if (dataManager && dataManager.isLoaded && !dataManager.routesByShortName[shortName]) {
-                        console.log(`⚠️ V199: Ligne inconnue du GTFS ("${shortName}") mais conservée.`);
-                    }
-                    
-                    const color = line.color || '#3388ff';
-                    const textColor = line.textColor || '#ffffff';
-                    const departureStop = stopDetails.departureStop || {};
-                    const arrivalStop = stopDetails.arrivalStop || {};
-                    let intermediateStops = (stopDetails.intermediateStops || []).map(stop => stop.name || 'Arrêt inconnu');
-                    
-                    if (intermediateStops.length === 0 && dataManager && dataManager.isLoaded) {
-                        const apiDepName = departureStop.name;
-                        const apiArrName = arrivalStop.name;
-                        const apiHeadsign = transit.headsign;
-                        if (apiDepName && apiArrName && apiHeadsign) {
-                            const gtfsStops = dataManager.getIntermediateStops(shortName, apiHeadsign, apiDepName, apiArrName);
-                            if (gtfsStops && gtfsStops.length > 0) {
-                                intermediateStops = gtfsStops;
-                            }
-                        }
-                    }
-                    const depTime = transit.localizedValues?.departureTime?.time?.text || formatGoogleTime(stopDetails.departureTime);
-                    const arrTime = transit.localizedValues?.arrivalTime?.time?.text || formatGoogleTime(stopDetails.arrivalTime);
-                    itinerary.steps.push({
-                        type: 'BUS', icon: ICONS.BUS, routeShortName: shortName, routeColor: color, routeTextColor: textColor,
-                        instruction: `Prendre le <b>${shortName}</b> direction <b>${transit.headsign || 'destination'}</b>`,
-                        departureStop: departureStop.name || 'Arrêt de départ', departureTime: depTime,
-                        arrivalStop: arrivalStop.name || 'Arrêt d\'arrivée', arrivalTime: arrTime,
-                        numStops: transit.stopCount || 0, intermediateStops: intermediateStops,
-                        duration: formatGoogleDuration(step.staticDuration), polyline: step.polyline
-                        , durationRaw: rawDuration
-                    });
-                }
-            }
-        }
-        
-        if (isRegionalRoute) return null;
-
-        if (currentWalkStep) {
-            currentWalkStep.duration = formatGoogleDuration(currentWalkStep.totalDuration + 's');
-            if (currentWalkStep.totalDistanceMeters > 1000) {
-                currentWalkStep.distance = `${(currentWalkStep.totalDistanceMeters / 1000).toFixed(1)} km`;
-            } else {
-                currentWalkStep.distance = `${currentWalkStep.totalDistanceMeters} m`;
-            }
-            const legArrivalTime = leg.localizedValues?.arrivalTime?.time?.text || "--:--";
-            currentWalkStep.arrivalTime = legArrivalTime;
-            currentWalkStep.durationRaw = currentWalkStep.totalDuration;
-            itinerary.steps.push(currentWalkStep);
-        }
-        
-        if (itinerary.steps.length > 0) {
-            const firstStepWithTime = itinerary.steps.find(s => s.departureTime && s.departureTime !== "--:--");
-            itinerary.departureTime = firstStepWithTime ? firstStepWithTime.departureTime : (itinerary.steps[0].departureTime || "--:--");
-            const lastStepWithTime = [...itinerary.steps].reverse().find(s => s.arrivalTime && s.arrivalTime !== "--:--");
-            itinerary.arrivalTime = lastStepWithTime ? lastStepWithTime.arrivalTime : (itinerary.steps[itinerary.steps.length - 1].arrivalTime || "--:--");
-        }
-                
-        const allSummarySegments = itinerary.steps.map(step => {
-            if (step.type === 'WALK') {
-                return { type: 'WALK', duration: step.duration };
-            } else {
-                return {
-                    type: 'BUS',
-                    name: getSafeRouteBadgeLabel(step.routeShortName),
-                    color: step.routeColor,
-                    textColor: step.routeTextColor,
-                    duration: step.duration
-                };
-            }
-        });
-        const hasBusSegment = itinerary.steps.some(step => step.type === 'BUS');
-        const computedDurationSeconds = itinerary.steps.reduce((total, step) => {
-            const value = typeof step?.durationRaw === 'number' ? step.durationRaw : 0;
-            return total + (Number.isFinite(value) ? value : 0);
-        }, 0);
-        if (computedDurationSeconds > 0) {
-            itinerary.durationRaw = computedDurationSeconds;
-            itinerary.duration = formatGoogleDuration(`${computedDurationSeconds}s`);
-        }
-
-        const firstTimedStepIndex = itinerary.steps.findIndex(step => isMeaningfulTime(step?.departureTime));
-        if (firstTimedStepIndex !== -1) {
-            let anchorTime = itinerary.steps[firstTimedStepIndex].departureTime;
-            for (let i = firstTimedStepIndex - 1; i >= 0; i--) {
-                const stepDuration = typeof itinerary.steps[i]?.durationRaw === 'number' ? itinerary.steps[i].durationRaw : 0;
-                if (stepDuration > 0) {
-                    const recalculated = subtractSecondsFromTimeString(anchorTime, stepDuration);
-                    if (!recalculated) break;
-                    anchorTime = recalculated;
-                }
-            }
-            itinerary.departureTime = anchorTime;
-        } else if (isMeaningfulTime(itinerary.arrivalTime) && computedDurationSeconds > 0) {
-            const derived = subtractSecondsFromTimeString(itinerary.arrivalTime, computedDurationSeconds);
-            if (derived) itinerary.departureTime = derived;
-        }
-
-        const lastTimedArrivalIndex = (() => {
-            for (let i = itinerary.steps.length - 1; i >= 0; i--) {
-                if (isMeaningfulTime(itinerary.steps[i]?.arrivalTime)) return i;
-            }
-            return -1;
-        })();
-
-        if (lastTimedArrivalIndex !== -1) {
-            let anchorTime = itinerary.steps[lastTimedArrivalIndex].arrivalTime;
-            for (let i = lastTimedArrivalIndex + 1; i < itinerary.steps.length; i++) {
-                const stepDuration = typeof itinerary.steps[i]?.durationRaw === 'number' ? itinerary.steps[i].durationRaw : 0;
-                if (stepDuration > 0) {
-                    const recalculated = addSecondsToTimeString(anchorTime, stepDuration);
-                    if (!recalculated) break;
-                    anchorTime = recalculated;
-                }
-            }
-            itinerary.arrivalTime = anchorTime;
-        } else if (isMeaningfulTime(itinerary.departureTime) && computedDurationSeconds > 0) {
-            const derivedArrival = addSecondsToTimeString(itinerary.departureTime, computedDurationSeconds);
-            if (derivedArrival) itinerary.arrivalTime = derivedArrival;
-        }
-
-        if (!hasBusSegment) {
-            const legDepartureTime = leg.localizedValues?.departureTime?.time?.text || leg.startTime?.text || "--:--";
-            const legArrivalTime = leg.localizedValues?.arrivalTime?.time?.text || leg.endTime?.text || "--:--";
-            itinerary.type = 'WALK';
-            itinerary.summarySegments = [];
-            itinerary._isWalk = true;
-            if (legDepartureTime && legDepartureTime !== "--:--") {
-                itinerary.departureTime = legDepartureTime;
-                if (itinerary.steps.length) {
-                    const firstStep = itinerary.steps[0];
-                    if (!firstStep.departureTime || firstStep.departureTime === '--:--') {
-                        firstStep.departureTime = legDepartureTime;
-                    }
-                }
-            }
-            if (legArrivalTime && legArrivalTime !== "--:--") {
-                itinerary.arrivalTime = legArrivalTime;
-                if (itinerary.steps.length) {
-                    const lastStep = itinerary.steps[itinerary.steps.length - 1];
-                    if (!lastStep.arrivalTime || lastStep.arrivalTime === '--:--') {
-                        lastStep.arrivalTime = legArrivalTime;
-                    }
-                }
-            }
-        } else {
-            itinerary.summarySegments = allSummarySegments.filter(segment => segment.type === 'BUS');
-        }
-        return itinerary;
-    }).filter(itinerary => itinerary !== null);
-}
-
-// (Déduplication déplacée vers itinerary/ranking.js)
+// ❌ FONCTION SUPPRIMÉE: processSimpleRoute (Google API - not used with OTP backend)
 
 /**
  * Transforme les legs OTP en format frontendfrontal
  */
 function transformLegs(otpLegs) {
     if (!otpLegs || !Array.isArray(otpLegs)) return [];
+
+    const normalizeStopId = (stopId) => {
+        if (!stopId) return null;
+        // OTP peut préfixer le feed par un entier (ex: "1:MOBIITI:Quay:111646")
+        return String(stopId).replace(/^(\d+):/, '');
+    };
     
     return otpLegs.map(leg => {
+        const startMs = leg.startTime || null;
+        const endMs = leg.endTime || null;
+        const startDate = startMs ? new Date(startMs) : null;
+        const endDate = endMs ? new Date(endMs) : null;
+        const fmtTime = (d) => d ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '~';
+
         const transformed = {
             type: leg.mode?.toUpperCase() || 'WALK',
             _isWalk: leg.mode === 'WALK',
@@ -2348,6 +2139,13 @@ function transformLegs(otpLegs) {
             from: leg.from?.name || 'Départ',
             to: leg.to?.name || 'Arrivée',
             polyline: leg.polyline,
+            departureStop: normalizeStopId(leg.from?.stopId) || null,
+            arrivalStop: normalizeStopId(leg.to?.stopId) || null,
+            departureTime: fmtTime(startDate),
+            arrivalTime: fmtTime(endDate),
+            routeId: leg.transitDetails?.routeId || null,
+            shapeId: leg.transitDetails?.shapeId || null,
+            tripId: leg.transitDetails?.tripId || null,
             subSteps: [] // Pour compatibilité avec legacy rendering
         };
         
@@ -2416,7 +2214,6 @@ function processIntelligentResults(intelligentResults, searchTime) {
     console.log("=== DÉBUT PROCESS INTELLIGENT RESULTS ===");
     console.log("📥 Mode de recherche:", searchTime?.type || 'partir');
     console.log("📥 Heure demandée:", `${searchTime?.hour}:${String(searchTime?.minute || 0).padStart(2,'0')}`);
-    console.log("📥 intelligentResults:", intelligentResults);
     
     // Si null/undefined, retourner array vide
     if (!intelligentResults) {
@@ -2424,42 +2221,47 @@ function processIntelligentResults(intelligentResults, searchTime) {
         return [];
     }
     
-    // Nouveau backend OTP: si 'routes' est présent, on convertit directement
+    // **BACKEND OTP LOCAL UNIQUEMENT** - pas de Google, juste OTP
     if (intelligentResults?.routes && Array.isArray(intelligentResults.routes)) {
+        console.log('🚀 Utilisation du backend OTP local -', intelligentResults.routes.length, 'itinéraires');
+        const fmtTime = (ms) => {
+            if (!ms || Number.isNaN(ms)) return null;
+            const d = new Date(ms);
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        };
+        
         return intelligentResults.routes.map((r, idx) => {
-            // Extraire les heures du premier et dernier leg
             const legs = r.legs || [];
-            const firstLeg = legs[0];
-            const lastLeg = legs[legs.length - 1];
-            
-            // Calculer les heures de départ et arrivée
             const durationSeconds = r.duration || 0;
-            const durationMinutes = Math.round(durationSeconds / 60);
-            
-            // Créer des heures approximatives si pas de données exactes
-            // On utilise searchTime comme référence
-            let departureTime = '08:00';
-            let arrivalTime = '08:52';
-            
-            if (searchTime?.hour !== undefined && searchTime?.minute !== undefined) {
-                const startHour = parseInt(searchTime.hour) || 8;
-                const startMin = parseInt(searchTime.minute) || 0;
-                const startTotal = startHour * 60 + startMin;
-                const endTotal = startTotal + durationMinutes;
-                
+            const itineraryStartMs = r.startTime || legs[0]?.startTime || null;
+            const itineraryEndMs = r.endTime || legs[legs.length - 1]?.endTime || (itineraryStartMs ? itineraryStartMs + durationSeconds * 1000 : null);
+
+            let departureTime = fmtTime(itineraryStartMs);
+            let arrivalTime = fmtTime(itineraryEndMs);
+
+            // Fallback sur l'heure demandée si OTP ne renvoie rien (ne devrait pas arriver)
+            if (!departureTime && searchTime?.hour !== undefined && searchTime?.minute !== undefined) {
+                const h = parseInt(searchTime.hour) || 0;
+                const m = parseInt(searchTime.minute) || 0;
+                departureTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            }
+            if (!arrivalTime && departureTime) {
+                const [hStr, mStr] = departureTime.split(':');
+                const startTotal = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
+                const endTotal = startTotal + Math.round(durationSeconds / 60);
                 const endHour = Math.floor(endTotal / 60) % 24;
                 const endMin = endTotal % 60;
-                
-                departureTime = `${String(startHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`;
                 arrivalTime = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
             }
+            if (!departureTime) departureTime = '~';
+            if (!arrivalTime) arrivalTime = '~';
             
-            // Détecter le type d'itinéraire (BUS si contient un bus, sinon WALK)
+            // Détecter le type d'itinéraire
             const hasBus = legs.some(leg => leg.mode === 'BUS');
             const hasBike = legs.some(leg => leg.mode === 'BICYCLE');
             const itinType = hasBus ? 'BUS' : (hasBike ? 'BIKE' : 'WALK');
             
-            // Créer summarySegments pour les lignes de bus
+            // Créer summarySegments pour les badges de ligne
             const summarySegments = legs
                 .filter(leg => leg.mode === 'BUS' && leg.transitDetails)
                 .map(leg => ({
@@ -2469,13 +2271,13 @@ function processIntelligentResults(intelligentResults, searchTime) {
                     textColor: '#fff'
                 }));
             
-            // Créer un objet steps pour backward compatibility
+            // Transformer les legs OTP
             const steps = transformLegs(legs);
             
             return {
                 type: itinType,
-                duration: `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}`,
-                distance: r.distanceMeters || 0,
+                duration: formatDuration(durationSeconds),
+                distance: formatDistance(r.distanceMeters),
                 polyline: r.polyline,
                 legs: steps,
                 steps: steps,
@@ -2487,604 +2289,9 @@ function processIntelligentResults(intelligentResults, searchTime) {
         });
     }
 
-    // Validation: si pas de recommendations, retourner un tableau vide
-    if (!intelligentResults?.recommendations || !Array.isArray(intelligentResults.recommendations)) {
-        console.warn('⚠️ Pas de recommendations dans intelligentResults:', intelligentResults);
-        return [];
-    }
-
-    const itineraries = [];
-    const sortedRecommendations = [...intelligentResults.recommendations].sort((a, b) => b.score - a.score);
-
-    // 1. Extraction des résultats Google
-    sortedRecommendations.forEach(rec => {
-        let modeData = null;
-        let modeInfo = null;
-        if (rec.mode === 'bus' && intelligentResults.bus) {
-            modeData = intelligentResults.bus.data;
-            modeInfo = intelligentResults.bus;
-        } else if (rec.mode === 'bike' && intelligentResults.bike) {
-            modeData = intelligentResults.bike.data;
-            modeInfo = intelligentResults.bike;
-        } else if (rec.mode === 'walk' && intelligentResults.walk) {
-            modeData = intelligentResults.walk.data;
-            modeInfo = intelligentResults.walk;
-        }
-
-        if (modeData && modeInfo) {
-            if (rec.mode === 'bus') {
-                const busItineraries = processGoogleRoutesResponse(modeData);
-                if (busItineraries.length > 0) {
-                    busItineraries.forEach((itin, index) => {
-                        itin.score = rec.score - index;
-                        if (!itin.type) itin.type = 'BUS';
-                    });
-                }
-                itineraries.push(...busItineraries);
-            } else {
-                const simpleItinerary = processSimpleRoute(modeData, rec.mode, modeInfo, searchTime);
-                if (simpleItinerary) {
-                    simpleItinerary.score = rec.score;
-                    if (rec.mode === 'bike' && simpleItinerary.type !== 'BIKE') simpleItinerary.type = 'BIKE';
-                    if (rec.mode === 'walk' && simpleItinerary.type !== 'WALK') simpleItinerary.type = 'WALK';
-                    itineraries.push(simpleItinerary);
-                }
-            }
-        }
-    });
-    
-    // Debug: afficher tous les itinéraires extraits de Google AVANT filtrage
-    console.log("📋 Itinéraires Google bruts (avant filtrage):", itineraries.map(it => ({
-        type: it.type,
-        dep: it.departureTime,
-        arr: it.arrivalTime,
-        dur: it.duration
-    })));
-
-    // V193: FILTRAGE DES BUS GOOGLE PAR JOUR DE SERVICE GTFS
-    // Vérifie que les lignes retournées par Google circulent bien ce jour-là
-    if (dataManager && dataManager.isLoaded) {
-        let searchDate;
-        if (!searchTime?.date || searchTime.date === 'today' || searchTime.date === "Aujourd'hui") {
-            searchDate = new Date();
-        } else {
-            searchDate = new Date(searchTime.date);
-        }
-        
-        // V194: Ajouter l'heure pour que la date soit complète
-        if (searchTime?.hour !== undefined) {
-            searchDate.setHours(parseInt(searchTime.hour) || 0, parseInt(searchTime.minute) || 0, 0, 0);
-        }
-        
-        const activeServiceIds = dataManager.getServiceIds(searchDate);
-        const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-        const dayName = dayNames[searchDate.getDay()];
-        console.log(`📅 V194: Vérification pour ${dayName} ${searchDate.toLocaleDateString()} - ${activeServiceIds.size} services actifs`);
-        console.log(`📅 V194: Services actifs:`, Array.from(activeServiceIds));
-        
-        if (activeServiceIds.size === 0) {
-            console.warn(`⚠️ V194: AUCUN SERVICE ACTIF pour ${dayName} - Les bus ne circulent peut-être pas (GTFS local)`);
-            // V199: On ne supprime plus les bus, on fait confiance à Google
-            console.log(`⚠️ V199: Conservation des itinéraires Google malgré l'absence de services locaux`);
-        } else {
-            // Construire un Set des lignes actives ce jour-là
-            const activeLinesThisDay = new Set();
-            for (const trip of dataManager.trips) {
-                const isActive = Array.from(activeServiceIds).some(sid => 
-                    dataManager.serviceIdsMatch(trip.service_id, sid)
-                );
-                if (isActive) {
-                    const route = dataManager.getRoute(trip.route_id);
-                    if (route?.route_short_name) {
-                        activeLinesThisDay.add(route.route_short_name.toUpperCase());
-                        // V194: Ajouter aussi sans espaces et avec variations
-                        activeLinesThisDay.add(route.route_short_name.toUpperCase().replace(/\s+/g, ''));
-                    }
-                }
-            }
-            console.log(`🚍 V194: Lignes actives ${dayName}:`, Array.from(activeLinesThisDay).sort().join(', '));
-            
-            // Filtrer les itinéraires bus Google
-            const beforeCount = itineraries.filter(it => it.type === 'BUS').length;
-            const filteredItineraries = itineraries.filter(itin => {
-                if (itin.type !== 'BUS') return true; // Garder vélo et marche
-                
-                // Extraire les noms de lignes depuis l'itinéraire
-                const lineNames = new Set();
-                if (itin.summarySegments) {
-                    itin.summarySegments.forEach(seg => {
-                        if (seg.name) {
-                            lineNames.add(seg.name.toUpperCase());
-                            lineNames.add(seg.name.toUpperCase().replace(/\s+/g, ''));
-                        }
-                    });
-                }
-                if (itin.steps) {
-                    itin.steps.forEach(step => {
-                        if (step.type === 'BUS' && step.lineName) {
-                            lineNames.add(step.lineName.toUpperCase());
-                            lineNames.add(step.lineName.toUpperCase().replace(/\s+/g, ''));
-                        }
-                        // V194: Aussi vérifier routeShortName
-                        if (step.type === 'BUS' && step.routeShortName) {
-                            lineNames.add(step.routeShortName.toUpperCase());
-                        }
-                    });
-                }
-                
-                // Vérifier si au moins une ligne est active
-                const hasActiveLine = Array.from(lineNames).some(name => activeLinesThisDay.has(name));
-                
-                if (!hasActiveLine && lineNames.size > 0) {
-                    console.log(`⚠️ V199: Lignes [${Array.from(lineNames).join(', ')}] non trouvées dans GTFS local pour ${dayName}, mais conservées (Google First)`);
-                    // return false; // V199: On ne filtre plus
-                }
-                
-                // Si pas de nom de ligne trouvé, on garde par prudence
-                if (lineNames.size === 0) {
-                    console.warn(`⚠️ V194: Itinéraire sans nom de ligne, conservé par défaut`);
-                }
-                return true;
-            });
-            
-            const afterCount = filteredItineraries.filter(it => it.type === 'BUS').length;
-            if (beforeCount !== afterCount) {
-                console.log(`📊 V194: ${beforeCount - afterCount} itinéraire(s) bus rejeté(s) (hors service ${dayName})`);
-            }
-            
-            // Remplacer itineraries par la version filtrée
-            itineraries.length = 0;
-            itineraries.push(...filteredItineraries);
-        }
-    }
-
-    // 2. LOGIQUE DE FENÊTRE TEMPORELLE (Horaire Arrivée)
-    try {
-        if (searchTime && searchTime.type === 'arriver') {
-            // A. Définir la cible
-            let reqDate = null;
-            if (!searchTime.date || searchTime.date === 'today' || searchTime.date === "Aujourd'hui") {
-                reqDate = new Date();
-            } else {
-                reqDate = new Date(searchTime.date);
-            }
-            const reqHour = parseInt(searchTime.hour) || 0;
-            const reqMinute = parseInt(searchTime.minute) || 0;
-            reqDate.setHours(reqHour, reqMinute, 0, 0);
-            const reqMs = reqDate.getTime();
-
-            // B. Fenêtre élargie : on accepte les arrivées jusqu'à 4h AVANT l'heure demandée
-            // Le tri ensuite classera par proximité à l'heure cible
-            const BEFORE_MINUTES = 240; // 4h de fenêtre en amont pour avoir plus de choix
-            const windowStart = reqMs - BEFORE_MINUTES * 60 * 1000;
-            const windowEnd = reqMs; // pas de trajets après l'heure demandée
-
-            console.log(`🕒 Cible: ${reqDate.toLocaleTimeString()} | Fenêtre: ${new Date(windowStart).toLocaleTimeString()} → ${new Date(windowEnd).toLocaleTimeString()} ( -${BEFORE_MINUTES}min / +0min )`);
-
-            const busItins = itineraries.filter(i => i.type === 'BUS' && i.arrivalTime && i.arrivalTime !== '~' && i.arrivalTime !== '--:--');
-            const otherItins = itineraries.filter(i => i.type !== 'BUS');
-
-            // Parser l'heure d'arrivée (HH:MM) en Timestamp
-            const parseArrivalMs = (arrivalStr) => {
-                if (!arrivalStr || typeof arrivalStr !== 'string') return NaN;
-                const m = arrivalStr.match(/(\d{1,2}):(\d{2})/);
-                if (!m) return NaN;
-                const hh = parseInt(m[1], 10);
-                const mm = parseInt(m[2], 10);
-                const d = new Date(reqDate);
-                d.setHours(hh, mm, 0, 0);
-                return d.getTime();
-            };
-
-            const busWithMs = busItins.map(i => ({ itin: i, arrivalMs: parseArrivalMs(i.arrivalTime) })).filter(x => !isNaN(x.arrivalMs));
-
-            // C. Filtrer les bus Google qui sont DANS la fenêtre
-            let filteredBus = busWithMs
-                .filter(x => x.arrivalMs >= windowStart && x.arrivalMs <= windowEnd)
-                .map(x => x.itin);
-
-            console.log(`🚌 Bus Google trouvés dans la fenêtre : ${filteredBus.length} sur ${busItins.length} total`);
-            if (busWithMs.length > filteredBus.length) {
-                const exclus = busWithMs.filter(x => x.arrivalMs < windowStart || x.arrivalMs > windowEnd);
-                console.log(`📅 Bus exclus (hors fenêtre):`, exclus.map(x => ({ arr: x.itin.arrivalTime, ms: x.arrivalMs })));
-            }
-
-            // D. INJECTION GTFS (Data locale) pour compléter
-            // ON SUPPRIME LA LIMITE "TARGET_BUS_COUNT" pour prendre TOUT ce qui existe.
-            
-            let gtfsAdded = [];
-            let candidateStopIds = new Set();
-            if (dataManager && dataManager.isLoaded) {
-                console.log("📂 Recherche dans les données GTFS locales...");
-                
-                const normalize = (name) => {
-                    if (!name) return "";
-                    return name.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]/g, '').trim();
-                };
-
-                // Récupérer les noms d'arrêts d'arrivée depuis Google pour savoir où chercher
-                const candidateNames = new Set();
-                busItins.forEach(it => {
-                    if (!it.steps) return;
-                    const lastBusStep = [...it.steps].reverse().find(s => s.type === 'BUS');
-                    if (lastBusStep && lastBusStep.arrivalStop) candidateNames.add(lastBusStep.arrivalStop);
-                });
-
-                candidateStopIds = new Set();
-                candidateNames.forEach(n => {
-                    const key = normalize(n);
-                    if (dataManager.stopsByName && dataManager.stopsByName[key]) {
-                        dataManager.stopsByName[key].forEach(s => candidateStopIds.add(s.stop_id));
-                    } else {
-                        // Fallback recherche large
-                        dataManager.stops.forEach(s => {
-                            if (normalize(s.stop_name || '').includes(key)) candidateStopIds.add(s.stop_id);
-                        });
-                    }
-                });
-                
-                // Si Google n'a rien donné, on cherche "Tourny" ou "Gare" par défaut (optionnel)
-                if (candidateStopIds.size === 0) {
-                     console.warn("⚠️ Aucun arrêt candidat trouvé via Google, recherche GTFS impossible.");
-                } else {
-                    console.log(`📍 Arrêts candidats GTFS (IDs):`, Array.from(candidateStopIds));
-                }
-
-                const serviceIdSet = dataManager.getServiceIds(new Date(reqDate));
-                const seenKeys = new Set(); // Pour éviter les doublons exacts
-
-                // Ajouter les clés des bus Google déjà trouvés pour ne pas les dupliquer
-                filteredBus.forEach(b => {
-                    seenKeys.add(`${b.summarySegments[0]?.name}_${b.arrivalTime}`);
-                });
-
-                // PARCOURS GTFS
-                for (const stopId of candidateStopIds) {
-                    const stopTimes = dataManager.stopTimesByStop[stopId] || [];
-                    
-                    for (const st of stopTimes) {
-                        const trip = dataManager.tripsByTripId[st.trip_id];
-                        if (!trip) continue;
-
-                        // Vérif Service (Jour de la semaine)
-                        const isServiceActive = Array.from(serviceIdSet).some(sid => dataManager.serviceIdsMatch(trip.service_id, sid));
-                        if (!isServiceActive) continue;
-
-                        const arrTimeStr = st.arrival_time || st.departure_time;
-                        const seconds = dataManager.timeToSeconds(arrTimeStr);
-                        
-                        // Calcul du Timestamp Arrivée GTFS
-                        const d = new Date(reqDate);
-                        const hours = Math.floor(seconds / 3600);
-                        const mins = Math.floor((seconds % 3600) / 60);
-                        d.setHours(hours, mins, 0, 0);
-                        const arrMs = d.getTime();
-
-                        // === TEST CRITIQUE DE LA FENÊTRE ===
-                        if (arrMs >= windowStart && arrMs <= windowEnd) {
-                            
-                            const route = dataManager.getRoute(trip.route_id) || {};
-                            const routeName = route.route_short_name || trip.route_id;
-                            const key = `${routeName}_${dataManager.formatTime(seconds)}`;
-
-                            if (!seenKeys.has(key)) {
-                                seenKeys.add(key); // Marquer comme vu
-
-                                // Création de l'itinéraire GTFS enrichi (noms lisibles, horaires, polylines via shapes)
-                                                const stopTimesList = dataManager.getStopTimes(st.trip_id) || [];
-                                                const alightIndex = stopTimesList.findIndex(s => s.stop_id === st.stop_id);
-
-                                                // Determine boardingIndex robustly:
-                                                // 1) Prefer a stop that matches any origin candidate stop IDs (if available)
-                                                // 2) Otherwise, pick the nearest predecessor before alightIndex (within a small window)
-                                                let boardingIndex = null;
-                                                // Déclarer originCandidateIds en dehors du try pour qu'il soit accessible plus bas
-                                                let originCandidateIds = new Set();
-                                                try {
-                                                    // Build origin candidate IDs from the current Google results (departure stops)
-                                                    const originCandidateNames = new Set();
-                                                    busItins.forEach(bi => {
-                                                        if (!bi.steps) return;
-                                                        const firstBusStep = [...bi.steps].find(s => s.type === 'BUS');
-                                                        if (firstBusStep && firstBusStep.departureStop) originCandidateNames.add(firstBusStep.departureStop);
-                                                    });
-                                                    originCandidateNames.forEach(n => {
-                                                        const key = (n || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]/g, '').trim();
-                                                        if (dataManager.stopsByName && dataManager.stopsByName[key]) {
-                                                            dataManager.stopsByName[key].forEach(s => originCandidateIds.add(s.stop_id));
-                                                        } else {
-                                                            dataManager.stops.forEach(s => { if ((s.stop_name||'').toLowerCase().includes((n||'').toLowerCase())) originCandidateIds.add(s.stop_id); });
-                                                        }
-                                                    });
-                                                        // Expand candidates via groupedStopMap (include station complexes)
-                                                        if (dataManager.groupedStopMap) {
-                                                            const toAdd = new Set();
-                                                            originCandidateIds.forEach(id => {
-                                                                if (dataManager.groupedStopMap[id]) dataManager.groupedStopMap[id].forEach(x => toAdd.add(x));
-                                                                // also check parent station mapping
-                                                                const stObj = dataManager.getStop(id);
-                                                                if (stObj && stObj.parent_station && dataManager.groupedStopMap[stObj.parent_station]) {
-                                                                    dataManager.groupedStopMap[stObj.parent_station].forEach(x => toAdd.add(x));
-                                                                }
-                                                            });
-                                                            toAdd.forEach(x => originCandidateIds.add(x));
-                                                        }
-
-                                                    if (alightIndex > -1) {
-                                                        // search backwards for any origin candidate stop id
-                                                        for (let i = Math.min(alightIndex - 1, stopTimesList.length - 1); i >= 0; i--) {
-                                                            if (originCandidateIds.size > 0 && originCandidateIds.has(stopTimesList[i].stop_id)) { boardingIndex = i; break; }
-                                                        }
-
-                                                        // if none found, pick a reasonable predecessor (up to 3 stops before the alight)
-                                                        if (boardingIndex === null) {
-                                                            boardingIndex = Math.max(0, alightIndex - 2);
-                                                        }
-                                                    } else {
-                                                        // alightIndex not found: default to first stop or 0
-                                                        boardingIndex = 0;
-                                                    }
-                                                } catch (err) {
-                                                    console.warn('Erreur détermination boardingIndex GTFS, fallback utilisé', err);
-                                                    boardingIndex = 0;
-                                                }
-
-                                                const boardingST = stopTimesList[boardingIndex] || stopTimesList[0] || st;
-                                                const alightingST = stopTimesList[alightIndex] || st;
-
-                                const boardingStopObj = dataManager.getStop(boardingST.stop_id) || { stop_name: boardingST.stop_id, stop_lat: 0, stop_lon: 0 };
-                                const alightingStopObj = dataManager.getStop(alightingST.stop_id) || { stop_name: alightingST.stop_id, stop_lat: 0, stop_lon: 0 };
-
-                                // If we have origin candidate IDs from Google, ensure the chosen boarding stop
-                                // actually matches one of them or is geographically close enough.
-                                // This avoids proposing trips that merely pass the destination stop
-                                // but do not start near the requested origin.
-                                const DIST_THRESHOLD_METERS = 500; // max acceptable walking distance to boarding
-                                if (originCandidateIds && originCandidateIds.size > 0) {
-                                    if (!originCandidateIds.has(boardingST.stop_id)) {
-                                        // Not exact match by ID — compute nearest origin candidate distance
-                                        let minDist = Infinity;
-                                        originCandidateIds.forEach(cid => {
-                                            const cand = dataManager.getStop(cid);
-                                            if (cand && cand.stop_lat && cand.stop_lon && boardingStopObj && boardingStopObj.stop_lat) {
-                                                const d = dataManager.calculateDistance(parseFloat(cand.stop_lat), parseFloat(cand.stop_lon), parseFloat(boardingStopObj.stop_lat), parseFloat(boardingStopObj.stop_lon));
-                                                if (!Number.isNaN(d) && d < minDist) minDist = d;
-                                            }
-                                        });
-                                        if (minDist === Infinity) {
-                                            console.debug('GTFS injection: no origin candidate coordinates to compare, rejecting trip', { tripId: st.trip_id, boarding: boardingST.stop_id });
-                                            continue;
-                                        }
-                                        if (minDist > DIST_THRESHOLD_METERS) {
-                                            console.debug('GTFS injection: boarding stop too far from origin candidates, skip', { tripId: st.trip_id, boarding: boardingST.stop_id, minDist });
-                                            continue;
-                                        }
-                                        // Otherwise accept (within distance threshold)
-                                        console.debug('GTFS injection: boarding stop accepted by proximity', { tripId: st.trip_id, boarding: boardingST.stop_id, minDist });
-                                    } else {
-                                        // Exact match by ID
-                                        console.debug('GTFS injection: boarding stop accepted by exact match', { tripId: st.trip_id, boarding: boardingST.stop_id });
-                                    }
-                                }
-
-                                const depSeconds = dataManager.timeToSeconds(boardingST.departure_time || boardingST.arrival_time || '00:00:00');
-                                const arrSeconds = dataManager.timeToSeconds(alightingST.arrival_time || alightingST.departure_time || '00:00:00');
-
-                                // Diagnostic: report when readable names are missing or when boarding is far from alight
-                                if (!boardingStopObj || !boardingStopObj.stop_name || boardingStopObj.stop_name === boardingST.stop_id) {
-                                    console.debug('GTFS injection: boarding stop has no readable name', { tripId: st.trip_id, boardingST });
-                                }
-                                if (!alightingStopObj || !alightingStopObj.stop_name || alightingStopObj.stop_name === alightingST.stop_id) {
-                                    console.debug('GTFS injection: alighting stop has no readable name', { tripId: st.trip_id, alightingST });
-                                }
-
-                                // Récupérer géométrie shape/route
-                                let geometry = dataManager.getRouteGeometry(trip.route_id);
-                                if (!geometry && trip.shape_id) {
-                                    geometry = dataManager.getShapeGeoJSON(trip.shape_id, trip.route_id);
-                                }
-
-                                // Convertir geometry en tableau de [lon, lat] points (comme dans geojson)
-                                const extractRouteCoords = (geom) => {
-                                    if (!geom) return null;
-                                    if (Array.isArray(geom)) return geom; // assume already coords
-                                    if (geom.type === 'LineString') return geom.coordinates;
-                                    if (geom.type === 'MultiLineString') return geom.coordinates.flat();
-                                    return null;
-                                };
-
-                                const routeCoords = extractRouteCoords(geometry);
-                                let busPolylineEncoded = null;
-                                let busPolylineLatLngs = null;
-                                if (routeCoords && routeCoords.length > 0) {
-                                    // dataManager.findNearestPointOnRoute expects [lon, lat] pairs
-                                    const startIdx = dataManager.findNearestPointOnRoute(routeCoords, parseFloat(boardingStopObj.stop_lat), parseFloat(boardingStopObj.stop_lon));
-                                    const endIdx = dataManager.findNearestPointOnRoute(routeCoords, parseFloat(alightingStopObj.stop_lat), parseFloat(alightingStopObj.stop_lon));
-                                    let slice = null;
-                                    if (startIdx != null && endIdx != null) {
-                                        if (startIdx <= endIdx) slice = routeCoords.slice(startIdx, endIdx + 1);
-                                        else slice = [...routeCoords].slice(endIdx, startIdx + 1).reverse();
-                                    }
-                                    if (!slice || slice.length < 2) {
-                                        slice = [[parseFloat(boardingStopObj.stop_lon), parseFloat(boardingStopObj.stop_lat)], [parseFloat(alightingStopObj.stop_lon), parseFloat(alightingStopObj.stop_lat)]];
-                                    }
-                                    // convert [lon,lat] to [lat,lon]
-                                    const latlngs = slice
-                                        .map(p => [Number(p[1]), Number(p[0])])
-                                        .filter(([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon));
-                                    if (latlngs.length >= 2) {
-                                        busPolylineLatLngs = latlngs;
-                                        busPolylineEncoded = encodePolyline(latlngs);
-                                    }
-                                }
-
-                                const intermediateStops = [];
-                                if (stopTimesList && stopTimesList.length > 0 && alightIndex > boardingIndex) {
-                                    const mids = stopTimesList.slice(boardingIndex + 1, alightIndex).map(s => dataManager.getStop(s.stop_id)?.stop_name || s.stop_id);
-                                    intermediateStops.push(...mids);
-                                }
-
-                                const busStep = {
-                                    type: 'BUS',
-                                    icon: ICONS.BUS,
-                                    instruction: `Prendre ${routeName} vers ${trip.trip_headsign}`,
-                                    polyline: busPolylineEncoded ? { encodedPolyline: busPolylineEncoded, latLngs: busPolylineLatLngs } : null,
-                                    routeColor: route.route_color ? `#${route.route_color}` : '#3388ff',
-                                    routeTextColor: route.route_text_color ? `#${route.route_text_color}` : '#ffffff',
-                                    routeShortName: routeName,
-                                    departureStop: boardingStopObj.stop_name || boardingST.stop_id,
-                                    arrivalStop: alightingStopObj.stop_name || alightingST.stop_id,
-                                    departureTime: dataManager.formatTime(depSeconds),
-                                    arrivalTime: dataManager.formatTime(arrSeconds),
-                                    duration: dataManager.formatDuration(Math.max(0, arrSeconds - depSeconds)) || 'Horaires théoriques',
-                                    intermediateStops,
-                                    numStops: Math.max(0, (alightIndex - boardingIndex)),
-                                    _durationSeconds: Math.max(0, arrSeconds - depSeconds)
-                                };
-
-                                const itin = {
-                                    type: 'BUS',
-                                    tripId: st.trip_id,
-                                    trip: trip,
-                                    route: route,
-                                    departureTime: busStep.departureTime || '~',
-                                    arrivalTime: busStep.arrivalTime || dataManager.formatTime(seconds),
-                                    summarySegments: [{ type: 'BUS', name: routeName, color: route.route_color ? `#${route.route_color}` : '#3388ff', textColor: route.route_text_color ? `#${route.route_text_color}` : '#ffffff' }],
-                                    durationRaw: busStep._durationSeconds || 0,
-                                    duration: busStep.duration || 'Horaires théoriques',
-                                    steps: [busStep]
-                                };
-                                    // Verify trip headsign/direction loosely matches candidate arrival names to avoid cloning reverse trips
-                                    if (trip.trip_headsign) {
-                                        const th = (trip.trip_headsign || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-                                        const matchesHeadsign = Array.from(candidateNames).some(n => {
-                                            if (!n) return false;
-                                            const normalizedN = n.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-                                            // Match si headsign contient le nom OU si le nom contient le headsign
-                                            return th.includes(normalizedN) || normalizedN.includes(th);
-                                        });
-                                        if (!matchesHeadsign) {
-                                            console.debug('GTFS injection: trip headsign does not match candidate arrival names, skipping', { 
-                                                tripId: st.trip_id, 
-                                                trip_headsign: trip.trip_headsign,
-                                                candidateNames: Array.from(candidateNames)
-                                            });
-                                            continue;
-                                        }
-                                    }
-                                    gtfsAdded.push(itin);
-                            }
-                        }
-                    }
-                }
-                console.log(`✅ Bus GTFS ajoutés : ${gtfsAdded.length}`);
-            }
-
-            // E. INCLURE LES RÉSULTATS GTFS DANS L'AFFICHAGE (fenêtre stricte: jusqu'à l'heure demandée)
-            // On annote d'abord les bus Google confirmés par GTFS
-            let matchedCount = 0;
-            filteredBus.forEach(it => {
-                const key = `${it.summarySegments[0]?.name}_${it.arrivalTime}`;
-                const match = gtfsAdded.find(g => `${g.summarySegments[0]?.name}_${g.arrivalTime}` === key);
-                // Do not annotate Google itineraries with provenance flags — treat all sources uniformly in UI.
-            });
-
-            // Préparer la liste combinée (Google + GTFS) — sans limitation du nombre
-            const allBuses = [];
-            // Ajouter les bus Google filtrés (déjà dans la fenêtre [req-30min, req])
-            filteredBus.forEach(it => {
-                allBuses.push({ itin: it, arrivalMs: parseArrivalMs(it.arrivalTime), source: 'google' });
-            });
-            // Ajouter les bus GTFS trouvés dans la même fenêtre
-            gtfsAdded.forEach(g => {
-                const arrivalMs = parseArrivalMs(g.arrivalTime);
-                // uniquement si dans la fenêtre (sécurité)
-                if (!isNaN(arrivalMs) && arrivalMs >= windowStart && arrivalMs <= windowEnd) {
-                    allBuses.push({ itin: g, arrivalMs: arrivalMs, source: 'gtfs' });
-                }
-            });
-
-            // Trier chronologiquement par heure d'arrivée
-            allBuses.sort((a, b) => a.arrivalMs - b.arrivalMs);
-
-            // Diagnostics GTFS
-            const missingGtfs = gtfsAdded.filter(g => !filteredBus.some(f => `${f.summarySegments[0]?.name}_${f.arrivalTime}` === `${g.summarySegments[0]?.name}_${g.arrivalTime}`));
-            itineraries._gtfsDiagnostics = {
-                candidateStopIds: Array.from(candidateStopIds || []),
-                gtfsFound: gtfsAdded.length,
-                googleFound: filteredBus.length,
-                matched: matchedCount,
-                missing: missingGtfs.map(g => ({ route: g.summarySegments[0]?.name, arrival: g.arrivalTime, tripId: g.tripId }))
-            };
-
-            if (missingGtfs.length > 0) {
-                console.warn(`⚠️ GTFS: ${missingGtfs.length} départ(s) trouvés dans GTFS mais non proposés par l'API Google.`);
-                console.table(itineraries._gtfsDiagnostics.missing);
-            } else {
-                console.log('✅ GTFS et Google cohérents pour cette fenêtre.');
-            }
-
-            // F. RECONSTRUIRE LA LISTE FINALE: inclure TOUS les bus (Google + GTFS) sans limite
-            itineraries.length = 0;
-            allBuses.forEach(b => itineraries.push(b.itin));
-            // Rajouter piéton/vélo filtrés dans la fenêtre demandée
-            const filteredOther = otherItins.filter(o => {
-                if (!o.arrivalTime || o.arrivalTime === '~' || o.arrivalTime === '--:--') return false;
-                const ms = parseArrivalMs(o.arrivalTime);
-                return !isNaN(ms) && ms >= windowStart && ms <= windowEnd;
-            });
-            itineraries.push(...filteredOther);
-        }
-    } catch (e) {
-        console.warn('Erreur lors du filtrage par heure d\'arrivée:', e);
-    }
-
-    // V115: Passer le searchMode à deduplicateItineraries pour garder les bons horaires
-    const searchMode = searchTime?.type || 'partir';
-    // V216: DÉSACTIVÉ - On garde TOUS les trajets, même avec la même structure mais horaires différents
-    // let finalList = deduplicateItineraries(itineraries, searchMode);
-    let finalList = [...itineraries];
-
-    // Tri + pagination spécifique au mode "arriver"
-    if (searchTime && searchTime.type === 'arriver') {
-        const parseArrivalMsGeneric = (arrivalStr, baseDate) => {
-            if (!arrivalStr || typeof arrivalStr !== 'string') return 0;
-            const m = arrivalStr.match(/(\d{1,2}):(\d{2})/);
-            if (!m) return 0;
-            const hh = parseInt(m[1], 10);
-            const mm = parseInt(m[2], 10);
-            return hh * 60 + mm; // Minutes depuis minuit
-        };
-
-        const targetMinutes = (parseInt(searchTime.hour) || 0) * 60 + (parseInt(searchTime.minute) || 0);
-
-        // V134: Tri SIMPLE - par heure d'arrivée DÉCROISSANTE
-        // L'utilisateur veut arriver à 16h -> on affiche d'abord 15h55, puis 15h45, puis 15h30...
-        // C'est l'ordre logique : le meilleur (plus proche de 16h) en premier
-        finalList.sort((a, b) => {
-            const arrA = parseArrivalMsGeneric(a.arrivalTime);
-            const arrB = parseArrivalMsGeneric(b.arrivalTime);
-            
-            // Filtrer les arrivées après l'heure demandée (trop tard)
-            const aValid = arrA <= targetMinutes;
-            const bValid = arrB <= targetMinutes;
-            if (aValid !== bValid) return aValid ? -1 : 1;
-            
-            // Trier par arrivée DÉCROISSANTE (15h55 avant 15h45 avant 15h30...)
-            return arrB - arrA;
-        });
-        
-        console.log('🎯 V134: Tri ARRIVER (arrivée décroissante):', finalList.slice(0, 5).map(it => ({
-            arr: it.arrivalTime,
-            dep: it.departureTime
-        })));
-
-        arrivalRankedAll = [...finalList];
-        arrivalRenderedCount = ARRIVAL_PAGE_SIZE;
-        finalList = arrivalRankedAll.slice(0, ARRIVAL_PAGE_SIZE);
-    }
-
-    return finalList;
+    // Aucune donnée valide - retourner vide
+    console.warn('⚠️ Aucune donnée OTP valide reçue');
+    return [];
 }
 
 /**
@@ -3124,12 +2331,29 @@ async function ensureItineraryPolylines(itineraries) {
                 // Try to find departure/arrival stops via stop names (fast path)
                 let depStopObj = null, arrStopObj = null;
                 let resolvedDepCoords = null, resolvedArrCoords = null;
+                const normalizeStopId = (stopId) => {
+                    if (!stopId) return null;
+                    return String(stopId).replace(/^(\d+):/, '');
+                };
+
                 try {
-                    if (step.departureStop) {
+                    const depId = normalizeStopId(step.departureStop);
+                    const arrId = normalizeStopId(step.arrivalStop);
+
+                    if (depId) {
+                        const byId = dataManager.getStop(depId);
+                        if (byId) depStopObj = byId;
+                    }
+                    if (arrId) {
+                        const byId = dataManager.getStop(arrId);
+                        if (byId) arrStopObj = byId;
+                    }
+
+                    if (!depStopObj && step.departureStop) {
                         const candidates = (dataManager.findStopsByName && dataManager.findStopsByName(step.departureStop, 3)) || [];
                         if (candidates.length) depStopObj = candidates[0];
                     }
-                    if (step.arrivalStop) {
+                    if (!arrStopObj && step.arrivalStop) {
                         const candidates = (dataManager.findStopsByName && dataManager.findStopsByName(step.arrivalStop, 3)) || [];
                         if (candidates.length) arrStopObj = candidates[0];
                     }

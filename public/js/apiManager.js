@@ -144,6 +144,8 @@ export class ApiManager {
             mode: 'TRANSIT'
         };
 
+        console.log('📤 apiManager.fetchItinerary() body:', body);
+
         const resp = await fetch(this.apiEndpoints.routes, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -156,6 +158,7 @@ export class ApiManager {
         }
 
         const json = await resp.json();
+        console.log('📥 apiManager.fetchItinerary() response:', json);
         // Retourner un objet avec routes pour compatibilité avec processIntelligentResults
         return { routes: json.routes || [] };
     }
@@ -184,12 +187,26 @@ function parseCoordPlaceId(placeId) {
 
 function buildIsoDateTime(searchTime) {
     if (searchTime?.dateTime) return searchTime.dateTime;
-    const d = searchTime?.date || new Date();
-    const h = searchTime?.hours || 0;
-    const m = searchTime?.minutes || 0;
-    const dt = new Date(d);
-    dt.setHours(h, m, 0, 0);
-    return dt.toISOString();
+    
+    // searchTime.date est en format YYYY-MM-DD (local)
+    // searchTime.hour et searchTime.minute sont des strings (ex: "7", "30")
+    const dateStr = searchTime?.date;
+    const hour = parseInt(searchTime?.hour || '0', 10);
+    const minute = parseInt(searchTime?.minute || '0', 10);
+    
+    if (!dateStr) {
+        return new Date().toISOString();
+    }
+    
+    // OTP backend attend une ISO UTC qui REPRÉSENTE l'heure locale
+    // Ex: Pour 7:25 locale → on envoie une date UTC qui dit "2025-12-09T07:25:00.000Z"
+    // Le backend OTP interprète le time=07:25 avec date=2025-12-09 comme heure locale
+    const [year, month, day] = dateStr.split('-');
+    const hours = String(hour).padStart(2, '0');
+    const mins = String(minute).padStart(2, '0');
+    
+    // Construire directement l'ISO avec les valeurs locales dans la partie UTC
+    return `${year}-${month}-${day}T${hours}:${mins}:00.000Z`;
 }
 
 async function safeJson(resp) {
