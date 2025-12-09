@@ -1525,12 +1525,20 @@ async function executeItinerarySearch(source, sourceElements) {
         
         console.log(`⚡ Routage terminé en ${Math.round(performance.now() - routingStart)}ms`);
 
-        // Traiter les résultats Google
+        // Traiter les résultats API OTP; ne jamais bloquer l'affichage si le payload est inattendu
+        let apiItins = [];
         if (intelligentResults) {
-            allFetchedItineraries = processIntelligentResults(intelligentResults, searchTime);
-            console.log('✅ API Google:', allFetchedItineraries?.length || 0, 'itinéraires');
-            
-            // Fusionner avec GTFS si disponible
+            try {
+                apiItins = processIntelligentResults(intelligentResults, searchTime) || [];
+                console.log('✅ API OTP:', apiItins.length, 'itinéraires');
+            } catch (e) {
+                console.error('processIntelligentResults error:', e);
+                apiItins = [];
+            }
+        }
+
+        if (apiItins.length) {
+            allFetchedItineraries = apiItins;
             if (hybridItins?.length) {
                 for (const gtfsIt of hybridItins) {
                     const isDuplicate = allFetchedItineraries.some(googleIt => 
@@ -2130,6 +2138,15 @@ function transformLegs(otpLegs) {
         const endDate = endMs ? new Date(endMs) : null;
         const fmtTime = (d) => d ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '~';
 
+        const fromStopId = normalizeStopId(leg.from?.stopId);
+        const toStopId = normalizeStopId(leg.to?.stopId);
+        const fromStopName = leg.from?.name || fromStopId || 'Arrêt';
+        const toStopName = leg.to?.name || toStopId || 'Arrêt';
+
+        const routeId = leg.transitDetails?.routeId ? normalizeStopId(leg.transitDetails.routeId) : null;
+        const shapeId = leg.transitDetails?.shapeId ? normalizeStopId(leg.transitDetails.shapeId) : null;
+        const tripId = leg.transitDetails?.tripId ? normalizeStopId(leg.transitDetails.tripId) : null;
+
         const transformed = {
             type: leg.mode?.toUpperCase() || 'WALK',
             _isWalk: leg.mode === 'WALK',
@@ -2139,13 +2156,16 @@ function transformLegs(otpLegs) {
             from: leg.from?.name || 'Départ',
             to: leg.to?.name || 'Arrivée',
             polyline: leg.polyline,
-            departureStop: normalizeStopId(leg.from?.stopId) || null,
-            arrivalStop: normalizeStopId(leg.to?.stopId) || null,
+            // Affichage = nom; ID brut conservé pour la reconstruction des shapes
+            departureStop: fromStopName,
+            arrivalStop: toStopName,
+            departureStopId: fromStopId || null,
+            arrivalStopId: toStopId || null,
             departureTime: fmtTime(startDate),
             arrivalTime: fmtTime(endDate),
-            routeId: leg.transitDetails?.routeId || null,
-            shapeId: leg.transitDetails?.shapeId || null,
-            tripId: leg.transitDetails?.tripId || null,
+            routeId: routeId,
+            shapeId: shapeId,
+            tripId: tripId,
             subSteps: [] // Pour compatibilité avec legacy rendering
         };
         
@@ -2197,17 +2217,18 @@ function formatDistance(meters) {
  * Retourne la couleur d'une ligne de bus
  */
 function getLineColor(lineNumber) {
+    const key = String(lineNumber || '').toUpperCase();
     const colors = {
         'A': '#1abc9c',
         'B': '#3498db',
         'C': '#e74c3c',
         'D': '#f39c12',
-        'e1': '#9b59b6',
-        'e2': '#1abc9c',
-        'e3': '#3498db',
-        'e4': '#e74c3c',
+        'E1': '#9b59b6',
+        'E2': '#1abc9c',
+        'E3': '#3498db',
+        'E4': '#e74c3c',
     };
-    return colors[lineNumber] || '#95a5a6';
+    return colors[key] || '#95a5a6';
 }
 
 function processIntelligentResults(intelligentResults, searchTime) {
@@ -2273,6 +2294,12 @@ function processIntelligentResults(intelligentResults, searchTime) {
             
             // Transformer les legs OTP
             const steps = transformLegs(legs);
+
+            // Itinéraire-level metadata pour la reconstruction des polylines
+            const firstBusLeg = legs.find(l => l.mode === 'BUS' && l.transitDetails);
+            const routeId = firstBusLeg?.transitDetails?.routeId || null;
+            const tripId = firstBusLeg?.transitDetails?.tripId || null;
+            const shapeId = firstBusLeg?.transitDetails?.shapeId || null;
             
             return {
                 type: itinType,
@@ -2282,6 +2309,9 @@ function processIntelligentResults(intelligentResults, searchTime) {
                 legs: steps,
                 steps: steps,
                 summarySegments,
+                routeId,
+                tripId,
+                shapeId,
                 departureTime,
                 arrivalTime,
                 score: 100 - idx
@@ -2337,8 +2367,8 @@ async function ensureItineraryPolylines(itineraries) {
                 };
 
                 try {
-                    const depId = normalizeStopId(step.departureStop);
-                    const arrId = normalizeStopId(step.arrivalStop);
+                    const depId = normalizeStopId(step.departureStopId || step.departureStop);
+                    const arrId = normalizeStopId(step.arrivalStopId || step.arrivalStop);
 
                     if (depId) {
                         const byId = dataManager.getStop(depId);
