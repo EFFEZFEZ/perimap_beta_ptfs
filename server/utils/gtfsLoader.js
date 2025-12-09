@@ -1,33 +1,139 @@
+// Copyright © 2025 Périmap - Tous droits réservés
 /**
  * utils/gtfsLoader.js
- * Chargement et parsing des fichiers GTFS
+ * Chargement et parsing des fichiers GTFS côté serveur
  * 
- * 🔴 STATUT: DÉSACTIVÉ - Code préparé pour le futur
+ * ✅ ACTIVÉ - Chargement léger (routes.txt pour les couleurs)
  */
 
-import { createReadStream, existsSync, readdirSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { createLogger } from './logger.js';
+
+const logger = createLogger('gtfs-loader');
 
 /**
- * Parse un fichier CSV
- * @param {string} filePath - Chemin du fichier
- * @returns {Promise<Array>} Données parsées
+ * Parse une ligne CSV en gérant les quotes
+ * @param {string} line 
+ * @returns {string[]}
  */
-export async function parseCSV(filePath) {
-  // NOTE: En production, utiliser csv-parse
-  /*
-  const { parse } = await import('csv-parse');
-  
-  return new Promise((resolve, reject) => {
+function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                current += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    
+    result.push(current.trim());
+    return result;
+}
+
+/**
+ * Parse un fichier CSV simple (sans dépendance externe)
+ * @param {string} content - Contenu du fichier CSV
+ * @returns {Array<Object>} Tableau d'objets
+ */
+function parseCSVContent(content) {
+    const lines = content.split(/\r?\n/).filter(line => line.trim());
+    if (lines.length < 2) return [];
+    
+    const headers = parseCSVLine(lines[0]);
     const records = [];
     
-    createReadStream(filePath)
-      .pipe(parse({
-        columns: true,
-        skip_empty_lines: true,
-        trim: true,
-        relax_quotes: true,
-      }))
+    for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i]);
+        if (values.length === 0) continue;
+        
+        const record = {};
+        for (let j = 0; j < headers.length; j++) {
+            record[headers[j]] = values[j] || '';
+        }
+        records.push(record);
+    }
+    
+    return records;
+}
+
+/**
+ * Charge le fichier routes.txt et extrait les couleurs
+ * C'est le seul fichier nécessaire côté serveur pour enrichir OTP
+ * 
+ * @param {string} gtfsDir - Chemin vers le répertoire GTFS
+ * @returns {Promise<Map<string, { color: string, textColor: string, shortName: string }>>}
+ */
+export async function loadRouteColors(gtfsDir) {
+    const routeColorsMap = new Map();
+    const routesPath = join(gtfsDir, 'routes.txt');
+    
+    if (!existsSync(routesPath)) {
+        logger.warn(`⚠️ routes.txt non trouvé: ${routesPath}`);
+        return routeColorsMap;
+    }
+    
+    try {
+        logger.info(`📂 Chargement routes.txt depuis ${routesPath}...`);
+        
+        const content = readFileSync(routesPath, 'utf-8');
+        const routes = parseCSVContent(content);
+        
+        for (const route of routes) {
+            if (!route.route_id) continue;
+            
+            // Normaliser les couleurs (ajouter # si manquant)
+            let color = route.route_color || '';
+            let textColor = route.route_text_color || '';
+            
+            if (color && !color.startsWith('#')) {
+                color = '#' + color;
+            }
+            if (textColor && !textColor.startsWith('#')) {
+                textColor = '#' + textColor;
+            }
+            
+            // Valeurs par défaut si vides
+            if (!color || color === '#') color = '#3388ff';
+            if (!textColor || textColor === '#') textColor = '#ffffff';
+            
+            routeColorsMap.set(route.route_id, {
+                color,
+                textColor,
+                shortName: route.route_short_name || '',
+                longName: route.route_long_name || ''
+            });
+        }
+        
+        logger.info(`✅ ${routeColorsMap.size} lignes chargées avec leurs couleurs`);
+        return routeColorsMap;
+        
+    } catch (error) {
+        logger.error(`❌ Erreur chargement routes.txt: ${error.message}`);
+        return routeColorsMap;
+    }
+}
+
+// === ANCIEN CODE DÉSACTIVÉ ===
+/**
+ * Parse un fichier CSV (placeholder)
+ * @deprecated Utiliser parseCSVContent à la place
+ */
+export async function parseCSV(filePath) {
+  // Placeholder désactivé
       .on('data', (record) => records.push(record))
       .on('end', () => resolve(records))
       .on('error', reject);

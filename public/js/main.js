@@ -68,9 +68,10 @@ let resultsRenderer = null; // instance du renderer des résultats
 // Feature flags
 let gtfsAvailable = true; // set to false if GTFS loading fails -> degraded API-only mode
 
-// ⚠️ V60: GTFS Router désactivé temporairement (performances insuffisantes)
-// TODO: Améliorer l'algorithme de pathfinding avant de réactiver
-const ENABLE_GTFS_ROUTER = true; // V189: ACTIVÉ pour avoir TOUS les horaires (comme SNCF Connect)
+// ⚠️ ARCHITECTURE SERVEUR-CENTRALISÉE
+// Le client ne fait PLUS de routing local - tout passe par l'API serveur/OTP
+// Le fallback GTFS local est DÉSACTIVÉ pour garantir des données cohérentes
+const ENABLE_GTFS_ROUTER = false; // ❌ DÉSACTIVÉ - Le serveur gère tout le routing
 
 // État global
 let lineStatuses = {}; 
@@ -1499,61 +1500,46 @@ async function executeItinerarySearch(source, sourceElements) {
         const fromLabel = sourceElements.fromInput?.value || '';
         const toLabel = sourceElements.toInput?.value || '';
 
-        // 🚀 V60: Routage optimisé - API Google uniquement
-        // ⚠️ Router GTFS local désactivé (ENABLE_GTFS_ROUTER=false)
+        // ✅ ARCHITECTURE SERVEUR-CENTRALISÉE
+        // Tout le routing passe par l'API serveur (OTP)
+        // Plus de fallback local - erreurs explicites si OTP échoue
         const routingStart = performance.now();
         
-        let hybridItins = [];
+        // Appel API serveur (seule source de vérité)
+        let apiResult = null;
+        let apiError = null;
         
-        // GTFS Router (désactivé par défaut pour performances)
-        if (ENABLE_GTFS_ROUTER && routerWorkerClient) {
-            try {
-                hybridItins = await routerWorkerClient.computeHybridItinerary({
-                    fromCoords, toCoords, searchTime,
-                    labels: { fromLabel, toLabel },
-                    forcedStops: { from: fromGtfsStops, to: toGtfsStops }
-                });
-                console.log('🔍 GTFS local:', hybridItins?.length || 0, 'itinéraires');
-            } catch (e) {
-                console.warn('GTFS router error:', e);
-            }
+        try {
+            apiResult = await apiManager.fetchItinerary(fromPlaceId, toPlaceId, searchTime);
+        } catch (e) {
+            console.error('❌ Erreur API serveur:', e);
+            apiError = e;
         }
-
-        // API Google (source principale)
-        const intelligentResults = await apiManager.fetchItinerary(fromPlaceId, toPlaceId, searchTime)
-            .catch(e => { console.error('API Google error:', e); return null; });
         
         console.log(`⚡ Routage terminé en ${Math.round(performance.now() - routingStart)}ms`);
 
-        // Traiter les résultats API OTP; ne jamais bloquer l'affichage si le payload est inattendu
+        // Traiter les résultats API OTP
         let apiItins = [];
-        if (intelligentResults) {
+        if (apiResult) {
             try {
-                apiItins = processIntelligentResults(intelligentResults, searchTime) || [];
-                console.log('✅ API OTP:', apiItins.length, 'itinéraires');
+                apiItins = processIntelligentResults(apiResult, searchTime) || [];
+                console.log('✅ API OTP:', apiItins.length, 'itinéraire(s)');
             } catch (e) {
                 console.error('processIntelligentResults error:', e);
                 apiItins = [];
             }
         }
 
-        if (apiItins.length) {
-            allFetchedItineraries = apiItins;
-            if (hybridItins?.length) {
-                for (const gtfsIt of hybridItins) {
-                    const isDuplicate = allFetchedItineraries.some(googleIt => 
-                        googleIt.departureTime === gtfsIt.departureTime && 
-                        googleIt.arrivalTime === gtfsIt.arrivalTime
-                    );
-                    if (!isDuplicate) allFetchedItineraries.push(gtfsIt);
-                }
-            }
-        } else if (hybridItins?.length) {
-            console.log('🔄 Fallback GTFS:', hybridItins.length, 'itinéraires');
-            allFetchedItineraries = hybridItins;
-        } else {
-            allFetchedItineraries = [];
+        // ❌ PLUS DE FALLBACK LOCAL
+        // Si OTP échoue, on affiche une erreur claire à l'utilisateur
+        if (apiItins.length === 0 && apiError) {
+            const errorMessage = apiError.message || 'Erreur inconnue';
+            // Afficher l'erreur dans l'interface
+            showSearchError(errorMessage);
+            return;
         }
+        
+        allFetchedItineraries = apiItins;
 
         // Debug: vérifier si l'heure demandée correspond
         const heureDemandeMin = parseInt(searchTime.hour) * 60 + parseInt(searchTime.minute);
@@ -2143,9 +2129,9 @@ function transformLegs(otpLegs) {
         const fromStopName = leg.from?.name || fromStopId || 'Arrêt';
         const toStopName = leg.to?.name || toStopId || 'Arrêt';
 
-        const routeId = leg.transitDetails?.routeId ? normalizeStopId(leg.transitDetails.routeId) : null;
-        const shapeId = leg.transitDetails?.shapeId ? normalizeStopId(leg.transitDetails.shapeId) : null;
-        const tripId = leg.transitDetails?.tripId ? normalizeStopId(leg.transitDetails.tripId) : null;
+        const routeId = leg.routeId ? normalizeStopId(leg.routeId) : null;
+        const shapeId = leg.shapeId ? normalizeStopId(leg.shapeId) : null;
+        const tripId = leg.tripId ? normalizeStopId(leg.tripId) : null;
 
         const transformed = {
             type: leg.mode?.toUpperCase() || 'WALK',
@@ -2155,7 +2141,8 @@ function transformLegs(otpLegs) {
             distance: formatDistance(leg.distanceMeters),
             from: leg.from?.name || 'Départ',
             to: leg.to?.name || 'Arrivée',
-            polyline: leg.polyline,
+            // ✅ SERVEUR-CENTRALISÉ: La polyline vient directement d'OTP (legGeometry)
+            polyline: leg.polyline || leg.legGeometry?.points || null,
             // Affichage = nom; ID brut conservé pour la reconstruction des shapes
             departureStop: fromStopName,
             arrivalStop: toStopName,
@@ -2166,15 +2153,20 @@ function transformLegs(otpLegs) {
             routeId: routeId,
             shapeId: shapeId,
             tripId: tripId,
+            // ✅ SERVEUR-CENTRALISÉ: Couleurs GTFS enrichies par le serveur
+            routeColor: leg.routeColor || null,
+            routeTextColor: leg.routeTextColor || null,
             subSteps: [] // Pour compatibilité avec legacy rendering
         };
         
         // Ajouter les détails de transit pour les bus
-        if (leg.mode === 'BUS' && leg.transitDetails) {
-            transformed.lineNumber = leg.transitDetails.routeShortName || '';
-            transformed.lineName = leg.transitDetails.routeLongName || '';
-            transformed.headsign = leg.transitDetails.headsign || '';
-            transformed.agency = leg.transitDetails.agencyName || '';
+        if (leg.mode === 'BUS') {
+            transformed.lineNumber = leg.routeShortName || '';
+            transformed.lineName = leg.routeLongName || '';
+            transformed.headsign = leg.headsign || '';
+            transformed.agency = leg.agencyName || '';
+            // Arrêts intermédiaires (si disponibles)
+            transformed.intermediateStops = leg.intermediateStops || [];
         }
         
         // Transformer les steps OTP en substeps pour les WALK legs
@@ -2211,6 +2203,46 @@ function formatDistance(meters) {
     if (meters < 1000) return `${Math.round(meters)} m`;
     const km = (meters / 1000).toFixed(1);
     return `${km} km`;
+}
+
+/**
+ * Affiche un message d'erreur dans l'interface de recherche
+ * @param {string} message - Message d'erreur à afficher
+ */
+function showSearchError(message) {
+    console.error('❌ Erreur de recherche:', message);
+    
+    // Déterminer le message utilisateur approprié
+    let userMessage = 'Erreur lors de la recherche d\'itinéraire';
+    let suggestion = '';
+    
+    if (message.includes('404') || message.includes('NO_ROUTE')) {
+        userMessage = 'Aucun itinéraire trouvé';
+        suggestion = 'Essayez de modifier vos points de départ ou d\'arrivée.';
+    } else if (message.includes('DATE_OUT_OF_RANGE') || message.includes('date')) {
+        userMessage = 'Date hors plage';
+        suggestion = 'Les horaires ne sont pas disponibles pour cette date. Essayez une date plus proche.';
+    } else if (message.includes('502') || message.includes('CONNECTION')) {
+        userMessage = 'Service temporairement indisponible';
+        suggestion = 'Réessayez dans quelques instants.';
+    } else if (message.includes('504') || message.includes('TIMEOUT')) {
+        userMessage = 'Délai dépassé';
+        suggestion = 'Le serveur met trop de temps à répondre. Réessayez.';
+    }
+    
+    // Afficher dans le conteneur de résultats
+    if (resultsListContainer) {
+        resultsListContainer.innerHTML = `
+            <div class="search-error" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <div style="font-size: 2rem; margin-bottom: 1rem;">😕</div>
+                <h3 style="margin-bottom: 0.5rem; color: var(--text-primary);">${userMessage}</h3>
+                ${suggestion ? `<p style="margin-bottom: 1rem;">${suggestion}</p>` : ''}
+                <button onclick="window.location.reload()" class="btn-primary" style="margin-top: 1rem;">
+                    Réessayer
+                </button>
+            </div>
+        `;
+    }
 }
 
 /**
@@ -2282,24 +2314,25 @@ function processIntelligentResults(intelligentResults, searchTime) {
             const hasBike = legs.some(leg => leg.mode === 'BICYCLE');
             const itinType = hasBus ? 'BUS' : (hasBike ? 'BIKE' : 'WALK');
             
-            // Créer summarySegments pour les badges de ligne
+            // ✅ SERVEUR-CENTRALISÉ: Utiliser les couleurs GTFS du serveur
             const summarySegments = legs
-                .filter(leg => leg.mode === 'BUS' && leg.transitDetails)
+                .filter(leg => leg.mode === 'BUS')
                 .map(leg => ({
                     type: 'BUS',
-                    name: leg.transitDetails.routeShortName || 'Bus',
-                    color: getLineColor(leg.transitDetails.routeShortName || ''),
-                    textColor: '#fff'
+                    name: leg.routeShortName || 'Bus',
+                    // Priorité: couleur serveur (GTFS) > couleur locale
+                    color: leg.routeColor || getLineColor(leg.routeShortName || ''),
+                    textColor: leg.routeTextColor || '#fff'
                 }));
             
             // Transformer les legs OTP
             const steps = transformLegs(legs);
 
-            // Itinéraire-level metadata pour la reconstruction des polylines
-            const firstBusLeg = legs.find(l => l.mode === 'BUS' && l.transitDetails);
-            const routeId = firstBusLeg?.transitDetails?.routeId || null;
-            const tripId = firstBusLeg?.transitDetails?.tripId || null;
-            const shapeId = firstBusLeg?.transitDetails?.shapeId || null;
+            // Itinéraire-level metadata
+            const firstBusLeg = legs.find(l => l.mode === 'BUS');
+            const routeId = firstBusLeg?.routeId || null;
+            const tripId = firstBusLeg?.tripId || null;
+            const shapeId = firstBusLeg?.shapeId || null;
             
             return {
                 type: itinType,
@@ -2325,206 +2358,56 @@ function processIntelligentResults(intelligentResults, searchTime) {
 }
 
 /**
- * Ensure every BUS step has a polyline. Attempts to reconstruct from GTFS data (shape or route geometry)
- * and falls back to a straight encoded line between boarding and alighting stops when necessary.
- * This is defensive: some GTFS-inserted itineraries may miss polylines and the renderer expects them.
+ * ✅ SERVEUR-CENTRALISÉ: Normalisation des polylines
+ * 
+ * Les polylines viennent maintenant directement du serveur (OTP legGeometry).
+ * Cette fonction ne fait plus de reconstruction locale - elle normalise simplement
+ * le format pour le renderer Leaflet.
  */
 async function ensureItineraryPolylines(itineraries) {
-    if (!Array.isArray(itineraries) || !dataManager) return;
-
-    const shapesReady = await dataManager.ensureShapesIndexLoaded();
-    if (shapesReady === false) {
-        console.warn('ensureItineraryPolylines: les shapes GTFS n\'ont pas pu être chargées.');
-    }
-
-    const normalize = (s) => (s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]/g, '').trim();
+    if (!Array.isArray(itineraries)) return;
 
     for (const itin of itineraries) {
         if (!itin || !Array.isArray(itin.steps)) continue;
+        
         for (const step of itin.steps) {
-            try {
             if (!step || step.type !== 'BUS' || isWaitStep(step)) continue;
-
-                const hasLatLngs = Array.isArray(step?.polyline?.latLngs) && step.polyline.latLngs.length >= 2;
-                if (hasLatLngs) continue;
-
-                const routeId = (itin.route && (itin.route.route_id || itin.routeId)) || null;
-                const shapeId = (itin.trip && itin.trip.shape_id) || (itin.shapeId) || null;
-                const hasLocalGeometryHints = Boolean(routeId || shapeId || itin.tripId || itin.trip);
-
-                const hasExistingEncoded = step.polyline && (step.polyline.encodedPolyline || step.polyline.points);
-                if (!hasLocalGeometryHints && hasExistingEncoded) {
-                    // Probable itinéraire Google déjà complet -> garder la polyline fournie
-                    continue;
-                }
-
-                // Try to find departure/arrival stops via stop names (fast path)
-                let depStopObj = null, arrStopObj = null;
-                let resolvedDepCoords = null, resolvedArrCoords = null;
-                const normalizeStopId = (stopId) => {
-                    if (!stopId) return null;
-                    return String(stopId).replace(/^(\d+):/, '');
-                };
-
+            
+            // La polyline doit venir du serveur (OTP legGeometry.points)
+            const existingPolyline = step.polyline;
+            
+            // Si on a déjà des latLngs, c'est bon
+            if (Array.isArray(existingPolyline?.latLngs) && existingPolyline.latLngs.length >= 2) {
+                continue;
+            }
+            
+            // Si on a une polyline encodée, la décoder
+            const encodedValue = typeof existingPolyline === 'string' 
+                ? existingPolyline 
+                : (existingPolyline?.encodedPolyline || existingPolyline?.points);
+                
+            if (encodedValue && typeof encodedValue === 'string') {
                 try {
-                    const depId = normalizeStopId(step.departureStopId || step.departureStop);
-                    const arrId = normalizeStopId(step.arrivalStopId || step.arrivalStop);
-
-                    if (depId) {
-                        const byId = dataManager.getStop(depId);
-                        if (byId) depStopObj = byId;
-                    }
-                    if (arrId) {
-                        const byId = dataManager.getStop(arrId);
-                        if (byId) arrStopObj = byId;
-                    }
-
-                    if (!depStopObj && step.departureStop) {
-                        const candidates = (dataManager.findStopsByName && dataManager.findStopsByName(step.departureStop, 3)) || [];
-                        if (candidates.length) depStopObj = candidates[0];
-                    }
-                    if (!arrStopObj && step.arrivalStop) {
-                        const candidates = (dataManager.findStopsByName && dataManager.findStopsByName(step.arrivalStop, 3)) || [];
-                        if (candidates.length) arrStopObj = candidates[0];
-                    }
-
-                    // If still missing, try to use itinerary-level info (trip/route) and match by times or stop_id
-                    if ((!depStopObj || !arrStopObj) && itin.tripId) {
-                        const stopTimes = dataManager.getStopTimes(itin.tripId) || [];
-                        if (stopTimes.length >= 1) {
-                            // Attempt to match by departureTime/arrivalTime strings if available
-                            if (!depStopObj && step.departureTime && step.departureTime !== '~') {
-                                const match = stopTimes.find(st => (st.departure_time || st.arrival_time) && ((st.departure_time && st.departure_time.startsWith(step.departureTime)) || (st.arrival_time && st.arrival_time.startsWith(step.departureTime))));
-                                if (match) depStopObj = dataManager.getStop(match.stop_id);
-                            }
-                            if (!arrStopObj && step.arrivalTime && step.arrivalTime !== '~') {
-                                const match = stopTimes.find(st => (st.arrival_time || st.departure_time) && ((st.arrival_time && st.arrival_time.startsWith(step.arrivalTime)) || (st.departure_time && st.departure_time.startsWith(step.arrivalTime))));
-                                if (match) arrStopObj = dataManager.getStop(match.stop_id);
-                            }
-
-                            // If still not found, try matching by raw stop_id if the UI shows one (some raw IDs include ':')
-                            if (!depStopObj && step.departureStop && step.departureStop.indexOf(':') !== -1) {
-                                depStopObj = dataManager.getStop(step.departureStop) || depStopObj;
-                            }
-                            if (!arrStopObj && step.arrivalStop && step.arrivalStop.indexOf(':') !== -1) {
-                                arrStopObj = dataManager.getStop(step.arrivalStop) || arrStopObj;
-                            }
-
-                            // Final fallback from stopTimes: choose first/last stops if one side still missing
-                            if (!depStopObj && stopTimes.length) depStopObj = dataManager.getStop(stopTimes[0].stop_id);
-                            if (!arrStopObj && stopTimes.length) arrStopObj = dataManager.getStop(stopTimes[stopTimes.length - 1].stop_id);
-                        }
+                    const decoded = decodePolyline(encodedValue);
+                    if (decoded && decoded.length >= 2) {
+                        step.polyline = {
+                            encodedPolyline: encodedValue,
+                            latLngs: decoded
+                        };
+                        continue;
                     }
                 } catch (err) {
-                    console.warn('ensureItineraryPolylines: erreur résolution arrêts', err);
+                    console.warn('Erreur décodage polyline:', err);
                 }
-
-                if (!depStopObj && step.departureStop) {
-                    resolvedDepCoords = resolveStopCoordinates(step.departureStop, dataManager);
-                }
-                if (!arrStopObj && step.arrivalStop) {
-                    resolvedArrCoords = resolveStopCoordinates(step.arrivalStop, dataManager);
-                }
-
-                // Build encoded polyline from route geometry when possible
-                let encoded = null;
-                let latLngPoints = null;
-                let geometry = routeId ? dataManager.getRouteGeometry(routeId) : null;
-                if (!geometry && shapeId) geometry = dataManager.getShapeGeoJSON(shapeId, routeId);
-
-                const geometryToLatLngs = (geom) => {
-                    if (!geom) return null;
-
-                    const toLatLng = (pair) => {
-                        if (!Array.isArray(pair) || pair.length < 2) return null;
-                        const lon = parseFloat(pair[0]);
-                        const lat = parseFloat(pair[1]);
-                        if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
-                        return [lat, lon];
-                    };
-
-                    let rawPoints = null;
-                    if (Array.isArray(geom)) {
-                        rawPoints = geom;
-                    } else if (geom.type === 'LineString') {
-                        rawPoints = geom.coordinates;
-                    } else if (geom.type === 'MultiLineString') {
-                        rawPoints = geom.coordinates.flat();
-                    }
-
-                    if (!rawPoints) return null;
-                    const converted = rawPoints.map(toLatLng).filter(Boolean);
-                    return converted.length >= 2 ? converted : null;
-                };
-
-                const latlngs = geometryToLatLngs(geometry);
-
-                if (latlngs && latlngs.length >= 2 && depStopObj && arrStopObj) {
-                    // find nearest indices
-                    const findNearestIdx = (points, targetLat, targetLon) => {
-                        let best = 0; let bestD = Infinity;
-                        for (let i = 0; i < points.length; i++) {
-                            const d = dataManager.calculateDistance(targetLat, targetLon, points[i][0], points[i][1]);
-                            if (d < bestD) { bestD = d; best = i; }
-                        }
-                        return best;
-                    };
-                    const startIdx = findNearestIdx(latlngs, parseFloat(depStopObj.stop_lat), parseFloat(depStopObj.stop_lon));
-                    const endIdx = findNearestIdx(latlngs, parseFloat(arrStopObj.stop_lat), parseFloat(arrStopObj.stop_lon));
-                    let slice = null;
-                    if (startIdx != null && endIdx != null && startIdx !== endIdx) {
-                        if (startIdx < endIdx) slice = latlngs.slice(startIdx, endIdx + 1);
-                        else slice = [...latlngs].slice(endIdx, startIdx + 1).reverse();
-                    }
-                    if (!slice || slice.length < 2) {
-                        slice = [
-                            [parseFloat(depStopObj.stop_lat), parseFloat(depStopObj.stop_lon)],
-                            [parseFloat(arrStopObj.stop_lat), parseFloat(arrStopObj.stop_lon)]
-                        ];
-                    }
-                    latLngPoints = slice
-                        .map(pair => [Number(pair[0]), Number(pair[1])])
-                        .filter(([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon));
-                    encoded = latLngPoints.length >= 2 ? encodePolyline(latLngPoints) : null;
-                    console.log('ensureItineraryPolylines: polyline reconstruite depuis la géométrie', {
-                        itinId: itin.tripId || itin.trip?.trip_id || null,
-                        stepRoute: routeId,
-                        pointCount: latLngPoints?.length || 0
-                    });
-                }
-
-                // Final fallback: direct straight line using available coordinates
-                if (!encoded) {
-                    const dep = depStopObj
-                        ? { lat: parseFloat(depStopObj.stop_lat), lon: parseFloat(depStopObj.stop_lon) }
-                        : (resolvedDepCoords ? { lat: resolvedDepCoords.lat, lon: resolvedDepCoords.lng } : null);
-                    const arr = arrStopObj
-                        ? { lat: parseFloat(arrStopObj.stop_lat), lon: parseFloat(arrStopObj.stop_lon) }
-                        : (resolvedArrCoords ? { lat: resolvedArrCoords.lat, lon: resolvedArrCoords.lng } : null);
-                    if (dep && arr && !Number.isNaN(dep.lat) && !Number.isNaN(arr.lat)) {
-                        latLngPoints = [[dep.lat, dep.lon], [arr.lat, arr.lon]];
-                        encoded = encodePolyline(latLngPoints);
-                        console.log('ensureItineraryPolylines: fallback polyline directe utilisée', {
-                            itinId: itin.tripId || itin.trip?.trip_id || null,
-                            stepRoute: routeId
-                        });
-                    }
-                }
-
-                if (encoded && latLngPoints && latLngPoints.length >= 2) {
-                    step.polyline = { encodedPolyline: encoded, latLngs: latLngPoints };
-                    console.debug('ensureItineraryPolylines: reconstructed polyline', { itinId: itin.tripId || itin.trip?.trip_id || null });
-                } else {
-                    console.warn('ensureItineraryPolylines: impossible de reconstruire la polyline pour une étape BUS (aucune coordonnée fiable)', {
-                        itinId: itin.tripId || itin.trip?.trip_id || null,
-                        stepRoute: routeId,
-                        departureStop: step.departureStop,
-                        arrivalStop: step.arrivalStop
-                    });
-                }
-            } catch (err) {
-                console.warn('ensureItineraryPolylines error for step', err);
             }
+            
+            // ⚠️ SERVEUR-CENTRALISÉ: Si pas de polyline du serveur, c'est un problème
+            // On log un warning mais on ne tente PAS de reconstruire localement
+            console.warn('❌ Polyline manquante du serveur pour step BUS:', {
+                departureStop: step.departureStop,
+                arrivalStop: step.arrivalStop,
+                routeId: step.routeId
+            });
         }
     }
 }

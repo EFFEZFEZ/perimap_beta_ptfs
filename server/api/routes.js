@@ -1,20 +1,26 @@
 // Copyright © 2025 Périmap - Tous droits réservés
 /**
  * api/routes.js
- * Route planner proxy vers OpenTripPlanner (OTP)
+ * API d'itinéraires - Proxy vers OpenTripPlanner avec enrichissement GTFS
+ * 
+ * ARCHITECTURE SERVEUR-CENTRALISÉE:
+ * - Le serveur interroge OTP et enrichit les réponses avec les couleurs GTFS
+ * - Le client reçoit des données complètes prêtes à afficher
+ * - AUCUN fallback côté client - erreurs explicites si OTP échoue
  */
 
 import { Router } from 'express';
+import { planItinerary, OtpError, OTP_ERROR_CODES } from '../services/otpService.js';
 
 const router = Router();
 
-// Configuration OTP
-const OTP_BASE_URL = process.env.OTP_BASE_URL || 'http://localhost:8080/otp/routers/default';
-const OTP_MAX_ITINERARIES = parseInt(process.env.OTP_MAX_ITINERARIES || '5', 10);
-
-// Modes supportés côté client (alignés sur l'ancien Google Routes)
+// Modes supportés
 const SUPPORTED_MODES = ['TRANSIT', 'WALK', 'BICYCLE'];
 
+/**
+ * POST /api/routes
+ * Planifie un itinéraire via OTP avec enrichissement des couleurs GTFS
+ */
 router.post('/', async (req, res) => {
   try {
     const {
@@ -25,128 +31,111 @@ router.post('/', async (req, res) => {
       mode = 'TRANSIT',
       maxWalkDistance = 1000,
       maxTransfers = 3,
+      options = {}
     } = req.body || {};
 
     // Validation basique
     if (!isValidCoord(origin) || !isValidCoord(destination)) {
-      return res.status(400).json({ error: 'origin et destination (lat, lon) requis' });
+      return res.status(400).json({ 
+        error: 'Coordonnées invalides',
+        code: 'INVALID_COORDINATES',
+        details: 'origin et destination doivent contenir lat et lon valides'
+      });
     }
 
     if (!SUPPORTED_MODES.includes(mode)) {
-      return res.status(400).json({ error: `mode invalide. Valeurs: ${SUPPORTED_MODES.join(', ')}` });
-    }
-
-    const travelDate = time ? new Date(time) : new Date();
-    if (Number.isNaN(travelDate.getTime())) {
-      return res.status(400).json({ error: 'time doit être une date ISO valide' });
-    }
-
-    const { dateStr, timeStr } = formatForOtp(travelDate);
-    const arriveBy = timeType === 'arrival';
-    const otpMode = buildOtpMode(mode);
-
-    const searchParams = new URLSearchParams({
-      fromPlace: `${origin.lat},${origin.lon}`,
-      toPlace: `${destination.lat},${destination.lon}`,
-      mode: otpMode,
-      date: dateStr,
-      time: timeStr,
-      arriveBy: arriveBy ? 'true' : 'false',
-      maxWalkDistance: String(Math.max(0, maxWalkDistance)),
-      numItineraries: String(Math.max(1, OTP_MAX_ITINERARIES)),
-      maxTransfers: String(Math.max(0, maxTransfers)),
-      wheelchair: req.body?.options?.wheelchairAccessible ? 'true' : 'false',
-      optimize: req.body?.options?.preferLessWalking ? 'WALKING' : 'QUICK',
-    });
-
-    const otpUrl = `${OTP_BASE_URL}/plan?${searchParams.toString()}`;
-
-    console.log('[routes] Fetching OTP:', otpUrl);
-    console.log('[routes] About to fetch, timestamp:', Date.now());
-    
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      
-      const otpResponse = await fetch(otpUrl, { method: 'GET', signal: controller.signal });
-      console.log('[routes] Fetch completed, timestamp:', Date.now());
-      clearTimeout(timeoutId);
-      console.log('[routes] OTP response status:', otpResponse.status);
-      
-      const otpText = await otpResponse.text();
-      console.log('[routes] OTP response size:', otpText.length);
-      console.log('[routes] OTP response sample:', otpText.slice(0, 300));
-      
-      const otpJson = JSON.parse(otpText);
-      console.log('[routes] OTP json parsed OK');
-
-      if (!otpResponse.ok) {
-        console.error('[routes] OTP error response:', { status: otpResponse.status, body: otpJson });
-        return res.status(502).json({
-          error: 'OTP plan error',
-          status: otpResponse.status,
-          details: otpJson?.error || otpJson,
-        });
-      }
-
-      if (!otpJson?.plan?.itineraries || !Array.isArray(otpJson.plan.itineraries)) {
-        console.error('[routes] OTP invalid response - no itineraries:', otpJson);
-        return res.status(502).json({ error: 'Réponse OTP invalide (plan manquant)' });
-      }
-
-      const routes = otpJson.plan.itineraries.map(mapItineraryToClient);
-      
-      console.log('[routes] Mapped routes count:', routes.length);
-      if (routes.length > 0) {
-        console.log('[routes] First route legs count:', routes[0]?.legs?.length || 0);
-        if (routes[0]?.legs?.length > 0) {
-          console.log('[routes] First leg:', JSON.stringify(routes[0].legs[0]).slice(0, 200));
-        }
-      }
-
-      res.setHeader('Cache-Control', 'no-store');
-      return res.json({ routes });
-    } catch (fetchError) {
-      console.error('[routes] Fetch/parse error:', {
-        message: fetchError.message,
-        code: fetchError.code,
-        stack: fetchError.stack?.split('\n').slice(0, 2).join('\n')
+      return res.status(400).json({ 
+        error: 'Mode de transport invalide',
+        code: 'INVALID_MODE',
+        details: `Modes supportés: ${SUPPORTED_MODES.join(', ')}`
       });
-      throw fetchError;
     }
-  } catch (error) {
-    console.error('[routes] OTP proxy error - URL:', `${OTP_BASE_URL}/plan`);
-    console.error('[routes] Full error:', {
-      message: error.message,
-      code: error.code,
-      cause: error.cause,
-      stack: error.stack?.split('\n').slice(0, 3).join('\n')
+
+    // Appel au service OTP enrichi
+    const result = await planItinerary({
+      origin,
+      destination,
+      time,
+      timeType,
+      mode,
+      maxWalkDistance,
+      maxTransfers,
+      options
     });
-    return res.status(502).json({ 
-      error: 'Routes proxy error', 
-      details: error.message,
-      code: error.code,
-      otpUrl: OTP_BASE_URL
+
+    // Réponse succès avec métadonnées
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({
+      success: true,
+      routes: result.routes,
+      metadata: result.metadata
+    });
+
+  } catch (error) {
+    // Erreur OTP structurée
+    if (error instanceof OtpError) {
+      const statusCode = getHttpStatusForOtpError(error.code);
+      return res.status(statusCode).json({
+        success: false,
+        error: error.message,
+        code: error.code,
+        details: error.details
+      });
+    }
+
+    // Erreur inattendue
+    console.error('[routes] Erreur inattendue:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur interne du serveur',
+      code: 'INTERNAL_ERROR'
     });
   }
 });
 
-// Helpers
+/**
+ * GET /api/routes/health
+ * Vérifie l'état du service de routage
+ */
+router.get('/health', async (_req, res) => {
+  const { checkOtpHealth } = await import('../services/otpService.js');
+  const health = await checkOtpHealth();
+  
+  res.json({
+    service: 'routes',
+    otp: health.ok ? 'connected' : 'disconnected',
+    otpVersion: health.version || null,
+    otpError: health.error || null
+  });
+});
+
+// === HELPERS ===
+
 function isValidCoord(obj) {
   if (!obj || typeof obj.lat !== 'number' || typeof obj.lon !== 'number') return false;
   return obj.lat >= -90 && obj.lat <= 90 && obj.lon >= -180 && obj.lon <= 180;
 }
 
-function formatForOtp(dateObj) {
-  // OTP attend date=YYYY-MM-DD et time=HH:MM au fuseau local
-  const pad = (n) => String(n).padStart(2, '0');
-  const yyyy = dateObj.getFullYear();
-  const mm = pad(dateObj.getMonth() + 1);
-  const dd = pad(dateObj.getDate());
-  const hh = pad(dateObj.getHours());
-  const mi = pad(dateObj.getMinutes());
-  return { dateStr: `${yyyy}-${mm}-${dd}`, timeStr: `${hh}:${mi}` };
+function getHttpStatusForOtpError(code) {
+  switch (code) {
+    case OTP_ERROR_CODES.NO_ROUTE:
+      return 404;
+    case OTP_ERROR_CODES.DATE_OUT_OF_RANGE:
+      return 400;
+    case OTP_ERROR_CODES.LOCATION_NOT_FOUND:
+      return 404;
+    case OTP_ERROR_CODES.INVALID_REQUEST:
+      return 400;
+    case OTP_ERROR_CODES.TIMEOUT:
+      return 504;
+    case OTP_ERROR_CODES.CONNECTION_ERROR:
+      return 502;
+    default:
+      return 500;
+  }
 }
+
+export default router;
 
 function buildOtpMode(mode) {
   if (mode === 'WALK') return 'WALK';

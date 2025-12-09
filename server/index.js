@@ -2,6 +2,11 @@
 /**
  * index.js
  * Point d'entrée du serveur Perimap (Express + OTP/Photon proxies)
+ * 
+ * Architecture serveur-centralisée:
+ * - Chargement des couleurs GTFS au démarrage (routes.txt)
+ * - Enrichissement des réponses OTP avec les données GTFS
+ * - Le client ne fait plus de parsing GTFS
  */
 
 import 'dotenv/config';
@@ -18,6 +23,8 @@ const __dirname = dirname(__filename);
 import { config, validateConfig } from './config.js';
 import { createLogger } from './utils/logger.js';
 import apiRouter from './api/index.js';
+import { loadRouteColors } from './utils/gtfsLoader.js';
+import { initOtpService, checkOtpHealth } from './services/otpService.js';
 
 const logger = createLogger('server');
 
@@ -25,6 +32,23 @@ async function startServer() {
   try {
     validateConfig();
     logger.info('✅ Configuration validée');
+
+    // ✅ NOUVEAU: Charger les couleurs GTFS au démarrage
+    const gtfsDir = config.paths.gtfs;
+    logger.info(`📂 Chargement des données GTFS depuis ${gtfsDir}...`);
+    const routeColors = await loadRouteColors(gtfsDir);
+    
+    // Initialiser le service OTP avec les couleurs
+    initOtpService(routeColors);
+    
+    // Vérifier la connectivité OTP (non bloquant)
+    checkOtpHealth().then(health => {
+      if (health.ok) {
+        logger.info(`✅ OTP connecté (version: ${health.version})`);
+      } else {
+        logger.warn(`⚠️ OTP non accessible: ${health.error}`);
+      }
+    });
 
     const app = express();
 
