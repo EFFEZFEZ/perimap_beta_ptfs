@@ -74,7 +74,7 @@ async function startServer() {
     });
 
     // Servir les fichiers statiques du frontend
-    app.use(express.static(join(__dirname, 'public')));
+    app.use(express.static(join(__dirname, '..', 'public')));
 
     app.use('/api', apiRouter);
 

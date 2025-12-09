@@ -135,8 +135,6 @@ function getHttpStatusForOtpError(code) {
   }
 }
 
-export default router;
-
 function buildOtpMode(mode) {
   if (mode === 'WALK') return 'WALK';
   if (mode === 'BICYCLE') return 'BICYCLE';

@@ -15,7 +15,7 @@ import { createLogger } from '../utils/logger.js';
 const logger = createLogger('otp-service');
 
 // Configuration OTP
-const OTP_BASE_URL = process.env.OTP_BASE_URL || 'http://otp:8080/otp/routers/default';
+const OTP_BASE_URL = process.env.OTP_BASE_URL || 'http://localhost:8888/otp/routers/default';
 const OTP_TIMEOUT_MS = parseInt(process.env.OTP_TIMEOUT_MS || '15000', 10);
 const OTP_MAX_ITINERARIES = parseInt(process.env.OTP_MAX_ITINERARIES || '5', 10);
 

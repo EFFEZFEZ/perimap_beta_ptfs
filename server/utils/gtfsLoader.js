@@ -127,23 +127,6 @@ export async function loadRouteColors(gtfsDir) {
     }
 }
 
-// === ANCIEN CODE DÉSACTIVÉ ===
-/**
- * Parse un fichier CSV (placeholder)
- * @deprecated Utiliser parseCSVContent à la place
- */
-export async function parseCSV(filePath) {
-  // Placeholder désactivé
-      .on('data', (record) => records.push(record))
-      .on('end', () => resolve(records))
-      .on('error', reject);
-  });
-  */
-  
-  // Placeholder: lire le fichier comme texte simple
-  return [];
-}
-
 /**
  * Charge tous les fichiers GTFS d'un répertoire
  * 
