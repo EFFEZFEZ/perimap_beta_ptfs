@@ -5,12 +5,18 @@
  * 
  * RESPONSABILITÉS:
  * - Connexion robuste à l'API OTP
- * - Enrichissement des données avec les couleurs GTFS
+ * - Enrichissement des données avec les couleurs GTFS via getRouteAttributes
  * - Gestion des erreurs explicites (pas de fallback inventé)
  * - Formatage standardisé des réponses
+ * 
+ * ÉTAPE 2 : Enrichissement OTP via le Service
+ * - Import du module gtfsLoader modifié (getRouteAttributes)
+ * - Dans enrichLegWithColors: appel à getRouteAttributes pour chaque leg transit
+ * - Injection des attributs GTFS propres (color, textColor, shortName)
  */
 
 import { createLogger } from '../utils/logger.js';
+import { getRouteAttributes } from '../utils/gtfsLoader.js';
 
 const logger = createLogger('otp-service');
 
@@ -19,7 +25,7 @@ const OTP_BASE_URL = process.env.OTP_BASE_URL || 'http://localhost:8888/otp/rout
 const OTP_TIMEOUT_MS = parseInt(process.env.OTP_TIMEOUT_MS || '15000', 10);
 const OTP_MAX_ITINERARIES = parseInt(process.env.OTP_MAX_ITINERARIES || '5', 10);
 
-// Cache des couleurs GTFS (route_id -> { color, textColor })
+// Cache des couleurs GTFS (route_id -> { color, textColor, shortName, longName })
 let gtfsRouteColors = new Map();
 
 /**
@@ -78,18 +84,14 @@ function normalizeColor(color, defaultColor = '#3388ff') {
 
 /**
  * Récupère les couleurs d'une ligne depuis le cache GTFS
- * @param {string} routeId - ID de la route
- * @returns {{ color: string, textColor: string }}
+ * Utilise la recherche fuzzy de getRouteAttributes
+ * 
+ * @param {string} routeId - ID de la route venant d'OTP (peut avoir des préfixes)
+ * @returns {{ color: string, textColor: string, shortName: string, longName: string }}
  */
 function getRouteColors(routeId) {
-    if (!routeId || !gtfsRouteColors.has(routeId)) {
-        return { color: '#3388ff', textColor: '#ffffff' };
-    }
-    const cached = gtfsRouteColors.get(routeId);
-    return {
-        color: normalizeColor(cached.color, '#3388ff'),
-        textColor: normalizeColor(cached.textColor, '#ffffff')
-    };
+    // Utilise getRouteAttributes avec recherche fuzzy (ÉTAPE 2)
+    return getRouteAttributes(routeId, gtfsRouteColors);
 }
 
 /**
@@ -119,29 +121,27 @@ function buildOtpMode(mode) {
 }
 
 /**
- * Enrichit un leg avec les couleurs GTFS
+ * Enrichit un leg avec les couleurs GTFS via recherche fuzzy
+ * ÉTAPE 2 : Transformation des données OTP brutes en données propres
+ * 
  * @param {Object} leg - Leg OTP brut
- * @returns {Object} Leg enrichi
+ * @returns {Object} Leg enrichi avec couleurs GTFS
  */
 function enrichLegWithColors(leg) {
     const isTransit = ['BUS', 'TRAM', 'SUBWAY', 'RAIL', 'FERRY'].includes(leg.mode) || leg.transitLeg;
     
     let routeColor = null;
     let routeTextColor = null;
+    let routeShortName = null;
+    let routeLongName = null;
     
     if (isTransit && leg.routeId) {
-        // Priorité 1: Couleurs du cache GTFS (routes.txt)
-        const gtfsColors = getRouteColors(leg.routeId);
-        routeColor = gtfsColors.color;
-        routeTextColor = gtfsColors.textColor;
-        
-        // Priorité 2: Couleurs OTP si GTFS n'a pas la couleur
-        if (routeColor === '#3388ff' && leg.routeColor) {
-            routeColor = normalizeColor(leg.routeColor);
-        }
-        if (routeTextColor === '#ffffff' && leg.routeTextColor) {
-            routeTextColor = normalizeColor(leg.routeTextColor, '#ffffff');
-        }
+        // ÉTAPE 2: Appelle getRouteAttributes avec recherche fuzzy
+        const gtfsAttrs = getRouteColors(leg.routeId);
+        routeColor = gtfsAttrs.color;
+        routeTextColor = gtfsAttrs.textColor;
+        routeShortName = gtfsAttrs.shortName || leg.routeShortName || null;
+        routeLongName = gtfsAttrs.longName || leg.routeLongName || null;
     }
     
     return {
@@ -173,12 +173,12 @@ function enrichLegWithColors(leg) {
             stopCode: leg.to?.stopCode || null
         },
         
-        // Infos transit enrichies avec couleurs GTFS
+        // Infos transit enrichies avec couleurs GTFS propres
         ...(isTransit && {
-            routeColor,
-            routeTextColor,
-            routeShortName: leg.routeShortName || null,
-            routeLongName: leg.routeLongName || null,
+            routeColor,        // Couleur hex propre depuis GTFS
+            routeTextColor,    // Couleur texte propre depuis GTFS
+            routeShortName,    // Nom court propre (ex: "A" au lieu de "1:A")
+            routeLongName,     // Nom long depuis GTFS
             routeId: leg.routeId || null,
             tripId: leg.tripId || null,
             headsign: leg.headsign || null,

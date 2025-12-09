@@ -1,9 +1,30 @@
 // Copyright © 2025 Périmap - Tous droits réservés
 /**
  * utils/gtfsLoader.js
- * Chargement et parsing des fichiers GTFS côté serveur
+ * Chargement et parsing intelligent des fichiers GTFS côté serveur
  * 
  * ✅ ACTIVÉ - Chargement léger (routes.txt pour les couleurs)
+ * 
+ * ÉTAPE 1 : Loader GTFS "Intelligent"
+ * - Chargement au démarrage: routes.txt stockée dans une Map
+ * - Gestion des couleurs: normalisation hex, couleurs par défaut
+ * - Fonction de recherche Fuzzy: getRouteAttributes() avec matching flexible
+ * 
+ * PROCÉDURE DE MAINTENANCE:
+ * Pour forcer OTP à recharger les fichiers GTFS à jour et ignorer le cache graph.obj:
+ * 
+ * 1. Arrêter les conteneurs Docker:
+ *    docker-compose down
+ * 
+ * 2. Supprimer le graphe OTP en cache:
+ *    docker volume rm perimap-otp-data (ou rm -rf data/otp/graphs/default/*)
+ *    Cela force OTP à reconstruire le graphe au prochain démarrage
+ * 
+ * 3. Relancer les conteneurs:
+ *    docker-compose up -d
+ * 
+ * OTP prendra 2-5 minutes pour reconstruire le graphe avec les données GTFS à jour.
+ * Monitorer avec: docker logs perimap-otp -f
  */
 
 import { existsSync, readFileSync } from 'fs';
@@ -75,7 +96,7 @@ function parseCSVContent(content) {
  * C'est le seul fichier nécessaire côté serveur pour enrichir OTP
  * 
  * @param {string} gtfsDir - Chemin vers le répertoire GTFS
- * @returns {Promise<Map<string, { color: string, textColor: string, shortName: string }>>}
+ * @returns {Promise<Map<string, { color: string, textColor: string, shortName: string, longName: string }>>}
  */
 export async function loadRouteColors(gtfsDir) {
     const routeColorsMap = new Map();
@@ -125,6 +146,84 @@ export async function loadRouteColors(gtfsDir) {
         logger.error(`❌ Erreur chargement routes.txt: ${error.message}`);
         return routeColorsMap;
     }
+}
+
+/**
+ * ÉTAPE 1 - Recherche "Fuzzy" Intelligente des attributs de ligne
+ * 
+ * Gère le problème des préfixes ajoutés par OTP (ex: GrandPerigueux:A)
+ * Algorithme de recherche flexible en 4 étapes:
+ * 
+ * 1. Correspondance exacte (===)
+ * 2. Correspondance sans préfixe (si OTP a ajouté un préfixe avec :)
+ * 3. Correspondance suffixe (si l'ID stocké finit par l'ID cherché)
+ * 4. Fallback propre (gris) pour ne jamais planter l'API
+ * 
+ * @param {string} otpRouteId - ID brut venant d'OTP (ex: "GrandPerigueux:A", "RATP:75502", "A")
+ * @param {Map} routeMap - Map route_id -> { color, textColor, shortName, longName }
+ * @returns {{ color: string, textColor: string, shortName: string, longName: string }}
+ */
+export function getRouteAttributes(otpRouteId, routeMap) {
+    // Fallback par défaut (gris neutre)
+    const FALLBACK = {
+        color: '#808080',
+        textColor: '#ffffff',
+        shortName: otpRouteId || 'X',
+        longName: 'Ligne inconnue'
+    };
+    
+    if (!otpRouteId || !routeMap || routeMap.size === 0) {
+        return FALLBACK;
+    }
+    
+    const cleanId = String(otpRouteId).trim();
+    
+    // ÉTAPE 1: Correspondance exacte
+    if (routeMap.has(cleanId)) {
+        logger.debug(`[Route] Correspondance exacte trouvée pour: ${cleanId}`);
+        return routeMap.get(cleanId);
+    }
+    
+    // ÉTAPE 2: Correspondance sans préfixe
+    // Si l'ID contient ":", extrait la partie après le dernier ":"
+    if (cleanId.includes(':')) {
+        const parts = cleanId.split(':');
+        const lastPart = parts[parts.length - 1].trim();
+        
+        if (routeMap.has(lastPart)) {
+            logger.debug(`[Route] Correspondance sans préfixe trouvée pour: ${cleanId} -> ${lastPart}`);
+            return routeMap.get(lastPart);
+        }
+        
+        // ÉTAPE 2b: Essayer chaque partie du préfixe
+        for (const part of parts) {
+            const trimmedPart = part.trim();
+            if (routeMap.has(trimmedPart)) {
+                logger.debug(`[Route] Correspondance partielle trouvée pour: ${cleanId} -> ${trimmedPart}`);
+                return routeMap.get(trimmedPart);
+            }
+        }
+    }
+    
+    // ÉTAPE 3: Correspondance suffixe
+    // Cherche une clé dans la map dont l'ID finit par l'ID cherché
+    for (const [storedId, attributes] of routeMap.entries()) {
+        // Si l'ID stocké finit par l'ID cherché (ex: "RATP:A" stocké cherche "A")
+        if (storedId.endsWith(cleanId)) {
+            logger.debug(`[Route] Correspondance suffixe trouvée pour: ${cleanId} -> ${storedId}`);
+            return attributes;
+        }
+        
+        // Inverse: si l'ID cherché finit par l'ID stocké (ex: "GrandPerigueux:75" cherche "75")
+        if (cleanId.endsWith(storedId)) {
+            logger.debug(`[Route] Correspondance inverse suffixe trouvée pour: ${cleanId} -> ${storedId}`);
+            return attributes;
+        }
+    }
+    
+    // ÉTAPE 4: Fallback
+    logger.warn(`[Route] Aucune correspondance trouvée pour: ${cleanId}, utilisation du fallback`);
+    return FALLBACK;
 }
 
 /**
@@ -296,6 +395,8 @@ export function parseGtfsDate(dateStr) {
 
 export default {
   loadGtfsData,
+  loadRouteColors,
+  getRouteAttributes,
   parseGtfsTime,
   formatGtfsTime,
   formatGtfsDate,
