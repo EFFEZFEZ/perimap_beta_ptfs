@@ -31,7 +31,9 @@ let isLoaded = false;
 export async function loadRouteAttributes() {
     return new Promise((resolve, reject) => {
         // Chemin vers le fichier routes.txt
-        const routesPath = path.join(__dirname, '../../public/data/gtfs/routes.txt');
+        // Dans Docker: __dirname = /app/utils, donc:
+        // ../public/data/gtfs/routes.txt = /app/public/data/gtfs/routes.txt
+        const routesPath = path.join(__dirname, '../public/data/gtfs/routes.txt');
         
         // Fallback si le fichier n'est pas trouvé dans public
         const alternativePath = path.join(__dirname, '../data/gtfs/routes.txt');
@@ -89,7 +91,7 @@ export async function loadRouteAttributes() {
  * 3. Essai Suffixe : "123_A" correspond à "A"
  * 4. Fallback : Gris #333333 + nom propre du routeId nettoyé
  */
-function getRouteAttributes(otpRouteId) {
+export function getRouteAttributes(otpRouteId) {
     // Valeurs par défaut si le système n'est pas prêt ou ID vide
     const defaultAttrs = { 
         color: '#333333', 
