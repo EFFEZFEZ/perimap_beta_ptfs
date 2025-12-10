@@ -71,12 +71,17 @@ async function startServer() {
     });
 
     // Servir les fichiers statiques du frontend
-    app.use(express.static(join(__dirname, '..', 'public')));
+    app.use(express.static(join(__dirname, 'public')));
 
     app.use('/api', apiRouter);
 
     app.get('/health', (_req, res) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
+    });
+
+    // Servir index.html pour la route racine et les routes SPA non reconnues
+    app.get('/', (_req, res) => {
+      res.sendFile(join(__dirname, 'public', 'index.html'));
     });
 
     app.use((err, _req, res, _next) => {
