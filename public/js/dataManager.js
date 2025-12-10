@@ -775,13 +775,11 @@ export class DataManager {
                 };
             }
             
-            // V107: Limiter à 4 départs par ligne/destination
-            if (departuresByLine[lineKey].departures.length < 4) {
-                departuresByLine[lineKey].departures.push({
-                    time: dep.time,
-                    departureSeconds: dep.departureSeconds
-                });
-            }
+            // Ne pas limiter : pousser tous les départs trouvés pour afficher la fréquence complète
+            departuresByLine[lineKey].departures.push({
+                time: dep.time,
+                departureSeconds: dep.departureSeconds
+            });
         });
         
         console.log(`📊 Stats: ${allFutureDepartures.length} départs futurs, isNextDay=${isNextDayDepartures}`);

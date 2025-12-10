@@ -192,8 +192,30 @@ router.get('/autocomplete', async (req, res) => {
       }
     } catch (err) {
       logger.debug(`[places] Photon unavailable: ${err.message}`);
+      // Si Photon indisponible, essayer Nominatim (adresses) avant le fallback GTFS
+      try {
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&limit=${encodeURIComponent(limit)}&q=${encodeURIComponent(q)}`;
+        const nomResp = await Promise.race([
+          fetch(nominatimUrl, { headers: { 'User-Agent': 'Perimap/1.0 (contact@perimap.local)' } }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+        ]);
+        if (nomResp && nomResp.ok) {
+          const nomData = await nomResp.json();
+          const nomResults = (nomData || []).map(r => ({
+            lat: parseFloat(r.lat),
+            lon: parseFloat(r.lon),
+            description: r.display_name || r.type || 'Adresse',
+            city: r.address?.city || r.address?.town || r.address?.village || ''
+          })).slice(0, limit);
+          if (nomResults.length > 0) {
+            return res.json({ suggestions: nomResults });
+          }
+        }
+      } catch (nerr) {
+        logger.debug(`[places] Nominatim fallback failed: ${nerr.message}`);
+      }
     }
-    
+
     // Fallback: recherche locale dans les arrêts GTFS
     const localResults = fuzzySearchStops(q, limit);
     res.json({ suggestions: localResults });
