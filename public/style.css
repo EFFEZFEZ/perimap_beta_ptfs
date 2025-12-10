@@ -10204,18 +10204,63 @@ body.dark-theme .route-summary-dot {
 
 /* === BADGES DE LIGNE - STYLE MODERNE TBM/SNCF === */
 .route-line-badge {
+    /* Circular badge: center content, allow short labels or icons */
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 0.8rem;
-    border-radius: 6px;
+    font-size: 0.85rem;
+    border-radius: 9999px;
     min-width: 36px;
-    height: 26px;
+    height: 36px;
     padding: 0 0.5rem;
     box-shadow: none;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
 }
+
+/* Instruction row used in itinerary detail: icon + circular badge + text */
+.route-instruction-row{display:flex;align-items:center;gap:10px}
+/* Scoped small icon used inside the instruction row; does NOT override global .step-icon used by timeline */
+.route-instruction-row .step-icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* Compact pre-expanded count of intermediate stops */
+.stops-compact{font-size:0.9em;color:var(--text-secondary,#64748b);margin:6px 0}
+
+/* Detailed intermediate stops list with white dots */
+.intermediate-stops summary{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:6px 0;border:none}
+.stop-list{list-style:none;padding:8px 0 0 0;margin:0}
+.stop-list li{display:flex;align-items:center;gap:10px;padding:6px 0}
+.stop-dot{width:10px;height:10px;border-radius:50%;background:#ffffff;border:2px solid var(--line-color,#ccc);box-sizing:border-box;flex-shrink:0}
+.stop-name{color:var(--text-primary,#0f172a)}
+
+/* === NEW BUS STEP DETAIL REDESIGN (PÉRIMAP-STYLE) === */
+
+/* Large circular badge for line logo */
+.route-line-badge-large{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;line-height:1;flex-shrink:0;box-shadow:0 2px 4px rgba(0,0,0,0.15)}
+
+/* Bus instruction line */
+.bus-instruction{font-size:0.95rem;color:var(--text-primary);margin-bottom:8px;line-height:1.4}
+.bus-instruction strong{font-weight:600}
+.trip-duration{font-size:0.85rem;color:var(--text-secondary);font-weight:400;margin-left:4px}
+
+/* Boarding and alighting */
+.bus-boarding,.bus-alighting{display:flex;align-items:center;gap:8px;font-size:0.9rem;color:var(--text-primary);padding:4px 0}
+.bus-boarding strong,.bus-alighting strong{font-weight:600}
+.boarding-time,.alighting-time{color:var(--text-secondary);font-size:0.85rem}
+.boarding-dot,.alighting-dot{width:8px;height:8px;border-radius:50%;background:#fff;border:2px solid var(--line-color,#ccc);flex-shrink:0}
+
+/* Bus stops details (expandable list) */
+.bus-stops-details{width:100%;margin:6px 0}
+.bus-stops-summary{display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none;padding:4px 0;border:none;color:var(--primary);font-weight:500;font-size:0.9rem;list-style:none}
+.bus-stops-summary::-webkit-details-marker{display:none}
+.bus-stops-summary .stops-count{text-decoration:underline}
+.bus-stops-summary .chevron{transition:transform 0.2s ease;width:12px;height:12px}
+.bus-stops-details[open] .bus-stops-summary .chevron{transform:rotate(180deg)}
+
+/* List of intermediate stops */
+.bus-intermediate-stops{list-style:none;padding:8px 0 8px 16px;margin:0;border-left:2px solid var(--line-color,#ccc)}
+.bus-stop-item{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:0.85rem;color:var(--text-primary)}
+.bus-stop-item .stop-dot{width:8px;height:8px;border-radius:50%;background:#ffffff;border:2px solid var(--line-color,#ccc);box-sizing:border-box;flex-shrink:0;margin-left:-21px}
 
 /* === FOOTER - HORAIRES ET DURÉE === */
 .route-footer {

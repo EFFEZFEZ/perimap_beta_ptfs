@@ -24,6 +24,9 @@ const logger = createLogger('otp-service');
 const OTP_BASE_URL = process.env.OTP_BASE_URL || 'http://localhost:8888/otp/routers/default';
 const OTP_TIMEOUT_MS = parseInt(process.env.OTP_TIMEOUT_MS || '15000', 10);
 const OTP_MAX_ITINERARIES = parseInt(process.env.OTP_MAX_ITINERARIES || '5', 10);
+// Valeur maximale absolue que le client peut demander (sécurité contre les requêtes trop larges)
+// Par défaut on limite à 10 propositions comme demandé
+const OTP_MAX_ITINERARIES_MAX = parseInt(process.env.OTP_MAX_ITINERARIES_MAX || '10', 10);
 
 /**
  * Vérifie la connectivité avec OTP
@@ -320,6 +323,14 @@ export async function planItinerary(params) {
     const arriveBy = timeType === 'arrival';
     const otpMode = buildOtpMode(mode);
     
+    // Déterminer le nombre d'itinéraires demandé (client peut proposer via options.numItineraries)
+    let requestedItineraries = OTP_MAX_ITINERARIES;
+    if (options && Number.isFinite(Number(options.numItineraries))) {
+        requestedItineraries = Math.max(1, Math.floor(Number(options.numItineraries)));
+    }
+    // Clamp to a safe maximum
+    const numItineraries = Math.min(Math.max(1, requestedItineraries), OTP_MAX_ITINERARIES_MAX);
+
     // Construire les paramètres OTP
     const searchParams = new URLSearchParams({
         fromPlace: `${origin.lat},${origin.lon}`,
@@ -329,11 +340,12 @@ export async function planItinerary(params) {
         time: timeStr,
         arriveBy: arriveBy ? 'true' : 'false',
         maxWalkDistance: String(Math.max(0, maxWalkDistance)),
-        numItineraries: String(OTP_MAX_ITINERARIES),
+        numItineraries: String(numItineraries),
         maxTransfers: String(Math.max(0, maxTransfers)),
         wheelchair: options.wheelchairAccessible ? 'true' : 'false',
         optimize: options.preferLessWalking ? 'WALKING' : 'QUICK',
-        locale: 'fr'
+        locale: 'fr',
+        showIntermediateStops: 'true'
     });
     
     const otpUrl = `${OTP_BASE_URL}/plan?${searchParams.toString()}`;

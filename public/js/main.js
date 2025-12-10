@@ -2161,22 +2161,48 @@ function transformLegs(otpLegs) {
         
         // Ajouter les détails de transit pour les bus
         if (leg.mode === 'BUS') {
-            transformed.lineNumber = leg.routeShortName || '';
-            transformed.lineName = leg.routeLongName || '';
-            transformed.headsign = leg.headsign || '';
-            transformed.agency = leg.agencyName || '';
-            // Arrêts intermédiaires (si disponibles)
-            transformed.intermediateStops = leg.intermediateStops || [];
+            // Normaliser le nom court de la ligne et fournir des fallbacks
+            const cleanedRouteId = (routeId || '') ? String(routeId).split(':').pop() : '';
+            const shortName = leg.routeShortName || leg.route_long_name || leg.routeLongName || cleanedRouteId || '';
+            transformed.routeShortName = shortName;
+            transformed.lineNumber = shortName;
+            transformed.lineName = leg.routeLongName || leg.route_long_name || '';
+            transformed.headsign = leg.headsign || leg.headsign || '';
+            transformed.agency = leg.agencyName || leg.agency || '';
+            // Construire une instruction lisible pour l'UI
+            const instrParts = [];
+            if (shortName) instrParts.push(`<strong>${shortName}</strong>`);
+            if (leg.headsign) instrParts.push(`direction ${leg.headsign}`);
+            transformed.instruction = instrParts.length ? `Prendre ${instrParts.join(' ')}` : (`Prendre ${shortName || 'le bus'}`);
+            // Arrêts intermédiaires (si disponibles) - garder coordonnées OTP
+            transformed.intermediateStops = (leg.intermediateStops || []).map(stop => ({
+                name: stop.name || stop.stopName || '',
+                lat: stop.lat || null,
+                lon: stop.lon || null
+            }));
         }
         
         // Transformer les steps OTP en substeps pour les WALK legs
         if ((leg.mode === 'WALK' || leg.mode === 'BICYCLE') && leg.steps && Array.isArray(leg.steps)) {
-            transformed.subSteps = leg.steps.map(step => ({
-                distance: formatDistance(step.distance),
-                maneuver: step.relativeDirection || 'CONTINUE',
-                streetName: step.streetName || '',
-                absoluteDirection: step.absoluteDirection || ''
-            }));
+            transformed.subSteps = leg.steps.map(step => {
+                const maneuverIcon = step.relativeDirection || 'CONTINUE';
+                const streetName = step.streetName || 'Continuer';
+                let instruction = streetName;
+                if (maneuverIcon && maneuverIcon !== 'CONTINUE') {
+                    instruction = `${maneuverIcon} ${streetName}`;
+                }
+                return {
+                    distance: formatDistance(step.distance),
+                    duration: step.duration ? formatDuration(step.duration) : '',
+                    maneuver: maneuverIcon,
+                    streetName: streetName,
+                    absoluteDirection: step.absoluteDirection || '',
+                    instruction: instruction
+                };
+            });
+            // Fournir une instruction lisible pour les étapes à pied / vélo
+            const walkInstr = leg.instruction || leg.legInstruction || (leg.mode === 'BICYCLE' ? 'À vélo' : 'À pied');
+            transformed.instruction = walkInstr || `À ${leg.mode?.toLowerCase()}`;
         }
         
         return transformed;
@@ -2192,7 +2218,7 @@ function formatDuration(seconds) {
     if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return mins > 0 ? `${hours}h ${mins}` : `${hours}h`;
+    return mins > 0 ? `${hours}h${String(mins).padStart(2, '0')}` : `${hours}h`;
 }
 
 /**
@@ -2317,13 +2343,17 @@ function processIntelligentResults(intelligentResults, searchTime) {
             // ✅ SERVEUR-CENTRALISÉ: Utiliser les couleurs GTFS du serveur
             const summarySegments = legs
                 .filter(leg => leg.mode === 'BUS')
-                .map(leg => ({
-                    type: 'BUS',
-                    name: leg.routeShortName || 'Bus',
-                    // Priorité: couleur serveur (GTFS) > couleur locale
-                    color: leg.routeColor || getLineColor(leg.routeShortName || ''),
-                    textColor: leg.routeTextColor || '#fff'
-                }));
+                .map(leg => {
+                    const cleanedRouteId = (leg.routeId || '') ? String(leg.routeId).split(':').pop() : '';
+                    const label = leg.routeShortName || leg.routeLongName || cleanedRouteId || 'Bus';
+                    return {
+                        type: 'BUS',
+                        name: label,
+                        // Priorité: couleur serveur (GTFS) > couleur locale
+                        color: leg.routeColor || getLineColor(label || ''),
+                        textColor: leg.routeTextColor || '#fff'
+                    };
+                });
             
             // Transformer les legs OTP
             const steps = transformLegs(legs);
@@ -2865,6 +2895,7 @@ function renderItineraryDetailHTML(itinerary) {
             const hasSubSteps = step.subSteps && step.subSteps.length > 0;
             const icon = (step.type === 'BIKE') ? ICONS.BICYCLE : ICONS.WALK;
             const stepClass = (step.type === 'BIKE') ? 'bicycle' : 'walk';
+            const safeInstruction = getSafeStopLabel(step.instruction, step.type === 'BIKE' ? 'À vélo' : 'À pied');
 
             // ✅ V46: Filtrer les étapes "STRAIGHT" trop courtes
             const filteredSubSteps = (step.subSteps || []).filter(subStep => {
@@ -2881,7 +2912,7 @@ function renderItineraryDetailHTML(itinerary) {
                         ${icon}
                     </div>
                     <div class="step-info">
-                        <span class="step-instruction">${step.instruction} <span class="step-duration-inline">(${step.duration})</span></span>
+                        <span class="step-instruction">${safeInstruction} <span class="step-duration-inline">(${step.duration})</span></span>
                         
                         ${hasSubSteps ? `
                         <details class="intermediate-stops">
@@ -2901,7 +2932,7 @@ function renderItineraryDetailHTML(itinerary) {
                                 `).join('')}
                             </ul>
                         </details>
-                        ` : `<span class="step-sub-instruction">${step.instruction}</span>`}
+                        ` : `<span class="step-sub-instruction">${safeInstruction}</span>`}
                     </div>
                 </div>
             `;
@@ -2913,17 +2944,18 @@ function renderItineraryDetailHTML(itinerary) {
             const hasIntermediateStops = step.intermediateStops && step.intermediateStops.length > 0;
             const intermediateStopCount = hasIntermediateStops ? step.intermediateStops.length : (step.numStops > 1 ? step.numStops - 1 : 0);
             
-            let stopCountLabel = 'Direct';
+            let stopsDisplayText = 'Direct';
             if (intermediateStopCount > 1) {
-                stopCountLabel = `${intermediateStopCount} arrêts`;
+                stopsDisplayText = `${intermediateStopCount} arrêts`;
             } else if (intermediateStopCount === 1) {
-                stopCountLabel = `1 arrêt`;
+                stopsDisplayText = `1 arrêt`;
             }
 
             const lineColor = step.routeColor || 'var(--border)';
-            const badgeLabel = getSafeRouteBadgeLabel(step.routeShortName);
+            const badgeLabel = getSafeRouteBadgeLabel(step.routeShortName, step.lineName || step.routeId || 'Bus');
             const badgeBg = step.routeColor || 'var(--primary)';
             const badgeText = step.routeTextColor || '#ffffff';
+            const safeHeadsign = step.headsign || step.routeLongName || '';
             const departureStopLabel = getSafeStopLabel(step.departureStop);
             const arrivalStopLabel = getSafeStopLabel(step.arrivalStop);
             const departureTimeLabel = getSafeTimeLabel(step.departureTime);
@@ -2932,36 +2964,36 @@ function renderItineraryDetailHTML(itinerary) {
             return `
                 <div class="step-detail bus" style="--line-color: ${lineColor};">
                     <div class="step-icon">
-                        <div class="route-line-badge" style="background-color: ${badgeBg}; color: ${badgeText};">${badgeLabel}</div>
+                        <div class="route-line-badge-large" style="background-color: ${badgeBg}; color: ${badgeText};">${badgeLabel}</div>
                     </div>
                     <div class="step-info">
-                        <span class="step-instruction">${step.instruction} <span class="step-duration-inline">(${step.duration})</span></span>
-                        
-                        <div class="step-stop-point">
-                            <span class="step-time">Montée à <strong>${departureStopLabel}</strong></span>
-                            <span class="step-time-detail">(${departureTimeLabel})</span>
+                        <div class="bus-instruction">Prendre le <strong>${badgeLabel}</strong> direction <strong>${safeHeadsign || 'destination'}</strong> <span class="trip-duration">(${step.duration})</span></div>
+                        <div class="bus-boarding">
+                            <span class="boarding-dot"></span>
+                            <span>Montée à <strong>${departureStopLabel}</strong></span>
+                            <span class="boarding-time">(${departureTimeLabel})</span>
                         </div>
-                        
-                        ${(intermediateStopCount > 0) ? `
-                        <details class="intermediate-stops">
-                            <summary>
-                                <span>${stopCountLabel}</span>
-                                <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                        ${intermediateStopCount > 0 ? `
+                        <details class="bus-stops-details">
+                            <summary class="bus-stops-summary">
+                                <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                                <span>${stopsDisplayText}</span>
                             </summary>
                             ${hasIntermediateStops ? `
-                            <ul class="intermediate-stops-list" style="--line-color: ${lineColor};">
+                            <ul class="bus-intermediate-stops">
                                 ${step.intermediateStops.map(stop => {
                                     const name = typeof stop === 'string' ? stop : (stop?.name || stop?.stop_name || 'Arrêt');
-                                    return `<li>${name}</li>`;
+                                    const safeName = getSafeStopLabel(name);
+                                    return `<li class="bus-stop-item"><span class="stop-dot"></span>${safeName}</li>`;
                                 }).join('')}
                             </ul>
-                            ` : `<ul class="intermediate-stops-list" style="--line-color: ${lineColor};"><li>(La liste détaillée des arrêts n'est pas disponible)</li></ul>`}
+                            ` : `<ul class="bus-intermediate-stops"><li class="bus-stop-item">(Arrêts non disponibles)</li></ul>`}
                         </details>
                         ` : ''}
-                        
-                        <div class="step-stop-point">
-                            <span class="step-time">Descente à <strong>${arrivalStopLabel}</strong></span>
-                            <span class="step-time-detail">(${arrivalTimeLabel})</span>
+                        <div class="bus-alighting">
+                            <span class="alighting-dot"></span>
+                            <span>Descente à <strong>${arrivalStopLabel}</strong></span>
+                            <span class="alighting-time">(${arrivalTimeLabel})</span>
                         </div>
                     </div>
                 </div>
@@ -2996,6 +3028,7 @@ function renderItineraryDetail(itinerary) {
             const hasSubSteps = step.subSteps && step.subSteps.length > 0;
             const icon = (step.type === 'BIKE') ? ICONS.BICYCLE : ICONS.WALK;
             const stepClass = (step.type === 'BIKE') ? 'bicycle' : 'walk';
+            const safeInstruction = getSafeStopLabel(step.instruction, step.type === 'BIKE' ? 'À vélo' : 'À pied');
 
             // ✅ V46: Filtrer les étapes "STRAIGHT" trop courtes
             const filteredSubSteps = (step.subSteps || []).filter(subStep => {
@@ -3014,7 +3047,7 @@ function renderItineraryDetail(itinerary) {
                         ${icon}
                     </div>
                     <div class="step-info">
-                        <span class="step-instruction">${step.instruction} <span class="step-duration-inline">(${step.duration})</span></span>
+                        <span class="step-instruction">${safeInstruction} <span class="step-duration-inline">(${step.duration})</span></span>
                         
                         ${hasSubSteps ? `
                         <details class="intermediate-stops">
@@ -3027,14 +3060,14 @@ function renderItineraryDetail(itinerary) {
                                     <li>
                                         ${getManeuverIcon(subStep.maneuver)}
                                         <div class="walk-step-info">
-                                            <span>${subStep.instruction}</span>
+                                            <span>${getSafeStopLabel(subStep.instruction, 'Continuer')}</span>
                                             <span class="walk-step-meta">${subStep.distance} ${subStep.duration ? `(${subStep.duration})` : ''}</span>
                                         </div>
                                     </li>
                                 `).join('')}
                             </ul>
                         </details>
-                        ` : `<span class="step-sub-instruction">${step.instruction}</span>`}
+                        ` : `<span class="step-sub-instruction">${safeInstruction}</span>`}
                     </div>
                 </div>
             `;
@@ -3046,54 +3079,57 @@ function renderItineraryDetail(itinerary) {
             const hasIntermediateStops = step.intermediateStops && step.intermediateStops.length > 0;
             const intermediateStopCount = hasIntermediateStops ? step.intermediateStops.length : (step.numStops > 1 ? step.numStops - 1 : 0);
             
-            let stopCountLabel = 'Direct';
+            let stopsDisplayText = 'Direct';
             if (intermediateStopCount > 1) {
-                stopCountLabel = `${intermediateStopCount} arrêts`;
+                stopsDisplayText = `${intermediateStopCount} arrêts`;
             } else if (intermediateStopCount === 1) {
-                stopCountLabel = `1 arrêt`;
+                stopsDisplayText = `1 arrêt`;
             }
 
-            const badgeLabel = getSafeRouteBadgeLabel(step.routeShortName);
+            const badgeLabel = getSafeRouteBadgeLabel(step.routeShortName, step.lineName || step.routeId || 'Bus');
             const badgeBg = step.routeColor || 'var(--primary)';
             const badgeText = step.routeTextColor || '#ffffff';
-            const departureStopLabel = getSafeStopLabel(step.departureStop);
-            const arrivalStopLabel = getSafeStopLabel(step.arrivalStop);
-            const departureTimeLabel = getSafeTimeLabel(step.departureTime);
-            const arrivalTimeLabel = getSafeTimeLabel(step.arrivalTime);
+            const safeHeadsign = step.headsign || step.routeLongName || '';
+            
+            // Departure/arrival info
+            const departureStopLabel = getSafeStopLabel(step.from, 'Départ');
+            const arrivalStopLabel = getSafeStopLabel(step.to, 'Arrivée');
+            const departureTimeLabel = getSafeTimeLabel(step.departureTime || step.startTime);
+            const arrivalTimeLabel = getSafeTimeLabel(step.arrivalTime || step.endTime);
 
             return `
                 <div class="step-detail bus" style="--line-color: ${lineColor};">
                     <div class="step-icon">
-                        <div class="route-line-badge" style="background-color: ${badgeBg}; color: ${badgeText};">${badgeLabel}</div>
+                        <div class="route-line-badge-large" style="background-color: ${badgeBg}; color: ${badgeText};">${badgeLabel}</div>
                     </div>
                     <div class="step-info">
-                        <span class="step-instruction">${step.instruction} <span class="step-duration-inline">(${step.duration})</span></span>
-                        
-                        <div class="step-stop-point">
-                            <span class="step-time">Montée à <strong>${departureStopLabel}</strong></span>
-                            <span class="step-time-detail">(${departureTimeLabel})</span>
+                        <div class="bus-instruction">Prendre le <strong>${badgeLabel}</strong> direction <strong>${safeHeadsign || 'destination'}</strong> <span class="trip-duration">(${step.duration})</span></div>
+                        <div class="bus-boarding">
+                            <span class="boarding-dot"></span>
+                            <span>Montée à <strong>${departureStopLabel}</strong></span>
+                            <span class="boarding-time">(${departureTimeLabel})</span>
                         </div>
-                        
-                        ${(intermediateStopCount > 0) ? `
-                        <details class="intermediate-stops">
-                            <summary>
-                                <span>${stopCountLabel}</span>
-                                <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                        ${intermediateStopCount > 0 ? `
+                        <details class="bus-stops-details">
+                            <summary class="bus-stops-summary">
+                                <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                                <span>${stopsDisplayText}</span>
                             </summary>
                             ${hasIntermediateStops ? `
-                            <ul class="intermediate-stops-list" style="--line-color: ${lineColor};">
+                            <ul class="bus-intermediate-stops">
                                 ${step.intermediateStops.map(stop => {
                                     const name = typeof stop === 'string' ? stop : (stop?.name || stop?.stop_name || 'Arrêt');
-                                    return `<li>${name}</li>`;
+                                    const safeName = getSafeStopLabel(name);
+                                    return `<li class="bus-stop-item"><span class="stop-dot"></span>${safeName}</li>`;
                                 }).join('')}
                             </ul>
-                            ` : `<ul class="intermediate-stops-list" style="--line-color: ${lineColor};"><li>(La liste détaillée des arrêts n'est pas disponible)</li></ul>`}
+                            ` : `<ul class="bus-intermediate-stops"><li class="bus-stop-item">(Arrêts non disponibles)</li></ul>`}
                         </details>
                         ` : ''}
-                        
-                        <div class="step-stop-point">
-                            <span class="step-time">Descente à <strong>${arrivalStopLabel}</strong></span>
-                            <span class="step-time-detail">(${arrivalTimeLabel})</span>
+                        <div class="bus-alighting">
+                            <span class="alighting-dot"></span>
+                            <span>Descente à <strong>${arrivalStopLabel}</strong></span>
+                            <span class="alighting-time">(${arrivalTimeLabel})</span>
                         </div>
                     </div>
                 </div>

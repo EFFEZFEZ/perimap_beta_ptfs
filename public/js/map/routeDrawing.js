@@ -285,10 +285,10 @@ export function addItineraryMarkers(itinerary, map, markerLayer, options = {}) {
         let intermediateStopsData = [];
         
         if (Array.isArray(step.intermediateStops) && step.intermediateStops.length > 0) {
-            intermediateStopsData = step.intermediateStops.map(stopName => ({
-                name: typeof stopName === 'string' ? stopName : (stopName?.name || stopName?.stop_name || ''),
-                lat: stopName?.lat || stopName?.stop_lat || null,
-                lng: stopName?.lng || stopName?.stop_lon || null
+            intermediateStopsData = step.intermediateStops.map(stop => ({
+                name: typeof stop === 'string' ? stop : (stop?.name || stop?.stop_name || ''),
+                lat: stop?.lat || stop?.stop_lat || null,
+                lng: stop?.lon || stop?.lng || stop?.stop_lon || null
             }));
         }
         

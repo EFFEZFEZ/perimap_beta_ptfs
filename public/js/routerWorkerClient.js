@@ -22,6 +22,9 @@ export class RouterWorkerClient {
             mode: 'TRANSIT'
         };
 
+        // Demander 10 itinéraires par défaut (le serveur clamp à sa limite maximale)
+        body.options = { numItineraries: 10 };
+
         const resp = await fetch('/api/routes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.otp
+    image: perimap-otp:local
     container_name: perimap-otp
     ports:
       - "8888:8080"
@@ -20,13 +21,14 @@ services:
     build:
       context: .
       dockerfile: ./server/Dockerfile
+    image: perimap-api:local
     container_name: perimap-api
     ports:
       - "8080:3000"
     environment:
       - PORT=3000
       - HOST=0.0.0.0
-      - OTP_BASE_URL=http://otp:8080/otp/routers/default
+      - OTP_BASE_URL=http://perimap-otp:8080/otp/routers/default
       - PHOTON_BASE_URL=https://photon.komoot.io
       - GTFS_RT_URL=${GTFS_RT_URL}
       - CORS_ORIGINS=http://localhost:8080,http://localhost:3000,http://localhost:8888
