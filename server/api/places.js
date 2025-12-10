@@ -45,9 +45,21 @@ router.get('/autocomplete', async (req, res) => {
     params.set('lon', String(searchLon));
 
     const url = `${PHOTON_BASE_URL}/api?${params.toString()}`;
-    const response = await fetch(url);
+    let response;
+    try {
+      response = await Promise.race([
+        fetch(url),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+      ]);
+    } catch (fetchError) {
+      // Photon non disponible - retourner fallback vide
+      console.warn('[places] Photon unavailable, returning empty suggestions');
+      return res.json({ suggestions: [] });
+    }
+    
     if (!response.ok) {
-      return res.status(502).json({ error: 'Photon error', status: response.status });
+      console.warn(`[places] Photon returned ${response.status}`);
+      return res.json({ suggestions: [] });
     }
     const data = await response.json();
     
@@ -85,9 +97,21 @@ router.get('/reverse', async (req, res) => {
   try {
     const params = new URLSearchParams({ lat, lon, limit: '1' });
     const url = `${PHOTON_BASE_URL}/reverse?${params.toString()}`;
-    const response = await fetch(url);
+    let response;
+    try {
+      response = await Promise.race([
+        fetch(url),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+      ]);
+    } catch (fetchError) {
+      // Photon non disponible - retourner fallback
+      console.warn('[places] Photon unavailable for reverse geocoding');
+      return res.json({ place: { name: 'Localisation', description: 'Non disponible' } });
+    }
+    
     if (!response.ok) {
-      return res.status(502).json({ error: 'Photon reverse error', status: response.status });
+      console.warn(`[places] Photon reverse returned ${response.status}`);
+      return res.json({ place: { name: 'Localisation', description: 'Non disponible' } });
     }
     const data = await response.json();
     const feature = data.features?.[0];
