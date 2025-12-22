@@ -7,8 +7,8 @@
     
     <!-- Page d'accueil - Priorité maximale -->
     <url>
-        <loc>https://perimap.fr/</loc>
-        <lastmod>2025-12-04</lastmod>
+        <loc>https://www.xn--primap-bva.fr/</loc>
+        <lastmod>2025-12-18</lastmod>
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
         <mobile:mobile/>
@@ -16,86 +16,89 @@
     
     <!-- À propos -->
     <url>
-        <loc>https://perimap.fr/about.html</loc>
-        <lastmod>2025-12-04</lastmod>
+        <loc>https://www.xn--primap-bva.fr/about.html</loc>
+        <lastmod>2025-12-18</lastmod>
         <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+        <mobile:mobile/>
+    </url>
+
+    <!-- Horaires / Lignes -->
+    <url>
+        <loc>https://www.xn--primap-bva.fr/horaires.html</loc>
+        <lastmod>2025-12-18</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
+        <mobile:mobile/>
+    </url>
+    <url>
+        <loc>https://www.xn--primap-bva.fr/horaires-ligne-a.html</loc>
+        <lastmod>2025-12-18</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+        <mobile:mobile/>
+    </url>
+    <url>
+        <loc>https://www.xn--primap-bva.fr/horaires-ligne-b.html</loc>
+        <lastmod>2025-12-18</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+        <mobile:mobile/>
+    </url>
+    <url>
+        <loc>https://www.xn--primap-bva.fr/horaires-ligne-c.html</loc>
+        <lastmod>2025-12-18</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+        <mobile:mobile/>
+    </url>
+    <url>
+        <loc>https://www.xn--primap-bva.fr/horaires-ligne-d.html</loc>
+        <lastmod>2025-12-18</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+        <mobile:mobile/>
+    </url>
+
+    <!-- Itinéraires -->
+    <url>
+        <loc>https://www.xn--primap-bva.fr/itineraire.html</loc>
+        <lastmod>2025-12-18</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
+        <mobile:mobile/>
+    </url>
+
+    <!-- Informations voyageurs -->
+    <url>
+        <loc>https://www.xn--primap-bva.fr/trafic.html</loc>
+        <lastmod>2025-12-18</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.7</priority>
+        <mobile:mobile/>
+    </url>
+
+    <!-- Carte -->
+    <url>
+        <loc>https://www.xn--primap-bva.fr/carte.html</loc>
+        <lastmod>2025-12-18</lastmod>
+        <changefreq>weekly</changefreq>
         <priority>0.7</priority>
         <mobile:mobile/>
     </url>
     
     <!-- Mentions légales (obligatoire droit français) -->
     <url>
-        <loc>https://perimap.fr/mentions-legales.html</loc>
-        <lastmod>2025-12-04</lastmod>
+        <loc>https://www.xn--primap-bva.fr/mentions-legales.html</loc>
+        <lastmod>2025-12-18</lastmod>
         <changefreq>yearly</changefreq>
         <priority>0.4</priority>
         <mobile:mobile/>
     </url>
     
-    <!-- Itinéraire - Page stratégique -->
-    <url>
-        <loc>https://perimap.fr/#itineraire</loc>
-        <lastmod>2025-12-04</lastmod>
-        <changefreq>daily</changefreq>
-        <priority>0.9</priority>
-        <mobile:mobile/>
-    </url>
-    
-    <!-- Horaires - Page stratégique -->
-    <url>
-        <loc>https://perimap.fr/#horaires</loc>
-        <lastmod>2025-12-04</lastmod>
-        <changefreq>daily</changefreq>
-        <priority>0.9</priority>
-        <mobile:mobile/>
-    </url>
-    
-    <!-- Carte interactive -->
-    <url>
-        <loc>https://perimap.fr/#carte</loc>
-        <lastmod>2025-12-04</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
-        <mobile:mobile/>
-    </url>
-    
-    <!-- État du trafic -->
-    <url>
-        <loc>https://perimap.fr/#trafic</loc>
-        <lastmod>2025-12-04</lastmod>
-        <changefreq>hourly</changefreq>
-        <priority>0.8</priority>
-        <mobile:mobile/>
-    </url>
-    
-    <!-- Tarifs -->
-    <url>
-        <loc>https://perimap.fr/#tarifs-grille</loc>
-        <lastmod>2025-12-04</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.7</priority>
-        <mobile:mobile/>
-    </url>
-    
-    <url>
-        <loc>https://perimap.fr/#tarifs-achat</loc>
-        <lastmod>2025-12-04</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.6</priority>
-        <mobile:mobile/>
-    </url>
-    
-    <url>
-        <loc>https://perimap.fr/#tarifs-billettique</loc>
-        <lastmod>2025-12-04</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.6</priority>
-        <mobile:mobile/>
-    </url>
-    
     <!-- Plan réseau PDF -->
     <url>
-        <loc>https://perimap.fr/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf</loc>
+        <loc>https://www.xn--primap-bva.fr/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf</loc>
         <lastmod>2025-09-01</lastmod>
         <changefreq>yearly</changefreq>
         <priority>0.5</priority>

@@ -39,6 +39,29 @@ export const API_ENDPOINTS = {
 };
 
 /**
+ * Détermine si les logs debug doivent être affichés.
+ * Objectif: garder un front silencieux en prod, tout en conservant les traces en local.
+ */
+export function isDebugEnabled() {
+  // 1) Config globale (override explicite)
+  if (window.__APP_CONFIG && typeof window.__APP_CONFIG.debug === 'boolean') {
+    return window.__APP_CONFIG.debug;
+  }
+
+  // 2) Query param (debug=1)
+  try {
+    const params = new URLSearchParams(window.location.search || '');
+    if (params.get('debug') === '1') return true;
+  } catch {
+    // ignore
+  }
+
+  // 3) Par défaut: activé uniquement en local
+  const host = (window.location && window.location.hostname) ? window.location.hostname : '';
+  return host === 'localhost' || host === '127.0.0.1';
+}
+
+/**
  * Retourne la configuration globale de l'application
  * @returns {Object} Configuration avec adminToken, endpoints backend, etc.
  */
@@ -46,6 +69,14 @@ export function getAppConfig() {
   return {
     adminToken: getAdminToken(),
     apiEndpoints: API_ENDPOINTS,
+    debug: isDebugEnabled(),
+    // GTFS remote fallback (désactivé par défaut)
+    // Permet (si besoin) de recharger shapes.txt depuis une source externe.
+    // Ex: window.__APP_CONFIG = { allowRemoteGtfs: true, remoteGtfsBaseUrl: 'https://.../public/data/gtfs' }
+    allowRemoteGtfs: !!(window.__APP_CONFIG && window.__APP_CONFIG.allowRemoteGtfs === true),
+    remoteGtfsBaseUrl: (window.__APP_CONFIG && typeof window.__APP_CONFIG.remoteGtfsBaseUrl === 'string')
+      ? window.__APP_CONFIG.remoteGtfsBaseUrl
+      : '',
     arrivalPageSize: 6,
     minBusItineraries: 3,
     maxBottomSheetLevels: 3

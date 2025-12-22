@@ -5,207 +5,166 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mentions légales – Périmap</title>
     <meta name="description" content="Mentions légales de Périmap. Informations sur l'éditeur, l'hébergement et la protection des données.">
-    <link rel="canonical" href="https://perimap.fr/mentions-legales.html">
-    <link rel="icon" type="image/png" href="icons/icon-192.png">
-    <link rel="manifest" href="manifest.json">
+    <link rel="canonical" href="https://www.xn--primap-bva.fr/mentions-legales.html">
+    <link rel="icon" type="image/png" href="/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
     <meta name="robots" content="index, follow">
     
-    <meta property="og:title" content="Mentions légales – Périmap">
-    <meta property="og:description" content="Informations juridiques de Périmap.">
-    <meta property="og:image" content="https://perimap.fr/icons/icon-192.png">
-    <meta property="og:url" content="https://perimap.fr/mentions-legales.html">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="PériMap">
+    <meta property="og:title" content="Mentions légales – PériMap">
+    <meta property="og:description" content="Informations juridiques, éditeur, hébergement et données personnelles.">
+    <meta property="og:image" content="https://www.xn--primap-bva.fr/icons/og-image.png">
+    <meta property="og:url" content="https://www.xn--primap-bva.fr/mentions-legales.html">
+    <meta property="og:locale" content="fr_FR">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Mentions légales – PériMap">
+    <meta name="twitter:description" content="Informations légales et données personnelles.">
+    <meta name="twitter:image" content="https://www.xn--primap-bva.fr/icons/og-image.png">
+
+    <meta name="theme-color" content="#22c55e">
+    
+    <!-- Importer le design system principal -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/brand.css">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        *, *::before, *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --color-bg: #0a0a0b;
-            --color-surface: #111113;
-            --color-surface-2: #18181b;
-            --color-border: rgba(255, 255, 255, 0.06);
-            --color-text: #fafafa;
-            --color-text-secondary: #a1a1aa;
-            --color-text-muted: #71717a;
-            --color-accent: #22c55e;
-            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            --radius: 12px;
-            --transition: 200ms ease;
-        }
-
-        html {
-            font-size: 16px;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
+        /* Overrides spécifiques page mentions légales */
         body {
-            font-family: var(--font);
-            background: var(--color-bg);
-            color: var(--color-text);
-            line-height: 1.6;
-            min-height: 100vh;
+            background: var(--bg-main);
+            color: var(--text-primary);
         }
 
-        /* Navigation */
-        nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 64px;
-            background: rgba(10, 10, 11, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--color-border);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-        }
-
-        .nav-logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            color: var(--color-text);
-            font-weight: 600;
-            font-size: 18px;
-        }
-
-        .nav-logo img {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 32px;
-        }
-
-        .nav-links a {
-            color: var(--color-text-secondary);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: color var(--transition);
-        }
-
-        .nav-links a:hover {
-            color: var(--color-text);
-        }
+        /* Navigation gérée par style.css via #main-header */
 
         /* Main */
         main {
-            padding: 64px 24px 0;
+            padding: 0 var(--spacing-6);
             max-width: 720px;
             margin: 0 auto;
         }
 
         /* Header */
-        header {
-            padding: 80px 0 48px;
-            border-bottom: 1px solid var(--color-border);
-            margin-bottom: 48px;
+        .legal-page-header {
+            padding: var(--spacing-16) 0 var(--spacing-10);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: var(--spacing-10);
         }
 
-        header h1 {
-            font-size: 32px;
-            font-weight: 700;
+        .legal-page-header h1 {
+            font-size: var(--font-size-4xl);
+            font-weight: 800;
             letter-spacing: -0.02em;
-            margin-bottom: 8px;
+            margin-bottom: var(--spacing-2);
+            background: linear-gradient(135deg, var(--pm-green), var(--pm-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        header p {
-            font-size: 15px;
-            color: var(--color-text-muted);
+        .legal-page-header p {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
         }
 
         /* Sections */
         .legal-section {
-            margin-bottom: 48px;
+            margin-bottom: var(--spacing-10);
         }
 
         .legal-section h2 {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 14px;
-            font-weight: 600;
+            gap: var(--spacing-3);
+            font-size: var(--font-size-sm);
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--color-text);
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--color-border);
+            letter-spacing: 0.1em;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-5);
+            padding-bottom: var(--spacing-3);
+            border-bottom: 1px solid var(--border);
         }
 
         .legal-section h2 svg {
-            width: 18px;
-            height: 18px;
-            stroke: var(--color-accent);
-            stroke-width: 1.5;
+            width: 20px;
+            height: 20px;
+            stroke: var(--pm-green);
+            stroke-width: 2;
             fill: none;
+        }
+        
+        body.dark-theme .legal-section h2 svg {
+            stroke: var(--pm-cyan);
         }
 
         .legal-section p {
-            font-size: 14px;
-            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
             line-height: 1.7;
-            margin-bottom: 12px;
+            margin-bottom: var(--spacing-3);
         }
 
         .legal-section ul {
             list-style: none;
-            margin: 16px 0;
+            margin: var(--spacing-4) 0;
         }
 
         .legal-section li {
-            font-size: 14px;
-            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
             line-height: 1.7;
-            padding-left: 20px;
+            padding-left: var(--spacing-5);
             position: relative;
-            margin-bottom: 8px;
+            margin-bottom: var(--spacing-2);
         }
 
         .legal-section li::before {
             content: '';
             position: absolute;
             left: 0;
-            top: 10px;
-            width: 4px;
-            height: 4px;
-            background: var(--color-accent);
+            top: 11px;
+            width: 6px;
+            height: 6px;
+            background: var(--pm-green);
             border-radius: 50%;
+        }
+        
+        body.dark-theme .legal-section li::before {
+            background: var(--pm-cyan);
         }
 
         .legal-section a {
-            color: var(--color-accent);
+            color: var(--pm-green);
             text-decoration: none;
-            transition: opacity var(--transition);
+            font-weight: 600;
+            transition: opacity var(--transition-quick);
+        }
+        
+        body.dark-theme .legal-section a {
+            color: var(--pm-cyan);
         }
 
         .legal-section a:hover {
-            opacity: 0.8;
+            opacity: 0.7;
         }
 
         .info-block {
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius);
-            padding: 20px;
-            margin: 16px 0;
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-5);
+            margin: var(--spacing-4) 0;
+            box-shadow: var(--elevation-0);
+        }
+        
+        body.dark-theme .info-block {
+            background: var(--surface-dark);
         }
 
         .info-block p {
@@ -213,109 +172,169 @@
         }
 
         .info-block strong {
-            color: var(--color-text);
-        }
-
-        /* Footer */
-        footer {
-            border-top: 1px solid var(--color-border);
-            padding: 40px 24px;
-            text-align: center;
-            margin-top: 48px;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 24px;
-            margin-bottom: 24px;
-        }
-
-        .footer-links a {
-            color: var(--color-text-muted);
-            text-decoration: none;
-            font-size: 14px;
-            transition: color var(--transition);
-        }
-
-        .footer-links a:hover {
-            color: var(--color-text);
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-
-        .social-links a {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all var(--transition);
-        }
-
-        .social-links a:hover {
-            border-color: rgba(255, 255, 255, 0.12);
-            background: var(--color-surface-2);
-        }
-
-        .social-links svg {
-            width: 16px;
-            height: 16px;
-            fill: var(--color-text-secondary);
-        }
-
-        .copyright {
-            font-size: 13px;
-            color: var(--color-text-muted);
+            color: var(--text-primary);
+            font-weight: 700;
         }
 
         /* Responsive */
         @media (max-width: 640px) {
-            .nav-links {
-                display: none;
-            }
-
             main {
-                padding: 64px 20px 0;
+                padding: 0 var(--spacing-5);
             }
 
-            header {
-                padding: 60px 0 32px;
+            .legal-page-header {
+                padding: var(--spacing-12) 0 var(--spacing-8);
             }
 
-            header h1 {
-                font-size: 28px;
+            .legal-page-header h1 {
+                font-size: var(--font-size-3xl);
             }
 
             .legal-section {
-                margin-bottom: 40px;
+                margin-bottom: var(--spacing-8);
             }
         }
     </style>
 </head>
 <body>
-    <nav>
-        <a href="/" class="nav-logo">
-            <img src="https://i.ibb.co/99PZh9Zq/export6-removebg-preview.webp" alt="">
-            <span>Périmap</span>
-        </a>
-        <div class="nav-links">
-            <a href="/">Accueil</a>
-            <a href="/#itineraire">Itinéraire</a>
-            <a href="/about.html">À propos</a>
+    <!-- Header principal (identique à index.html) -->
+    <header id="main-header">
+        <div class="header-content">
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <a href="/" class="logo">
+                <img src="https://i.ibb.co/99PZh9Zq/export6-removebg-preview.webp" alt="Logo PériMap" class="header-logo-img">
+                <div class="header-title-group">
+                    <span class="brand-name">PériMap</span>
+                </div>
+            </a>
+
+            <nav class="header-nav-main">
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-trigger">
+                        Me déplacer
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="nav-dropdown-menu">
+                        <a href="#" class="nav-dropdown-item" data-action="itineraire">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 12H8m4-4v8"/></svg>
+                            Itinéraire
+                        </a>
+                        <a href="#" class="nav-dropdown-item" data-action="horaires">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                            Horaires des lignes
+                        </a>
+                        <a href="#" class="nav-dropdown-item" data-action="info-trafic">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            État du réseau
+                        </a>
+                        <a href="#" class="nav-dropdown-item" data-action="carte">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                            Carte interactive
+                        </a>
+                        <a href="/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf" target="_blank" class="nav-dropdown-item">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                            Plan du réseau (PDF)
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-trigger">
+                        Tarifs
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="nav-dropdown-menu">
+                        <a href="#" class="nav-dropdown-item" data-action="tarifs-grille">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            Grille tarifaire
+                        </a>
+                        <a href="#" class="nav-dropdown-item" data-action="tarifs-achat">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                            Où acheter ?
+                        </a>
+                        <a href="#" class="nav-dropdown-item" data-action="tarifs-billettique">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                            Billettique
+                        </a>
+                        <a href="#" class="nav-dropdown-item" data-action="tarifs-amendes">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            Fraudes & amendes
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-trigger">
+                        Services
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="nav-dropdown-menu">
+                        <a href="/about.html" class="nav-dropdown-item">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                            <span>À propos</span>
+                        </a>
+                        <div class="nav-dropdown-item nav-dropdown-item--disabled">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                            <span>Autres services</span>
+                            <span class="nav-badge">Bientôt</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <nav class="header-nav-right">
+                <button id="theme-toggle-btn" class="btn-icon-round" data-theme-toggle="true" aria-label="Basculer thème sombre" title="Thème sombre" aria-pressed="false">
+                    <span class="theme-toggle-icon" id="theme-toggle-icon">🌙</span>
+                </button>
+            </nav>
         </div>
-    </nav>
+
+        <div id="mobile-menu" class="mobile-menu hidden">
+            <div class="mobile-menu-section">
+                <button class="mobile-menu-category" aria-expanded="false">
+                    <span>Me déplacer</span>
+                    <svg class="mobile-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="mobile-menu-items">
+                    <a href="#" class="mobile-menu-item" data-action="itineraire">Itinéraire</a>
+                    <a href="#" class="mobile-menu-item" data-action="horaires">Horaires des lignes</a>
+                    <a href="#" class="mobile-menu-item" data-action="info-trafic">État du réseau</a>
+                    <a href="#" class="mobile-menu-item" data-action="carte">Carte interactive</a>
+                    <a href="/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf" target="_blank" class="mobile-menu-item">Plan du réseau (PDF)</a>
+                </div>
+            </div>
+            <div class="mobile-menu-section">
+                <button class="mobile-menu-category" aria-expanded="false">
+                    <span>Tarifs</span>
+                    <svg class="mobile-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="mobile-menu-items">
+                    <a href="#" class="mobile-menu-item" data-action="tarifs-grille">Grille tarifaire</a>
+                    <a href="#" class="mobile-menu-item" data-action="tarifs-achat">Où acheter ?</a>
+                    <a href="#" class="mobile-menu-item" data-action="tarifs-billettique">Billettique</a>
+                    <a href="#" class="mobile-menu-item" data-action="tarifs-amendes">Fraudes & amendes</a>
+                </div>
+            </div>
+            <div class="mobile-menu-section">
+                <button class="mobile-menu-category" aria-expanded="false">
+                    <span>Services</span>
+                    <svg class="mobile-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="mobile-menu-items">
+                    <a href="/about.html" class="mobile-menu-item">À propos</a>
+                    <span class="mobile-menu-item mobile-menu-item--disabled">Autres services <span class="nav-badge">Bientôt</span></span>
+                </div>
+            </div>
+        </div>
+    </header>
 
     <main>
-        <header>
+        <header class="legal-page-header">
             <h1>Mentions légales</h1>
             <p>Dernière mise à jour : décembre 2025</p>
         </header>
@@ -407,21 +426,196 @@
         </article>
     </main>
 
-    <footer>
-        <div class="social-links">
-            <a href="https://instagram.com/perimap.fr" target="_blank" rel="noopener" aria-label="Instagram">
-                <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-            </a>
-            <a href="https://facebook.com/perimap.fr" target="_blank" rel="noopener" aria-label="Facebook">
-                <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-            </a>
+    <!-- Footer professionnel (identique à index.html) -->
+    <footer id="site-footer">
+        <div class="footer-content">
+            <div class="footer-main">
+                <div class="footer-brand">
+                    <img src="https://i.ibb.co/99PZh9Zq/export6-removebg-preview.webp" alt="PériMap" class="footer-logo">
+                    <div class="footer-brand-text">
+                        <span class="footer-brand-name">PériMap</span>
+                        <span class="footer-brand-tagline">Simplifiez vos déplacements dans le Grand Périgueux</span>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-links-column">
+                        <h4>Navigation</h4>
+                        <a href="/">Accueil</a>
+                        <a href="/about.html">À propos</a>
+                        <a href="/mentions-legales.html">Mentions légales</a>
+                    </div>
+                    <div class="footer-links-column footer-social-column">
+                        <h4>Suivez-nous</h4>
+                        <div class="footer-social-links">
+                            <a href="https://www.instagram.com/perimap.fr/" target="_blank" rel="noopener" class="footer-social-btn" aria-label="Instagram PériMap" title="Suivez-nous sur Instagram">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                            </a>
+                            <a href="https://www.facebook.com/perimap.fr" target="_blank" rel="noopener" class="footer-social-btn" aria-label="Facebook PériMap" title="Suivez-nous sur Facebook">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Ressources</h4>
+                        <a href="/data/fichehoraire/grandperigueux_peribus_plan_reseau_bus_.pdf" target="_blank">Plan du réseau</a>
+                        <a href="https://www.grandperigueux.fr/mon-quotidien/transports-mobilite/se-deplacer-en-bus-car/reseau-peribus/" target="_blank" rel="noopener">Réseau Péribus</a>
+                        <a href="https://www.grandperigueux.fr" target="_blank" rel="noopener">Grand Périgueux</a>
+                        <a href="https://github.com/EFFEZFEZ/perimap-" target="_blank" rel="noopener">Code source</a>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Données</h4>
+                        <p class="footer-data-info">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            © Grand Périgueux / Péribus
+                        </p>
+                        <p class="footer-license">Licence ODbL</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="footer-independent">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    Application indépendante, non affiliée au Grand Périgueux ou Péribus.
+                </p>
+                <div class="footer-bottom-right">
+                    <div class="footer-social-mobile">
+                        <a href="https://www.instagram.com/perimap.fr/" target="_blank" rel="noopener" class="footer-social-btn-sm" aria-label="Instagram">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        </a>
+                        <a href="https://www.facebook.com/perimap.fr" target="_blank" rel="noopener" class="footer-social-btn-sm" aria-label="Facebook">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                        </a>
+                    </div>
+                    <p class="footer-copyright">© 2025 PériMap · Tous droits réservés · Fait avec ❤️ pour le Grand Périgueux</p>
+                </div>
+            </div>
         </div>
-        <div class="footer-links">
-            <a href="/">Accueil</a>
-            <a href="/about.html">À propos</a>
-            <a href="mailto:perimapfr@gmail.com">Contact</a>
-        </div>
-        <p class="copyright">© 2025 Périmap</p>
     </footer>
+
+    <script type="module">
+        // Theme + header interactions (standalone, sans app.js)
+        const body = document.body;
+
+        function applyThemeState(useDark) {
+            body.classList.toggle('dark-theme', !!useDark);
+            const toggleButtons = Array.from(document.querySelectorAll('[data-theme-toggle]'));
+            toggleButtons.forEach(btn => {
+                btn.setAttribute('aria-pressed', useDark ? 'true' : 'false');
+                btn.title = useDark ? 'Thème clair' : 'Thème sombre';
+            });
+            const icons = Array.from(document.querySelectorAll('.theme-toggle-icon'));
+            icons.forEach(icon => { icon.textContent = useDark ? '☀️' : '🌙'; });
+        }
+
+        (function initTheme() {
+            try {
+                const saved = localStorage.getItem('ui-theme');
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const useDark = saved ? (saved === 'dark') : prefersDark;
+                applyThemeState(useDark);
+            } catch (e) {
+                // ignore
+            }
+        })();
+
+        Array.from(document.querySelectorAll('[data-theme-toggle]')).forEach(btn => {
+            btn.addEventListener('click', () => {
+                const nextIsDark = !body.classList.contains('dark-theme');
+                applyThemeState(nextIsDark);
+                try { localStorage.setItem('ui-theme', nextIsDark ? 'dark' : 'light'); } catch (e) { /* ignore */ }
+            }, { passive: true });
+        });
+
+        function navigateToAction(action) {
+            if (!action) return;
+            window.location.assign(`/#${action}`);
+        }
+
+        function closeAllDropdowns() {
+            document.querySelectorAll('.nav-dropdown.is-open').forEach(dropdown => {
+                dropdown.classList.remove('is-open');
+                const trigger = dropdown.querySelector('.nav-dropdown-trigger');
+                if (trigger) trigger.setAttribute('aria-expanded', 'false');
+            });
+        }
+
+        // Dropdowns desktop (clic/touch) + fermeture clic extérieur
+        document.querySelectorAll('.nav-dropdown').forEach(dropdown => {
+            const trigger = dropdown.querySelector('.nav-dropdown-trigger');
+            if (!trigger) return;
+
+            trigger.setAttribute('aria-expanded', 'false');
+            trigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                const willOpen = !dropdown.classList.contains('is-open');
+                closeAllDropdowns();
+                dropdown.classList.toggle('is-open', willOpen);
+                trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            });
+
+            trigger.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeAllDropdowns();
+                    trigger.focus();
+                }
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.nav-dropdown')) {
+                closeAllDropdowns();
+            }
+        });
+
+        document.querySelectorAll('.nav-dropdown-item[data-action]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                closeAllDropdowns();
+                navigateToAction(item.dataset.action);
+            });
+        });
+
+        // Mobile menu
+        const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+        const mobileMenu = document.getElementById('mobile-menu');
+        if (mobileMenuToggle && mobileMenu) {
+            mobileMenuToggle.addEventListener('click', () => {
+                const isOpening = mobileMenu.classList.contains('hidden');
+                mobileMenuToggle.classList.toggle('is-active');
+                mobileMenu.classList.toggle('hidden');
+                body.classList.toggle('mobile-menu-open', isOpening);
+            });
+
+            mobileMenu.querySelectorAll('.mobile-menu-category').forEach(category => {
+                category.addEventListener('click', () => {
+                    const isExpanded = category.getAttribute('aria-expanded') === 'true';
+                    const itemsContainer = category.nextElementSibling;
+                    category.setAttribute('aria-expanded', (!isExpanded).toString());
+                    if (itemsContainer) itemsContainer.classList.toggle('is-expanded', !isExpanded);
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!mobileMenu.classList.contains('hidden')) {
+                    if (!e.target.closest('#mobile-menu') && !e.target.closest('#mobile-menu-toggle')) {
+                        mobileMenuToggle.classList.remove('is-active');
+                        mobileMenu.classList.add('hidden');
+                        body.classList.remove('mobile-menu-open');
+                    }
+                }
+            });
+
+            mobileMenu.querySelectorAll('a.mobile-menu-item').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const action = link.dataset.action;
+                    if (action) e.preventDefault();
+                    mobileMenuToggle.classList.remove('is-active');
+                    mobileMenu.classList.add('hidden');
+                    body.classList.remove('mobile-menu-open');
+                    if (action) navigateToAction(action);
+                });
+            });
+        }
+    </script>
 </body>
 </html>

@@ -9,6 +9,7 @@ import { getAppConfig } from './config.js';
 export class ApiManager {
     constructor() {
         const config = getAppConfig();
+        this.debug = !!config.debug;
         this.apiEndpoints = config.apiEndpoints || {
             routes: '/api/routes',
             places: '/api/places',
@@ -144,7 +145,9 @@ export class ApiManager {
             mode: 'TRANSIT'
         };
 
-        console.log('📤 apiManager.fetchItinerary() body:', body);
+        if (this.debug) {
+            console.log('📤 apiManager.fetchItinerary() body:', body);
+        }
 
         const resp = await fetch(this.apiEndpoints.routes, {
             method: 'POST',
@@ -158,7 +161,9 @@ export class ApiManager {
         }
 
         const json = await resp.json();
-        console.log('📥 apiManager.fetchItinerary() response:', json);
+        if (this.debug) {
+            console.log('📥 apiManager.fetchItinerary() response:', json);
+        }
         // Retourner un objet avec routes pour compatibilité avec processIntelligentResults
         return { routes: json.routes || [] };
     }

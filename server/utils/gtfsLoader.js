@@ -25,6 +25,24 @@ const logger = createLogger('gtfs-loader');
 const routeAttributes = new Map();
 let isLoaded = false;
 
+function normalizeHexColor(input, fallback) {
+    if (typeof input !== 'string') return fallback;
+    let raw = input.trim();
+    if (!raw) return fallback;
+
+    // Supprime tous les # (on les rajoute à la fin)
+    raw = raw.replace(/#/g, '').trim();
+    if (!raw) return fallback;
+
+    // Supporte RGB -> RRGGBB
+    if (/^[0-9a-fA-F]{3}$/.test(raw)) {
+        raw = raw.split('').map((c) => c + c).join('');
+    }
+
+    if (!/^[0-9a-fA-F]{6}$/.test(raw)) return fallback;
+    return `#${raw.toUpperCase()}`;
+}
+
 /**
  * Charge les attributs (couleur, texte, nom court) depuis routes.txt au démarrage
  */
@@ -54,12 +72,9 @@ export async function loadRouteAttributes() {
         fs.createReadStream(finalPath)
             .pipe(csv())
             .on('data', (data) => {
-                // Nettoyage et sécurisation des couleurs
-                let color = data.route_color || '000000';
-                if (!color.startsWith('#')) color = '#' + color;
-
-                let textColor = data.route_text_color || 'FFFFFF';
-                if (!textColor.startsWith('#')) textColor = '#' + textColor;
+                // Nettoyage et sécurisation des couleurs (évite '#', '##RRGGBB', valeurs non-hex)
+                const color = normalizeHexColor(data.route_color, '#000000');
+                const textColor = normalizeHexColor(data.route_text_color, '#FFFFFF');
 
                 // On stocke l'ID exact
                 routeAttributes.set(data.route_id, {

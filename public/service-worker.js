@@ -1,3 +1,7 @@
+﻿/*
+ * Copyright (c) 2025 Périmap. Tous droits réservés.
+ * Ce code ne peut être ni copié, ni distribué, ni modifié sans l'autorisation écrite de l'auteur.
+ */
 /**
  * Service Worker - Stratégie optimisée pour performance
  * 
@@ -9,7 +13,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v226'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V226: Cache CDN GET pour Routes
+const CACHE_VERSION = 'v247'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V247: popup arrêt (nom) + départs uniquement (filtre terminus)
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
@@ -18,7 +22,16 @@ const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
 const CRITICAL_ASSETS = [
   '/',
   '/index.html',
+  '/horaires.html',
+  '/horaires-ligne-a.html',
+  '/horaires-ligne-b.html',
+  '/horaires-ligne-c.html',
+  '/horaires-ligne-d.html',
+  '/itineraire.html',
+  '/trafic.html',
+  '/carte.html',
   '/about.html',
+  '/mentions-legales.html',
   '/style.css',
   '/js/app.js',
   '/manifest.json',
@@ -46,6 +59,8 @@ const SECONDARY_ASSETS = [
   '/js/config/routes.js',
   '/js/utils/formatters.js',
   '/js/utils/geo.js',
+  '/js/utils/stopName.mjs',
+  '/js/utils/tripStopTimes.mjs',
   '/js/utils/polyline.js',
   '/js/utils/gtfsProcessor.js',
   '/js/itinerary/ranking.js',
@@ -120,6 +135,13 @@ self.addEventListener('fetch', (event) => {
   
   // Ignorer non-GET
   if (request.method !== 'GET') return;
+
+  // Network-first pour les navigations (évite HTML nouveau + JS ancien)
+  // On garde un fallback offline vers index.html si le réseau échoue.
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith(networkFirst(request, STATIC_CACHE));
+    return;
+  }
   
   // Network-only pour APIs externes
   if (NETWORK_ONLY.some(p => request.url.includes(p))) {
@@ -127,10 +149,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Cache-First pour assets statiques (JS, CSS, HTML)
-  if (url.origin === self.location.origin && 
-      (request.url.endsWith('.js') || request.url.endsWith('.css') || request.url.endsWith('.html'))) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE));
+  // Stale-While-Revalidate pour assets statiques (JS, CSS)
+  // Objectif: site réactif + mise à jour progressive sans "mix" sur HTML.
+  if (url.origin === self.location.origin &&
+      (request.url.endsWith('.js') || request.url.endsWith('.css'))) {
+    event.respondWith(staleWhileRevalidate(request, STATIC_CACHE));
     return;
   }
   
@@ -171,15 +194,29 @@ async function staleWhileRevalidate(request, cacheName) {
   // Revalidation en arrière-plan
   const networkPromise = fetch(request)
     .then(response => {
-      // N'essaie de cacher que les requêtes HTTP(S)
-      if (response.ok && request.url.startsWith('http')) {
-        cache.put(request, response.clone());
-      }
+      if (response.ok) cache.put(request, response.clone());
       return response;
     })
     .catch(() => null);
   
   return cached || networkPromise || caches.match('/index.html');
+}
+
+/**
+ * Network-First: tente le réseau, fallback cache, puis fallback index.html
+ */
+async function networkFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await cache.match(request);
+    return cached || caches.match('/index.html');
+  }
 }
 
 /**
@@ -191,3 +228,4 @@ self.addEventListener('message', (event) => {
     caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
   }
 });
+

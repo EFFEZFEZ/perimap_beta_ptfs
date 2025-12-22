@@ -106,7 +106,7 @@ export function createResultsRenderer(deps) {
       if (title) wrapper.innerHTML += `<p class='route-option-title'>${title}</p>`;
 
       const card = document.createElement('div');
-      card.className = 'route-option';
+      card.className = 'route-option route-card';
 
       let summaryHtml = '';
       if (type === 'BIKE') {
@@ -134,16 +134,22 @@ export function createResultsRenderer(deps) {
 
       const ecoHtml = (globalIndex === 0 && mode === 'ALL' && type === 'BUS')
         ? `<span class='route-duration-eco'>${ICONS.LEAF_ICON} ${itinerary.duration}</span>`
-        : `<span>${itinerary.duration}</span>`;
+        : `<span class='route-duration-label'>${itinerary.duration}</span>`;
 
       const timeHtml = (itinerary.departureTime === '~')
-        ? `<span class='route-time' style='color:var(--text-secondary);font-weight:500;'>(Trajet)</span>`
-        : `<span class='route-time'>${itinerary.departureTime} &gt; ${itinerary.arrivalTime}</span>`;
+        ? `<span class='pill pill-time muted' aria-label='Trajet'>(Trajet)</span>`
+        : `<span class='pill pill-time' aria-label='Heure'>${itinerary.departureTime} › ${itinerary.arrivalTime}</span>`;
 
       // V214: Plus de "AUSSI À" - chaque trajet est affiché séparément
       card.innerHTML = `
+        <div class='route-card-header'>
+          ${timeHtml}
+          <span class='pill pill-duration'>${itinerary.duration}</span>
+        </div>
         <div class='route-summary-line'>${summaryHtml}</div>
-        <div class='route-footer'>${timeHtml}<span class='route-duration'>${ecoHtml}</span></div>
+        <div class='route-footer'>
+          <span class='route-duration'>${ecoHtml}</span>
+        </div>
       `;
 
       card.addEventListener('click', () => deps.onSelectItinerary(itinerary, card));

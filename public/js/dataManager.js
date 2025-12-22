@@ -1,5 +1,6 @@
 import { cleanDataset, buildGtfsIndexes } from './utils/gtfsProcessor.js';
 import { StopTimesStore } from './stopTimesStore.js';
+import { getAppConfig } from './config.js';
 
 /**
  * dataManager.js - CORRECTION V39
@@ -14,7 +15,20 @@ const GTFS_CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 heures (augmenté pour moin
 const GTFS_CACHE_META_KEY = 'peribus_gtfs_cache_meta';
 const GTFS_CACHE_DB = 'peribus_gtfs_cache_db';
 const GTFS_CACHE_STORE = 'datasets';
-const REMOTE_GTFS_BASE_URL = 'https://raw.githubusercontent.com/EFFEZFEZ/p-rimap-sans-api-/main/public/data/gtfs';
+// Fallback GTFS distant (désactivé par défaut, voir config.js)
+const DEFAULT_REMOTE_GTFS_BASE_URL = '';
+
+const DEBUG = (() => {
+    try {
+        return !!getAppConfig()?.debug;
+    } catch {
+        return false;
+    }
+})();
+
+const debugLog = (...args) => {
+    if (DEBUG) console.log(...args);
+};
 
 // Performance: requestIdleCallback polyfill pour navigateurs anciens
 const scheduleIdleTask = typeof requestIdleCallback !== 'undefined' 
@@ -22,6 +36,7 @@ const scheduleIdleTask = typeof requestIdleCallback !== 'undefined'
     : (fn) => setTimeout(fn, 1);
 export class DataManager {
     constructor() {
+        const appConfig = getAppConfig();
         this.routes = [];
         this.trips = [];
         this.stopTimes = [];
@@ -34,7 +49,10 @@ export class DataManager {
         this.shapes = [];
         this.routeGeometriesById = {};
         this._shapesIndexPromise = null;
-        this.remoteGtfsBaseUrl = REMOTE_GTFS_BASE_URL;
+        this.allowRemoteGtfs = !!appConfig?.allowRemoteGtfs;
+        this.remoteGtfsBaseUrl = (this.allowRemoteGtfs && appConfig?.remoteGtfsBaseUrl)
+            ? String(appConfig.remoteGtfsBaseUrl)
+            : DEFAULT_REMOTE_GTFS_BASE_URL;
 
         this.masterStops = []; 
         this.groupedStopMap = {}; 
@@ -68,7 +86,7 @@ export class DataManager {
             const cached = await this.restoreCache();
             if (cached) {
                 const cacheTime = performance.now() - startTime;
-                console.log(`⚡ GTFS cache utilisé en ${cacheTime.toFixed(0)}ms`);
+                debugLog(`⚡ GTFS cache utilisé en ${cacheTime.toFixed(0)}ms`);
                 this.applyLoadedData(cached);
                 this.isLoaded = true;
                 return true;
@@ -83,7 +101,7 @@ export class DataManager {
                     scheduleIdleTask(() => this.saveCache(workerPayload));
                     this.isLoaded = true;
                     const totalTime = performance.now() - startTime;
-                    console.log(`✅ GTFS chargé via Worker en ${totalTime.toFixed(0)}ms`);
+                    debugLog(`✅ GTFS chargé via Worker en ${totalTime.toFixed(0)}ms`);
                     return true;
                 } catch (workerError) {
                     console.warn('GTFS worker indisponible, fallback inline.', workerError);
@@ -183,15 +201,15 @@ export class DataManager {
 
         this.applyIndexes(indexes);
 
-        console.log('🛠️  Index GTFS prêts.');
-        console.log('✅ Données chargées:');
-        console.log(`  - ${this.routes.length} routes`);
-        console.log(`  - ${this.trips.length} trips`);
-        console.log(`  - ${this.stopTimes.length} stop_times`);
-        console.log(`  - ${this.stops.length} stops`);
-        console.log(`  - ${this.calendar.length} calendriers`);
-        console.log(`  - ${this.calendarDates.length} exceptions`);
-        console.log(`  - ${this.shapes.length} points de shapes`);
+        debugLog('🛠️  Index GTFS prêts.');
+        debugLog('✅ Données chargées:');
+        debugLog(`  - ${this.routes.length} routes`);
+        debugLog(`  - ${this.trips.length} trips`);
+        debugLog(`  - ${this.stopTimes.length} stop_times`);
+        debugLog(`  - ${this.stops.length} stops`);
+        debugLog(`  - ${this.calendar.length} calendriers`);
+        debugLog(`  - ${this.calendarDates.length} exceptions`);
+        debugLog(`  - ${this.shapes.length} points de shapes`);
     }
     
     applyIndexes(indexes = {}) {
@@ -206,13 +224,13 @@ export class DataManager {
         this.groupedStopMap = indexes.groupedStopMap || {};
         this.masterStops = indexes.masterStops || [];
         this.shapesById = indexes.shapesById || {};
-        console.log(`📍 ${this.masterStops.length} arrêts maîtres`);
+        debugLog(`📍 ${this.masterStops.length} arrêts maîtres`);
         
         // Diagnostic stopTimesByStop
         const stbsKeys = Object.keys(this.stopTimesByStop);
-        console.log(`📊 stopTimesByStop: ${stbsKeys.length} arrêts indexés`);
+        debugLog(`📊 stopTimesByStop: ${stbsKeys.length} arrêts indexés`);
         if (stbsKeys.length > 0) {
-            console.log(`   Exemples: ${stbsKeys.slice(0, 3).join(', ')}`);
+            debugLog(`   Exemples: ${stbsKeys.slice(0, 3).join(', ')}`);
         } else {
             console.warn('⚠️ stopTimesByStop est VIDE - les recherches de correspondances ne fonctionneront pas!');
         }
@@ -233,23 +251,28 @@ export class DataManager {
 
         this._shapesIndexPromise = (async () => {
             try {
-                console.log('🔁 Recharge des shapes GTFS à partir de shapes.txt (cache incomplet)…');
+                debugLog('🔁 Recharge des shapes GTFS à partir de shapes.txt (cache incomplet)…');
                 let rows = null;
                 let localError = null;
                 try {
                     rows = await this.loadGTFSFile('shapes.txt');
                 } catch (error) {
                     localError = error;
-                    console.warn('ensureShapesIndexLoaded: shapes.txt introuvable localement, tentative via GitHub brut…');
+                    console.warn('ensureShapesIndexLoaded: shapes.txt introuvable localement');
                 }
 
                 if (!rows) {
-                    try {
-                        const remoteUrl = `${this.remoteGtfsBaseUrl}/shapes.txt`;
-                        rows = await this.loadGTFSFile('shapes.txt', remoteUrl);
-                        console.log('ensureShapesIndexLoaded: shapes chargés depuis GitHub brut.');
-                    } catch (remoteError) {
-                        throw localError || remoteError;
+                    if (this.allowRemoteGtfs && this.remoteGtfsBaseUrl) {
+                        try {
+                            const remoteUrl = `${this.remoteGtfsBaseUrl.replace(/\/+$/, '')}/shapes.txt`;
+                            rows = await this.loadGTFSFile('shapes.txt', remoteUrl);
+                            debugLog('ensureShapesIndexLoaded: shapes chargés depuis la source distante configurée.');
+                        } catch (remoteError) {
+                            throw localError || remoteError;
+                        }
+                    } else {
+                        // Remote fallback désactivé (prod-safe)
+                        if (localError) throw localError;
                     }
                 }
                 if (!Array.isArray(rows) || rows.length === 0) {
@@ -285,7 +308,7 @@ export class DataManager {
 
                 this.shapesById = shapesById;
                 this.shapes = rows;
-                console.log(`✅ Shapes rechargés (${Object.keys(shapesById).length} shape_id, ${rows.length} points).`);
+                debugLog(`✅ Shapes rechargés (${Object.keys(shapesById).length} shape_id, ${rows.length} points).`);
                 return true;
             } catch (error) {
                 console.warn('ensureShapesIndexLoaded: échec du rechargement', error);
@@ -373,7 +396,7 @@ export class DataManager {
             if (Array.isArray(this.stopTimes)) {
                 this.stopTimes.length = 0;
             }
-            console.log('💾 StopTimes stockés dans IndexedDB et relâchés de la RAM.');
+            debugLog('💾 StopTimes stockés dans IndexedDB et relâchés de la RAM.');
         } catch (error) {
             console.warn('optimizeStopTimesStorage failed', error);
         }
@@ -419,7 +442,7 @@ export class DataManager {
                 version: this.cacheVersion,
                 timestamp: Date.now()
             });
-            console.log('💾 GTFS mis en cache pour les prochaines sessions.');
+            debugLog('💾 GTFS mis en cache pour les prochaines sessions.');
         } catch (error) {
             console.warn('Impossible de mettre les données GTFS en cache (IndexedDB ?)', error);
             await this.clearCacheStorage();
@@ -696,8 +719,8 @@ export class DataManager {
     getDeparturesForOneHour(stopIds, currentSeconds, date) {
         const serviceIdSet = this.getServiceIds(date);
         
-        console.log(`🔍 getDeparturesForOneHour: ${stopIds.length} stopIds, heure=${Math.floor(currentSeconds/3600)}:${String(Math.floor((currentSeconds%3600)/60)).padStart(2,'0')}`);
-        console.log(`📅 Services actifs:`, Array.from(serviceIdSet));
+        debugLog(`🔍 getDeparturesForOneHour: ${stopIds.length} stopIds, heure=${Math.floor(currentSeconds/3600)}:${String(Math.floor((currentSeconds%3600)/60)).padStart(2,'0')}`);
+        debugLog(`📅 Services actifs:`, Array.from(serviceIdSet));
         
         if (serviceIdSet.size === 0) {
             console.warn('⚠️  Aucun service actif pour cette date');
@@ -755,7 +778,7 @@ export class DataManager {
         if (allFutureDepartures.length > 0 && allFutureDepartures[0].departureSeconds > oneHourLater) {
             isNextDayDepartures = true;
             firstDepartureTime = allFutureDepartures[0].time;
-            console.log(`🌅 Premiers départs à partir de ${firstDepartureTime}`);
+            debugLog(`🌅 Premiers départs à partir de ${firstDepartureTime}`);
         }
         
         // Grouper par ligne + destination
@@ -782,7 +805,7 @@ export class DataManager {
             });
         });
         
-        console.log(`📊 Stats: ${allFutureDepartures.length} départs futurs, isNextDay=${isNextDayDepartures}`);
+        debugLog(`📊 Stats: ${allFutureDepartures.length} départs futurs, isNextDay=${isNextDayDepartures}`);
 
         return { departuresByLine, isNextDayDepartures, firstDepartureTime };
     }
@@ -1101,7 +1124,7 @@ export class DataManager {
                 // On a trouvé un trajet !
                 const intermediateStopTimes = stopTimes.slice(depIndex + 1, arrIndex);
                 
-                console.log(`[GTFS Match] ✅ SUCCÈS: Trip ${trip.trip_id} trouvé (${intermediateStopTimes.length} arrêts intermédiaires)`);
+                debugLog(`[GTFS Match] ✅ SUCCÈS: Trip ${trip.trip_id} trouvé (${intermediateStopTimes.length} arrêts intermédiaires)`);
                 
                 // On retourne la liste des noms d'arrêts
                 return intermediateStopTimes.map(st => this.stopsById[st.stop_id].stop_name);
@@ -1209,14 +1232,14 @@ export class DataManager {
             const startFound = Array.from(startSet).filter(id => allStopTimeIds.has(id));
             const endFound = Array.from(endSet).filter(id => allStopTimeIds.has(id));
             
-            console.log('🔬 Recherche GTFS directe:');
-            console.log(`   Départ: ${startFound.length}/${startSet.size} IDs valides`, startFound.slice(0, 2));
-            console.log(`   Arrivée: ${endFound.length}/${endSet.size} IDs valides`, endFound.slice(0, 2));
+            debugLog('🔬 Recherche GTFS directe:');
+            debugLog(`   Départ: ${startFound.length}/${startSet.size} IDs valides`, startFound.slice(0, 2));
+            debugLog(`   Arrivée: ${endFound.length}/${endSet.size} IDs valides`, endFound.slice(0, 2));
             const fmt = (d) => d.toLocaleDateString('fr-CA'); // YYYY-MM-DD en local
-            console.log(`   Services veille (${fmt(prevDate)}):`, Array.from(serviceSetPrev));
-            console.log(`   Services jour J (${fmt(reqDate)}):`, Array.from(serviceSetCurrent));
-            console.log(`   Services lendemain (${fmt(nextDate)}):`, Array.from(serviceSetNext));
-            console.log(`   Fenêtre brute: ${windowStart}s → ${windowEnd}s`);
+            debugLog(`   Services veille (${fmt(prevDate)}):`, Array.from(serviceSetPrev));
+            debugLog(`   Services jour J (${fmt(reqDate)}):`, Array.from(serviceSetCurrent));
+            debugLog(`   Services lendemain (${fmt(nextDate)}):`, Array.from(serviceSetNext));
+            debugLog(`   Fenêtre brute: ${windowStart}s → ${windowEnd}s`);
             
             // Sauvegarder les IDs valides pour comparaison ultérieure
             globalThis._validEndIds = endFound;
@@ -1312,10 +1335,10 @@ export class DataManager {
         // Log stats uniquement pour le premier appel (pas pour les correspondances)
         if (!globalThis._gtfsStatsLogged && results.length === 0) {
             globalThis._gtfsStatsLogged = true;
-            console.log('📊 getTripsBetweenStops STATS:', JSON.stringify(debugStats));
+            debugLog('📊 getTripsBetweenStops STATS:', JSON.stringify(debugStats));
             if (debugStats.noBoardingFound > 0 && debugStats.noAlightFound > 0 && debugStats.accepted === 0) {
-                console.log('⚠️ AUCUN trajet DIRECT: les arrêts départ/arrivée ne sont pas sur la même ligne.');
-                console.log('💡 Une correspondance sera nécessaire.');
+                debugLog('⚠️ AUCUN trajet DIRECT: les arrêts départ/arrivée ne sont pas sur la même ligne.');
+                debugLog('💡 Une correspondance sera nécessaire.');
             }
         }
         
@@ -1324,10 +1347,10 @@ export class DataManager {
             globalThis._secondLegCallCount = (globalThis._secondLegCallCount || 0) + 1;
             // Logger seulement les 3 premières recherches de second leg en détail
             if (globalThis._secondLegCallCount <= 3 && results.length === 0) {
-                console.log(`🔍 Second leg #${globalThis._secondLegCallCount} STATS:`, JSON.stringify(debugStats));
-                console.log(`   StartIds (${startSet.size}):`, Array.from(startSet).slice(0, 3));
-                console.log(`   EndIds (${endSet.size}):`, Array.from(endSet).slice(0, 3));
-                console.log(`   Window: ${Math.floor(windowStartSeconds/3600)}:${String(Math.floor((windowStartSeconds%3600)/60)).padStart(2,'0')} - ${Math.floor(windowEndSeconds/3600)}:${String(Math.floor((windowEndSeconds%3600)/60)).padStart(2,'0')}`);
+                debugLog(`🔍 Second leg #${globalThis._secondLegCallCount} STATS:`, JSON.stringify(debugStats));
+                debugLog(`   StartIds (${startSet.size}):`, Array.from(startSet).slice(0, 3));
+                debugLog(`   EndIds (${endSet.size}):`, Array.from(endSet).slice(0, 3));
+                debugLog(`   Window: ${Math.floor(windowStartSeconds/3600)}:${String(Math.floor((windowStartSeconds%3600)/60)).padStart(2,'0')} - ${Math.floor(windowEndSeconds/3600)}:${String(Math.floor((windowEndSeconds%3600)/60)).padStart(2,'0')}`);
             }
             if (globalThis._secondLegCallCount === 3) {
                 globalThis._secondLegStatsLogged = true;

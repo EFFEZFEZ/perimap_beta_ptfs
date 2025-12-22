@@ -17,6 +17,14 @@ const logger = createLogger('autocomplete');
 let stopsCache = [];
 let stopsCacheLoaded = false;
 
+function normalizeText(value) {
+  return (value || '').toString().toLowerCase().trim();
+}
+
+function splitWords(textLower) {
+  return textLower.split(/[\s\-_]/);
+}
+
 /**
  * Charge les arrêts GTFS et les POIs
  */
@@ -41,9 +49,13 @@ async function loadAutocompleteCache() {
           fs.createReadStream(stopsPath)
             .pipe(csv())
             .on('data', (row) => {
+              const name = row.stop_name || '';
+              const nameLower = normalizeText(name);
               stops.push({
                 id: row.stop_id,
-                name: row.stop_name || '',
+                name,
+                _nameLower: nameLower,
+                _words: splitWords(nameLower),
                 lat: parseFloat(row.stop_lat),
                 lon: parseFloat(row.stop_lon),
                 type: 'stop',           // Catégorie basse priorité
@@ -95,7 +107,7 @@ export async function autocomplete(query, options = {}) {
 
   // Chercher dans les arrêts GTFS
   stopsCache.forEach(stop => {
-    const score = calculateScore(q, stop.name, stop);
+    const score = calculateScorePrepared(q, stop);
     if (score > 0) {
       results.push({
         ...stop,
@@ -160,6 +172,42 @@ function calculateScore(query, text, item) {
   // Bonus pour les correspondances consécutives
   score *= (1 + consecutiveMatches * 0.1);
   
+  // Retourner un score normalisé (0-0.7 max pour fuzzy)
+  return queryIdx === query.length ? Math.min(score / textLower.length, 0.7) : 0;
+}
+
+// Version optimisée: utilise des champs pré-calculés, sans modifier l'algorithme
+function calculateScorePrepared(query, item) {
+  const textLower = item?._nameLower ?? normalizeText(item?.name);
+
+  // Correspondance exacte (complète)
+  if (textLower === query) return 1.0;
+
+  // Correspondance au début
+  if (textLower.startsWith(query)) return 0.9;
+
+  // Correspondance dans le texte (préfixe de mot)
+  const words = Array.isArray(item?._words) ? item._words : splitWords(textLower);
+  if (words.some(w => w.startsWith(query))) return 0.8;
+
+  // Fuzzy matching (chercher les caractères dans l'ordre)
+  let score = 0;
+  let queryIdx = 0;
+  let consecutiveMatches = 0;
+
+  for (let i = 0; i < textLower.length && queryIdx < query.length; i++) {
+    if (textLower[i] === query[queryIdx]) {
+      score += 0.1 * (query.length - queryIdx) / query.length;
+      consecutiveMatches++;
+      queryIdx++;
+    } else {
+      consecutiveMatches = 0;
+    }
+  }
+
+  // Bonus pour les correspondances consécutives
+  score *= (1 + consecutiveMatches * 0.1);
+
   // Retourner un score normalisé (0-0.7 max pour fuzzy)
   return queryIdx === query.length ? Math.min(score / textLower.length, 0.7) : 0;
 }

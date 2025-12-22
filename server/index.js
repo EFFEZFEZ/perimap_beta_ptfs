@@ -15,6 +15,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import { join, dirname } from 'path';
+import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -70,8 +71,13 @@ async function startServer() {
       next();
     });
 
-    // Servir les fichiers statiques du frontend
-    app.use(express.static(join(__dirname, 'public')));
+    // Servir les fichiers statiques du frontend (chemin robuste)
+    const candidates = [
+      join(__dirname, 'public'),           // Dockerfile: COPY public ./public → __dirname=/app
+      join(__dirname, '..', 'public')      // Exécution locale: /server → ../public
+    ];
+    const publicDir = candidates.find(p => existsSync(p)) || candidates[0];
+    app.use(express.static(publicDir));
 
     app.use('/api', apiRouter);
 
@@ -79,9 +85,14 @@ async function startServer() {
       res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
     });
 
-    // Servir index.html pour la route racine et les routes SPA non reconnues
+    // Servir index.html pour la route racine
     app.get('/', (_req, res) => {
-      res.sendFile(join(__dirname, 'public', 'index.html'));
+      res.sendFile(join(publicDir, 'index.html'));
+    });
+
+    // Fallback SPA: toutes les routes non-API renvoient index.html
+    app.get(/^\/(?!api).+/, (_req, res) => {
+      res.sendFile(join(publicDir, 'index.html'));
     });
 
     app.use((err, _req, res, _next) => {

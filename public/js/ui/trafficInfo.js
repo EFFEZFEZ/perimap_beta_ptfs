@@ -7,6 +7,15 @@
 
 import { getCategoryForRoute, PDF_FILENAME_MAP, ROUTE_LONG_NAME_MAP } from '../config/routes.js';
 
+function normalizeCssHexColor(value, fallback) {
+    if (!value) return fallback;
+    const raw = String(value).trim();
+    if (!raw) return fallback;
+    if (raw.startsWith('#')) return raw;
+    if (/^[0-9a-fA-F]{6}$/.test(raw)) return `#${raw}`;
+    return fallback;
+}
+
 // Stockage des données de ligne pour le modal
 let lineDataCache = {};
 let perturbationsData = []; // Données des perturbations pour le popup du bandeau
@@ -52,8 +61,8 @@ export function renderInfoTraficCard(dataManager, lineStatuses, container, count
 
         categoryData.routes.forEach(route => {
             const state = lineStatuses[route.route_id] || { status: 'normal', message: '' };
-            const routeColor = route.route_color ? `#${route.route_color}` : '#3388ff';
-            const textColor = route.route_text_color ? `#${route.route_text_color}` : '#ffffff';
+            const routeColor = normalizeCssHexColor(route.route_color, '#3388ff');
+            const textColor = normalizeCssHexColor(route.route_text_color, '#ffffff');
             
             // Comptabiliser les alertes
             if (state.status !== 'normal') {
