@@ -80,6 +80,10 @@ export class DataManager {
 
         // Lazy-built index for calendar_dates (date -> { added:Set, removed:Set })
         this._calendarDatesIndex = null;
+
+        // Baseline signatures (most common) to detect "horaires adaptés" even without exceptions
+        this._baselineSignatures = null;
+        this._baselineComputedAt = null;
     }
 
     _toGtfsDateString(date) {
@@ -128,6 +132,141 @@ export class DataManager {
         return serviceIds.join('|');
     }
 
+    _getDayKind(date) {
+        const d = date instanceof Date ? date : new Date(date);
+        const day = d.getDay();
+        return (day === 0 || day === 6) ? 'weekend' : 'weekday';
+    }
+
+    _parseGtfsDateString(dateString) {
+        if (!dateString || typeof dateString !== 'string' || dateString.length !== 8) return null;
+        const y = Number(dateString.slice(0, 4));
+        const m = Number(dateString.slice(4, 6));
+        const d = Number(dateString.slice(6, 8));
+        if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+        return new Date(y, m - 1, d);
+    }
+
+    _getGtfsDateBounds() {
+        const allStarts = [];
+        const allEnds = [];
+        for (const row of (this.calendar || [])) {
+            if (row?.start_date) allStarts.push(String(row.start_date));
+            if (row?.end_date) allEnds.push(String(row.end_date));
+        }
+        allStarts.sort();
+        allEnds.sort();
+        const minStart = allStarts.length ? this._parseGtfsDateString(allStarts[0]) : null;
+        const maxEnd = allEnds.length ? this._parseGtfsDateString(allEnds[allEnds.length - 1]) : null;
+        return { minStart, maxEnd };
+    }
+
+    /**
+     * Calcule des signatures "référence" (weekday/weekend) à partir des prochains jours.
+     * Sert à détecter une période "adaptée" même si calendar_dates est vide.
+     */
+    ensureBaselineSignatures({ horizonDays = 90 } = {}) {
+        const now = new Date();
+        const last = this._baselineComputedAt ? new Date(this._baselineComputedAt) : null;
+        const lastKey = last ? this._toGtfsDateString(last) : null;
+        const nowKey = this._toGtfsDateString(now);
+        if (this._baselineSignatures && lastKey === nowKey) return this._baselineSignatures;
+
+        const { maxEnd } = this._getGtfsDateBounds();
+        const endLimit = new Date(now);
+        endLimit.setDate(now.getDate() + Math.max(7, horizonDays));
+        const scanEnd = (maxEnd && maxEnd < endLimit) ? maxEnd : endLimit;
+
+        const freq = { weekday: new Map(), weekend: new Map() };
+        const cursor = new Date(now);
+        cursor.setHours(0, 0, 0, 0);
+        const end = new Date(scanEnd);
+        end.setHours(0, 0, 0, 0);
+
+        while (cursor <= end) {
+            const kind = this._getDayKind(cursor);
+            const exceptions = this.getCalendarExceptionsForDate(cursor);
+            const signature = this.getServiceSignature(cursor);
+            // On ignore les jours vides et ceux avec exceptions pour construire une référence "standard"
+            if (signature && !exceptions.hasAny) {
+                const map = freq[kind];
+                map.set(signature, (map.get(signature) || 0) + 1);
+            }
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        const pickMode = (map) => {
+            let best = '';
+            let bestCount = 0;
+            for (const [sig, count] of map.entries()) {
+                if (count > bestCount) {
+                    best = sig;
+                    bestCount = count;
+                }
+            }
+            return best;
+        };
+
+        this._baselineSignatures = {
+            weekday: pickMode(freq.weekday),
+            weekend: pickMode(freq.weekend)
+        };
+        this._baselineComputedAt = new Date();
+        return this._baselineSignatures;
+    }
+
+    getDayScheduleClassification(date) {
+        const d = date instanceof Date ? date : new Date(date);
+        const signature = this.getServiceSignature(d);
+        const exceptions = this.getCalendarExceptionsForDate(d);
+        const kind = this._getDayKind(d);
+        const baseline = this.ensureBaselineSignatures();
+        const baselineSig = baseline?.[kind] || '';
+
+        if (!signature) {
+            return {
+                type: 'no-service',
+                label: 'Aucun service',
+                message: 'Aucun transport prévu aujourd\'hui (calendrier GTFS).',
+                signature,
+                kind,
+                exceptions
+            };
+        }
+
+        if (exceptions.hasAny) {
+            return {
+                type: 'adapted',
+                label: 'Horaires adaptés',
+                message: 'Période spéciale (vacances, jours fériés, événements) : vérifiez vos horaires.',
+                signature,
+                kind,
+                exceptions
+            };
+        }
+
+        // Si la signature diffère de la signature "référence" du même type de jour
+        if (baselineSig && baselineSig !== signature) {
+            return {
+                type: 'adapted',
+                label: 'Horaires adaptés',
+                message: 'Horaires différents de la période habituelle : vérifiez vos horaires (vacances / période spéciale).',
+                signature,
+                kind,
+                exceptions
+            };
+        }
+
+        return {
+            type: 'standard',
+            label: 'Horaires du jour',
+            message: 'Horaires standard (selon calendrier).',
+            signature,
+            kind,
+            exceptions
+        };
+    }
+
     /**
      * Décrit la "période horaires" en se basant STRICTEMENT sur GTFS:
      * - calendar.txt (services réguliers)
@@ -135,9 +274,9 @@ export class DataManager {
      */
     getSchedulePeriodInfo(date) {
         const d = date instanceof Date ? date : new Date(date);
-        const activeServiceIds = this.getServiceIds(d);
-        const exceptions = this.getCalendarExceptionsForDate(d);
-        const signatureToday = this.getServiceSignature(d);
+        const classification = this.getDayScheduleClassification(d);
+        const exceptions = classification.exceptions;
+        const signatureToday = classification.signature;
 
         const yesterday = new Date(d);
         yesterday.setDate(d.getDate() - 1);
@@ -150,33 +289,8 @@ export class DataManager {
         const changedFromYesterday = signatureYesterday !== signatureToday;
         const changesTomorrow = signatureTomorrow !== signatureToday;
 
-        if (!activeServiceIds || activeServiceIds.size === 0) {
-            return {
-                type: 'no-service',
-                label: 'Aucun service',
-                message: 'Aucun transport prévu aujourd\'hui (calendrier GTFS).',
-                dateString: exceptions.dateString,
-                changedFromYesterday,
-                changesTomorrow,
-                exceptions
-            };
-        }
-
-        // Si des exceptions existent, on considère "horaires adaptés" (souvent vacances/fériés)
-        if (exceptions.hasAny) {
-            return {
-                type: 'adapted',
-                label: 'Horaires adaptés',
-                message: 'Période spéciale (vacances, jours fériés, événements) : vérifiez vos horaires.',
-                dateString: exceptions.dateString,
-                changedFromYesterday,
-                changesTomorrow,
-                exceptions
-            };
-        }
-
-        // "standard", mais on veut quand même informer en cas de changement de signature
-        if (changedFromYesterday || changesTomorrow) {
+        // Si on est sur standard mais qu'il y a un changement autour, on remonte un état "transition"
+        if (classification.type === 'standard' && (changedFromYesterday || changesTomorrow)) {
             return {
                 type: 'transition',
                 label: 'Changement de période',
@@ -189,14 +303,65 @@ export class DataManager {
         }
 
         return {
-            type: 'standard',
-            label: 'Horaires du jour',
-            message: 'Horaires standard (selon calendrier).',
+            type: classification.type,
+            label: classification.label,
+            message: classification.message,
             dateString: exceptions.dateString,
             changedFromYesterday,
             changesTomorrow,
             exceptions
         };
+    }
+
+    getUpcomingNonStandardSchedulePeriods(fromDate, { maxItems = 2, horizonDays = 120 } = {}) {
+        const start = fromDate instanceof Date ? new Date(fromDate) : new Date(fromDate || Date.now());
+        start.setHours(0, 0, 0, 0);
+
+        const { maxEnd } = this._getGtfsDateBounds();
+        const endLimit = new Date(start);
+        endLimit.setDate(start.getDate() + Math.max(14, horizonDays));
+        const scanEnd = (maxEnd && maxEnd < endLimit) ? maxEnd : endLimit;
+        scanEnd.setHours(0, 0, 0, 0);
+
+        const items = [];
+        let cursor = new Date(start);
+        cursor.setDate(cursor.getDate() + 1); // commence demain
+
+        while (cursor <= scanEnd && items.length < maxItems) {
+            const info = this.getDayScheduleClassification(cursor);
+            if (info.type === 'standard') {
+                cursor.setDate(cursor.getDate() + 1);
+                continue;
+            }
+
+            const periodStart = new Date(cursor);
+            let periodEnd = new Date(cursor);
+            // Étendre tant que le type reste identique ET que les exceptions restent cohérentes
+            while (true) {
+                const next = new Date(periodEnd);
+                next.setDate(next.getDate() + 1);
+                if (next > scanEnd) break;
+                const nextInfo = this.getDayScheduleClassification(next);
+                const sameType = nextInfo.type === info.type;
+                const sameExceptionsShape = (nextInfo.exceptions?.hasAny || false) === (info.exceptions?.hasAny || false);
+                if (!sameType || !sameExceptionsShape) break;
+                periodEnd = next;
+            }
+
+            items.push({
+                type: info.type,
+                label: info.label,
+                start: periodStart,
+                end: periodEnd,
+                message: info.message,
+                exceptions: info.exceptions
+            });
+
+            cursor = new Date(periodEnd);
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        return items;
     }
 
     async loadAllData(onProgress) {

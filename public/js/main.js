@@ -306,6 +306,7 @@ let fromPlaceId = null;
 let toPlaceId = null;
 
 let _lastScheduleBannerKey = null;
+let _lastScheduleUpcomingKey = null;
 
 // LINE_CATEGORIES est maintenant importée depuis config/routes.js
 
@@ -3666,6 +3667,16 @@ function showDashboardView(viewName) {
     if (activeCard) {
         setTimeout(() => {
             activeCard.classList.add('view-active');
+
+            // Rafraîchir les infos "périodes horaires" quand la vue correspondante s'affiche
+            try {
+                if (viewName === 'horaires') {
+                    updateSchedulePeriodBanner(true);
+                }
+                if (viewName === 'info-trafic') {
+                    renderScheduleUpcoming(true);
+                }
+            } catch (e) { /* ignore */ }
         }, 50);
     }
 }
@@ -3830,6 +3841,7 @@ async function updateData() {
     }
 
     try { updateSchedulePeriodBanner(false); } catch (e) { /* ignore */ }
+    try { renderScheduleUpcoming(false); } catch (e) { /* ignore */ }
 
     const currentSeconds = timeManager.getCurrentSeconds();
     updateClock(currentSeconds);
@@ -3968,7 +3980,68 @@ function updateSchedulePeriodBanner(force = false) {
         return;
     }
 
+    banner.classList.remove('severity-perturbation', 'severity-retard', 'severity-annulation');
+    if (info.type === 'no-service') banner.classList.add('severity-annulation');
+    else if (info.type === 'transition') banner.classList.add('severity-retard');
+    else banner.classList.add('severity-perturbation');
+
     labelEl.textContent = info.label || 'Horaires';
     textEl.textContent = info.message || 'Vérifiez les horaires selon la période.';
     banner.classList.remove('hidden');
+}
+
+function _formatFrenchDate(d) {
+    try {
+        return d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    } catch {
+        return '';
+    }
+}
+
+function renderScheduleUpcoming(force = false) {
+    if (!dataManager || !timeManager) return;
+    const container = document.getElementById('schedule-upcoming');
+    if (!container) return;
+
+    const nowDate = timeManager.getCurrentDate ? timeManager.getCurrentDate() : new Date();
+    const key = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
+    if (!force && _lastScheduleUpcomingKey === key) return;
+    _lastScheduleUpcomingKey = key;
+
+    const items = dataManager.getUpcomingNonStandardSchedulePeriods(nowDate, { maxItems: 2, horizonDays: 180 }) || [];
+    if (!items.length) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const html = items.map(item => {
+        const startStr = _formatFrenchDate(item.start);
+        const endStr = _formatFrenchDate(item.end);
+        const range = (startStr && endStr && startStr !== endStr)
+            ? `Débute ${startStr} · Finit ${endStr}`
+            : (startStr ? `Le ${startStr}` : '');
+
+        const severityClass = item.type === 'no-service'
+            ? 'severity-annulation'
+            : (item.type === 'adapted' ? 'severity-perturbation' : 'severity-retard');
+
+        return `
+            <div class="news-banner ${severityClass}">
+                <div class="news-banner-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                </div>
+                <div class="news-banner-content">
+                    <span class="news-banner-label">${item.label || 'Horaires'}</span>
+                    <span class="news-banner-text">${range || (item.message || 'Horaires adaptés : vérifiez.')}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = html;
 }

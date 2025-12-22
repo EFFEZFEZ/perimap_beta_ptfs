@@ -232,7 +232,7 @@ export { hideLineDetailModal };
  * @param {Object} lineStatuses - État des lignes
  */
 export function updateNewsBanner(dataManager, lineStatuses) {
-    const banner = document.querySelector('.news-banner');
+    const banner = document.getElementById('hall-news-banner') || document.querySelector('.news-banner');
     const textEl = banner?.querySelector('.news-banner-text');
     const labelEl = banner?.querySelector('.news-banner-label');
     const iconEl = banner?.querySelector('.news-banner-icon');
