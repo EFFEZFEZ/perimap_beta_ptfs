@@ -305,6 +305,8 @@ let installTipContainer, installTipCloseBtn;
 let fromPlaceId = null;
 let toPlaceId = null;
 
+let _lastScheduleBannerKey = null;
+
 // LINE_CATEGORIES est maintenant importée depuis config/routes.js
 
 const DETAIL_SHEET_TRANSITION_MS = 380; // Doit être >= à la transition CSS (350ms + marge)
@@ -501,6 +503,8 @@ async function initializeApp() {
         updateDataStatus('Données chargées', 'loaded');
         checkAndSetupTimeMode();
         updateData().catch(err => console.error('updateData error:', err)); 
+
+        try { updateSchedulePeriodBanner(true); } catch (e) { console.debug('updateSchedulePeriodBanner init failed', e); }
         
     } catch (error) {
         console.error('Erreur lors de l\'initialisation GTFS:', error);
@@ -3825,6 +3829,8 @@ async function updateData() {
         return;
     }
 
+    try { updateSchedulePeriodBanner(false); } catch (e) { /* ignore */ }
+
     const currentSeconds = timeManager.getCurrentSeconds();
     updateClock(currentSeconds);
     
@@ -3937,4 +3943,32 @@ if (typeof window !== 'undefined') {
             console.table(rankedArrive.map(it => ({ dep: it.departureTime, arr: it.arrivalTime })));
         }
     });
+}
+
+function updateSchedulePeriodBanner(force = false) {
+    if (!dataManager || !timeManager) return;
+
+    const banner = document.getElementById('schedule-period-banner');
+    const labelEl = document.getElementById('schedule-period-label');
+    const textEl = document.getElementById('schedule-period-text');
+
+    if (!banner || !labelEl || !textEl) return;
+
+    const nowDate = timeManager.getCurrentDate ? timeManager.getCurrentDate() : new Date();
+    const key = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
+
+    if (!force && _lastScheduleBannerKey === key) return;
+    _lastScheduleBannerKey = key;
+
+    const info = dataManager.getSchedulePeriodInfo(nowDate);
+    const shouldShow = info && info.type !== 'standard';
+
+    if (!shouldShow) {
+        banner.classList.add('hidden');
+        return;
+    }
+
+    labelEl.textContent = info.label || 'Horaires';
+    textEl.textContent = info.message || 'Vérifiez les horaires selon la période.';
+    banner.classList.remove('hidden');
 }

@@ -77,6 +77,126 @@ export class DataManager {
         this.cacheMetaKey = GTFS_CACHE_META_KEY;
         this.cacheDbPromise = null;
         this.stopTimesStore = null;
+
+        // Lazy-built index for calendar_dates (date -> { added:Set, removed:Set })
+        this._calendarDatesIndex = null;
+    }
+
+    _toGtfsDateString(date) {
+        const d = date instanceof Date ? date : new Date(date);
+        return d.getFullYear() +
+            String(d.getMonth() + 1).padStart(2, '0') +
+            String(d.getDate()).padStart(2, '0');
+    }
+
+    _ensureCalendarDatesIndex() {
+        if (this._calendarDatesIndex) return;
+        const index = new Map();
+        for (const row of (this.calendarDates || [])) {
+            const date = row?.date;
+            const serviceId = row?.service_id;
+            const exceptionType = row?.exception_type;
+            if (!date || !serviceId || !exceptionType) continue;
+            let entry = index.get(date);
+            if (!entry) {
+                entry = { added: new Set(), removed: new Set() };
+                index.set(date, entry);
+            }
+            if (exceptionType === '1' || exceptionType === 1) entry.added.add(serviceId);
+            if (exceptionType === '2' || exceptionType === 2) entry.removed.add(serviceId);
+        }
+        this._calendarDatesIndex = index;
+    }
+
+    getCalendarExceptionsForDate(date) {
+        this._ensureCalendarDatesIndex();
+        const dateString = this._toGtfsDateString(date);
+        const entry = this._calendarDatesIndex?.get(dateString);
+        const addedCount = entry?.added?.size || 0;
+        const removedCount = entry?.removed?.size || 0;
+        return {
+            dateString,
+            addedCount,
+            removedCount,
+            hasAny: (addedCount + removedCount) > 0
+        };
+    }
+
+    getServiceSignature(date) {
+        const serviceIds = Array.from(this.getServiceIds(date) || []);
+        serviceIds.sort();
+        return serviceIds.join('|');
+    }
+
+    /**
+     * Décrit la "période horaires" en se basant STRICTEMENT sur GTFS:
+     * - calendar.txt (services réguliers)
+     * - calendar_dates.txt (exceptions: fériés/vacances/événements)
+     */
+    getSchedulePeriodInfo(date) {
+        const d = date instanceof Date ? date : new Date(date);
+        const activeServiceIds = this.getServiceIds(d);
+        const exceptions = this.getCalendarExceptionsForDate(d);
+        const signatureToday = this.getServiceSignature(d);
+
+        const yesterday = new Date(d);
+        yesterday.setDate(d.getDate() - 1);
+        const tomorrow = new Date(d);
+        tomorrow.setDate(d.getDate() + 1);
+
+        const signatureYesterday = this.getServiceSignature(yesterday);
+        const signatureTomorrow = this.getServiceSignature(tomorrow);
+
+        const changedFromYesterday = signatureYesterday !== signatureToday;
+        const changesTomorrow = signatureTomorrow !== signatureToday;
+
+        if (!activeServiceIds || activeServiceIds.size === 0) {
+            return {
+                type: 'no-service',
+                label: 'Aucun service',
+                message: 'Aucun transport prévu aujourd\'hui (calendrier GTFS).',
+                dateString: exceptions.dateString,
+                changedFromYesterday,
+                changesTomorrow,
+                exceptions
+            };
+        }
+
+        // Si des exceptions existent, on considère "horaires adaptés" (souvent vacances/fériés)
+        if (exceptions.hasAny) {
+            return {
+                type: 'adapted',
+                label: 'Horaires adaptés',
+                message: 'Période spéciale (vacances, jours fériés, événements) : vérifiez vos horaires.',
+                dateString: exceptions.dateString,
+                changedFromYesterday,
+                changesTomorrow,
+                exceptions
+            };
+        }
+
+        // "standard", mais on veut quand même informer en cas de changement de signature
+        if (changedFromYesterday || changesTomorrow) {
+            return {
+                type: 'transition',
+                label: 'Changement de période',
+                message: 'Les horaires changent (période en cours différente) : pensez à vérifier.',
+                dateString: exceptions.dateString,
+                changedFromYesterday,
+                changesTomorrow,
+                exceptions
+            };
+        }
+
+        return {
+            type: 'standard',
+            label: 'Horaires du jour',
+            message: 'Horaires standard (selon calendrier).',
+            dateString: exceptions.dateString,
+            changedFromYesterday,
+            changesTomorrow,
+            exceptions
+        };
     }
 
     async loadAllData(onProgress) {
