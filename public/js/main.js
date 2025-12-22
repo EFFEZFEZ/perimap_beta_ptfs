@@ -2209,6 +2209,110 @@ function transformLegs(otpLegs) {
     });
 }
 
+function _normalizeStopKey(value) {
+    if (!value) return '';
+    return String(value)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function _getEncodedPolylineValue(polyline) {
+    if (!polyline) return null;
+    if (typeof polyline === 'string') return polyline;
+    if (typeof polyline.encodedPolyline === 'string') return polyline.encodedPolyline;
+    if (typeof polyline.points === 'string') return polyline.points;
+    return null;
+}
+
+function _mergeEncodedPolylines(polyA, polyB) {
+    const encA = _getEncodedPolylineValue(polyA);
+    const encB = _getEncodedPolylineValue(polyB);
+    if (!encA || !encB) return null;
+    try {
+        const a = decodePolyline(encA);
+        const b = decodePolyline(encB);
+        if (!Array.isArray(a) || a.length < 2 || !Array.isArray(b) || b.length < 2) return null;
+        const merged = a.slice();
+        const lastA = merged[merged.length - 1];
+        const firstB = b[0];
+        const sameJoin = lastA && firstB && lastA[0] === firstB[0] && lastA[1] === firstB[1];
+        merged.push(...(sameJoin ? b.slice(1) : b));
+        const encoded = encodePolyline(merged);
+        return { encodedPolyline: encoded, latLngs: merged };
+    } catch {
+        return null;
+    }
+}
+
+function mergeConsecutiveSameLineBusSteps(steps) {
+    if (!Array.isArray(steps) || steps.length < 2) return steps;
+
+    const merged = [];
+    for (let i = 0; i < steps.length; i++) {
+        const current = steps[i];
+        const next = steps[i + 1];
+
+        if (
+            current?.type === 'BUS' &&
+            next?.type === 'BUS' &&
+            !isWaitStep(current) &&
+            !isWaitStep(next)
+        ) {
+            const sameLine = _normalizeStopKey(current.routeShortName) &&
+                _normalizeStopKey(current.routeShortName) === _normalizeStopKey(next.routeShortName);
+
+            const sameAgency = !_normalizeStopKey(current.agency) || !_normalizeStopKey(next.agency)
+                ? true
+                : _normalizeStopKey(current.agency) === _normalizeStopKey(next.agency);
+
+            const transferById = current.arrivalStopId && next.departureStopId && current.arrivalStopId === next.departureStopId;
+            const transferByName = _normalizeStopKey(current.arrivalStop) &&
+                _normalizeStopKey(current.arrivalStop) === _normalizeStopKey(next.departureStop);
+            const sameTransferStop = transferById || transferByName;
+
+            if (sameLine && sameAgency && sameTransferStop) {
+                const mergedPolyline = _mergeEncodedPolylines(current.polyline, next.polyline);
+                const finalHeadsign = next.headsign || current.headsign || '';
+                const shortName = current.routeShortName || next.routeShortName || '';
+                const instrParts = [];
+                if (shortName) instrParts.push(`<strong>${shortName}</strong>`);
+                if (finalHeadsign) instrParts.push(`direction ${finalHeadsign}`);
+
+                merged.push({
+                    ...current,
+                    // Étendre jusqu'à la destination finale
+                    arrivalStop: next.arrivalStop,
+                    arrivalStopId: next.arrivalStopId || current.arrivalStopId,
+                    arrivalTime: next.arrivalTime,
+                    to: next.to || current.to,
+                    // Garder l'info la plus pertinente côté bus
+                    headsign: finalHeadsign,
+                    instruction: instrParts.length ? `Prendre ${instrParts.join(' ')}` : (current.instruction || next.instruction),
+                    // Fusion durée / stops
+                    _durationSeconds: (current._durationSeconds || 0) + (next._durationSeconds || 0),
+                    duration: formatDuration((current._durationSeconds || 0) + (next._durationSeconds || 0)),
+                    numStops: (current.numStops || 0) + (next.numStops || 0),
+                    // Fusion arrêts intermédiaires (sans changer le format)
+                    intermediateStops: [
+                        ...(Array.isArray(current.intermediateStops) ? current.intermediateStops : []),
+                        ...(Array.isArray(next.intermediateStops) ? next.intermediateStops : [])
+                    ],
+                    // Fusion polyline si possible
+                    polyline: mergedPolyline || current.polyline || next.polyline
+                });
+                i++; // sauter le next
+                continue;
+            }
+        }
+
+        merged.push(current);
+    }
+    return merged;
+}
+
 /**
  * Formate la durée en minutes pour l'affichage
  */
@@ -2356,7 +2460,7 @@ function processIntelligentResults(intelligentResults, searchTime) {
                 });
             
             // Transformer les legs OTP
-            const steps = transformLegs(legs);
+            const steps = mergeConsecutiveSameLineBusSteps(transformLegs(legs));
 
             // Itinéraire-level metadata
             const firstBusLeg = legs.find(l => l.mode === 'BUS');
