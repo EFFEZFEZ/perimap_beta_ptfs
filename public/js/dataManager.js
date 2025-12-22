@@ -165,7 +165,7 @@ export class DataManager {
      * Calcule des signatures "référence" (weekday/weekend) à partir des prochains jours.
      * Sert à détecter une période "adaptée" même si calendar_dates est vide.
      */
-    ensureBaselineSignatures({ horizonDays = 90 } = {}) {
+    ensureBaselineSignatures({ pastDays = 60, futureDays = 30 } = {}) {
         const now = new Date();
         const last = this._baselineComputedAt ? new Date(this._baselineComputedAt) : null;
         const lastKey = last ? this._toGtfsDateString(last) : null;
@@ -173,12 +173,16 @@ export class DataManager {
         if (this._baselineSignatures && lastKey === nowKey) return this._baselineSignatures;
 
         const { maxEnd } = this._getGtfsDateBounds();
+        const startLimit = new Date(now);
+        startLimit.setDate(now.getDate() - Math.max(14, pastDays));
+
         const endLimit = new Date(now);
-        endLimit.setDate(now.getDate() + Math.max(7, horizonDays));
+        endLimit.setDate(now.getDate() + Math.max(7, futureDays));
+
         const scanEnd = (maxEnd && maxEnd < endLimit) ? maxEnd : endLimit;
 
         const freq = { weekday: new Map(), weekend: new Map() };
-        const cursor = new Date(now);
+        const cursor = new Date(startLimit);
         cursor.setHours(0, 0, 0, 0);
         const end = new Date(scanEnd);
         end.setHours(0, 0, 0, 0);
