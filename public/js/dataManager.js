@@ -227,7 +227,7 @@ export class DataManager {
             return {
                 type: 'no-service',
                 label: 'Aucun service',
-                message: 'Aucun transport prévu aujourd\'hui (calendrier GTFS).',
+                message: 'Aucun transport prévu aujourd\'hui (selon le calendrier GTFS).',
                 signature,
                 kind,
                 exceptions
@@ -238,7 +238,7 @@ export class DataManager {
             return {
                 type: 'adapted',
                 label: 'Horaires adaptés',
-                message: 'Période spéciale (vacances, jours fériés, événements) : vérifiez vos horaires.',
+                message: 'Service spécial aujourd\'hui (exceptions GTFS) : vérifiez vos horaires.',
                 signature,
                 kind,
                 exceptions
@@ -250,7 +250,7 @@ export class DataManager {
             return {
                 type: 'adapted',
                 label: 'Horaires adaptés',
-                message: 'Horaires différents de la période habituelle : vérifiez vos horaires (vacances / période spéciale).',
+                message: 'Service spécial aujourd\'hui (calendrier différent de l\'habituel) : vérifiez vos horaires.',
                 signature,
                 kind,
                 exceptions
