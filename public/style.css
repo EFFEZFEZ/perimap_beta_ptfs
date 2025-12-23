@@ -5204,17 +5204,19 @@ body.dark-theme .install-tip-steps section {
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
 }
-.stop-popup-v105 .popup-badge {
+.stop-popup-v105 .popup-badge,
+.stop-popup-v105 .popup-line-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 32px;
-    height: 22px;
-    padding: 0 0.5rem;
-    font-size: 0.8125rem;
+    min-width: 40px;
+    height: 32px;
+    padding: 0 10px;
+    font-size: var(--font-size-sm);
     font-weight: 700;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     flex-shrink: 0;
+    box-shadow: var(--elevation-1);
 }
 .stop-popup-v105 .popup-stop-name {
     font-size: 0.9375rem;

@@ -767,9 +767,9 @@ export class MapRenderer {
                 
                 html += `<div class="popup-line-block">`;
                 
-                // Header de la ligne : badge + nom arrêt (comme SNCF)
+                // Header de la ligne : badge rond coloré + nom arrêt (style cohérent avec état des lignes)
                 html += `<div class="popup-line-header">
-                            <span class="popup-badge" style="background:#${lineGroup.routeColor};color:#${lineGroup.routeTextColor};">${lineGroup.routeShortName}</span>
+                            <span class="popup-line-badge" style="background-color:#${lineGroup.routeColor};color:#${lineGroup.routeTextColor};">${lineGroup.routeShortName}</span>
                             <span class="popup-stop-name">${masterStop.stop_name}</span>
                          </div>`;
                 
@@ -789,8 +789,9 @@ export class MapRenderer {
                                 </div>
                                 <div class="popup-times">`;
                     
-                    // Tous les horaires (pas de slice)
-                    dest.departures.forEach(dep => {
+                    // Limiter à 4 prochains départs maximum
+                    const maxDepartures = dest.departures.slice(0, 4);
+                    maxDepartures.forEach(dep => {
                         html += `<span class="popup-time">${dep.time.substring(0, 5)}</span>`;
                     });
                     
