@@ -1,18 +1,38 @@
-# 📑 Index Complet : Architecture GTFS Centralisée V2
+# 📑 Index Complet : Documentation PériMap
 
 ## 🎯 Vue d'Ensemble
 
-Ce dossier contient l'implémentation complète d'une architecture GTFS centralisée pour l'application Périmap.
-
-### Problème Résolu
-❌ **Avant**: OTP envoie des IDs de routes avec préfixes (ex: "GrandPerigueux:A"), mais GTFS local les nomme simplement ("A"). Les couleurs et noms ne correspondent jamais.  
-✅ **Après**: Fuzzy matching 4 niveaux + fallback garantis = zéro cassure de couleurs.
+Ce dossier contient toute la documentation technique de PériMap, l'application de transport en commun pour Périgueux.
 
 ---
 
 ## 📚 Documentation Disponible
 
-### 1. **GTFS_ARCHITECTURE_V2.md** (404 lignes)
+### 🆕 **CHANGELOG_2025-12-22-23.md** (Nouveau)
+**Audience**: Tous
+
+**Contient**:
+- Tous les changements des 22-23 décembre 2025
+- Détection autonome des périodes vacances GTFS
+- Fix itinéraires absurdes
+- Stabilisation Docker/OTP
+
+---
+
+### **DEV_ROADMAP.md** (Nouveau)
+**Audience**: Product Owner, Développeurs
+
+**Contient**:
+- Plan de développement en 4 phases
+- Phase 0 : Stack actuelle (Docker, PWA, GTFS)
+- Phase 1 : Périodes horaires (UX)
+- Phase 2 : Fiabilité itinéraires
+- Phase 3 : Maintenance données
+- Phase 4 : Améliorations fortes
+
+---
+
+### **GTFS_ARCHITECTURE_V2.md** (404 lignes)
 **Audience**: Architectes, Tech Leads, Devs expérimentés
 
 **Contient**:
@@ -26,7 +46,7 @@ Ce dossier contient l'implémentation complète d'une architecture GTFS centrali
 
 ---
 
-### 2. **GTFS_DEVELOPER_GUIDE.md** (220 lignes)
+### **GTFS_DEVELOPER_GUIDE.md** (220 lignes)
 **Audience**: Développeurs, Testeurs, DevOps
 
 **Contient**:
@@ -42,7 +62,7 @@ Ce dossier contient l'implémentation complète d'une architecture GTFS centrali
 
 ---
 
-### 3. **RESUME_MODIFICATIONS.md** (255 lignes)
+### **RESUME_MODIFICATIONS.md** (255 lignes)
 **Audience**: Tout le monde (résumé exécutif)
 
 **Contient**:
@@ -57,7 +77,7 @@ Ce dossier contient l'implémentation complète d'une architecture GTFS centrali
 
 ---
 
-### 4. **DIFF_DETAILLE.md** (506 lignes)
+### **DIFF_DETAILLE.md** (506 lignes)
 **Audience**: Code Reviewers, Architects
 
 **Contient**:
@@ -71,41 +91,39 @@ Ce dossier contient l'implémentation complète d'une architecture GTFS centrali
 
 ---
 
-## 🔧 Fichiers de Code Modifiés
+## 🔧 Fichiers de Code Clés
 
-### `server/utils/gtfsLoader.js`
-**Changes**: +73 lignes (new function, documentation)
+### Frontend (PWA)
+| Fichier | Rôle |
+|---------|------|
+| `public/js/dataManager.js` | Chargement GTFS, détection périodes, signatures |
+| `public/js/main.js` | Logique UI, bandeaux, navigation |
+| `public/js/ui/trafficInfo.js` | Bandeau hall, perturbations, marquee |
+| `public/js/search/itineraryProcessor.js` | Post-traitement itinéraires OTP |
+| `public/service-worker.js` | Cache PWA, stratégies offline |
 
-```javascript
-// NOUVEAU: export function getRouteAttributes(otpRouteId, routeMap)
-// Fuzzy matching 4 niveaux pour gérer les préfixes OTP
-// Retourne toujours un objet valide (fallback gris)
-```
-
-**Export**: `loadRouteColors`, `loadGtfsData`, `getRouteAttributes`, etc.
-
----
-
-### `server/services/otpService.js`
-**Changes**: +20 lignes (refactor + documentation)
-
-```javascript
-// IMPORT: import { getRouteAttributes } from '../utils/gtfsLoader.js'
-// REFACTOR: getRouteColors() utilise maintenant fuzzy matching
-// AMÉLIORATION: enrichLegWithColors() injecte routeColor, routeTextColor, routeShortName, routeLongName
-```
+### Backend (Express + OTP)
+| Fichier | Rôle |
+|---------|------|
+| `server/services/otpService.js` | Enrichissement legs OTP avec couleurs GTFS |
+| `server/utils/gtfsLoader.js` | Fuzzy matching route IDs |
 
 ---
 
-## 🚀 Commits GitHub
+## 🚀 Commits Récents (22-23/12/2025)
 
-| Commit | Message | Fichiers | Date |
-|--------|---------|----------|------|
-| `ba3b430` | Docs: Diff détaillé avant/après GTFS V2 | `DIFF_DETAILLE.md` | 2025-12-09 |
-| `5f7a381` | Docs: Résumé complet des modifications GTFS V2 | `RESUME_MODIFICATIONS.md` | 2025-12-09 |
-| `e2cafb5` | Docs: Architecture GTFS V2 et Guide Développeur | `GTFS_ARCHITECTURE_V2.md`, `GTFS_DEVELOPER_GUIDE.md` | 2025-12-09 |
-| `71d5f22` | ÉTAPE 1-2: Loader GTFS intelligent + enrichissement OTP | `server/utils/gtfsLoader.js`, `server/services/otpService.js` | 2025-12-09 |
-| `82f6af9` | Fix: static path, docker-compose, OTP/Photon config, full startup | `server/index.js`, `docker-compose.yml` | 2025-12-09 |
+| Commit | Message | Date |
+|--------|---------|------|
+| `be1da8f` | feat: détection autonome périodes vacances GTFS + marquee | 2025-12-23 |
+| `b94668f` | fix: suppression bandeau schedule redondant trafic | 2025-12-23 |
+| `6c9da50` | fix: correction détection périodes GTFS | 2025-12-23 |
+| `af5997c` | fix: cache.put schemes non-http Service Worker | 2025-12-23 |
+| `7aad010` | fix: Service Worker chrome-extension crash | 2025-12-22 |
+| `3d69857` | fix: itinéraires absurdes terminus+même ligne | 2025-12-22 |
+| `ea1dec6` | fix: stabilisation Docker/OTP couleurs routes | 2025-12-22 |
+
+### Historique Complet
+Voir [CHANGELOG_2025-12-22-23.md](CHANGELOG_2025-12-22-23.md) pour le détail de tous les changements des 22-23 décembre 2025.
 
 ---
 
