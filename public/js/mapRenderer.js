@@ -773,8 +773,9 @@ export class MapRenderer {
                 html += `<div class="popup-line-block">`;
                 
                 // Header de la ligne : badge rond coloré + nom arrêt (style cohérent avec état des lignes)
+                // Note: routeColor contient déjà le # (ex: #dd1b75)
                 html += `<div class="popup-line-header">
-                            <span class="popup-line-badge" style="background-color:#${lineGroup.routeColor};color:#${lineGroup.routeTextColor};">${lineGroup.routeShortName}</span>
+                            <span class="popup-line-badge" style="background-color:${lineGroup.routeColor};color:${lineGroup.routeTextColor};">${lineGroup.routeShortName}</span>
                             <span class="popup-stop-name">${masterStop.stop_name}</span>
                          </div>`;
                 
