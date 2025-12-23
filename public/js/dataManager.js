@@ -162,32 +162,31 @@ export class DataManager {
     }
 
     /**
-     * Calcule des signatures "référence" (weekday/weekend) à partir des prochains jours.
-     * Sert à détecter une période "adaptée" même si calendar_dates est vide.
+     * Calcule des signatures "référence" (weekday/weekend) en regardant exclusivement
+     * une fenêtre PASSÉE de 3-6 semaines avant aujourd'hui.
+     * Cela évite de polluer la baseline avec les vacances en cours.
      */
-    ensureBaselineSignatures({ pastDays = 60, futureDays = 30 } = {}) {
+    ensureBaselineSignatures() {
         const now = new Date();
         const last = this._baselineComputedAt ? new Date(this._baselineComputedAt) : null;
         const lastKey = last ? this._toGtfsDateString(last) : null;
         const nowKey = this._toGtfsDateString(now);
         if (this._baselineSignatures && lastKey === nowKey) return this._baselineSignatures;
 
-        const { maxEnd } = this._getGtfsDateBounds();
+        // Fenêtre de référence: de J-42 à J-14 (3-6 semaines dans le passé)
+        // Cela évite de prendre les vacances actuelles ou imminentes dans la baseline.
         const startLimit = new Date(now);
-        startLimit.setDate(now.getDate() - Math.max(14, pastDays));
+        startLimit.setDate(now.getDate() - 42);
+        startLimit.setHours(0, 0, 0, 0);
 
         const endLimit = new Date(now);
-        endLimit.setDate(now.getDate() + Math.max(7, futureDays));
-
-        const scanEnd = (maxEnd && maxEnd < endLimit) ? maxEnd : endLimit;
+        endLimit.setDate(now.getDate() - 14);
+        endLimit.setHours(0, 0, 0, 0);
 
         const freq = { weekday: new Map(), weekend: new Map() };
         const cursor = new Date(startLimit);
-        cursor.setHours(0, 0, 0, 0);
-        const end = new Date(scanEnd);
-        end.setHours(0, 0, 0, 0);
 
-        while (cursor <= end) {
+        while (cursor <= endLimit) {
             const kind = this._getDayKind(cursor);
             const exceptions = this.getCalendarExceptionsForDate(cursor);
             const signature = this.getServiceSignature(cursor);
@@ -261,6 +260,32 @@ export class DataManager {
             };
         }
 
+        // Heuristique robuste: comparer au même jour de la semaine à J-14, J-21 ou J-28.
+        // Si la signature est différente d'au moins 2 de ces références → période spéciale.
+        try {
+            let differentCount = 0;
+            for (const offset of [14, 21, 28]) {
+                const refDay = new Date(d);
+                refDay.setDate(d.getDate() - offset);
+                const refSig = this.getServiceSignature(refDay);
+                // Si ce jour de référence avait un service et signature différente
+                if (refSig && refSig !== signature) {
+                    differentCount++;
+                }
+            }
+            // Si au moins 2 références sont différentes → c'est une période spéciale
+            if (differentCount >= 2) {
+                return {
+                    type: 'adapted',
+                    label: 'Horaires adaptés',
+                    message: 'Période spéciale en cours (horaires différents de l\'habituel) : vérifiez vos horaires.',
+                    signature,
+                    kind,
+                    exceptions
+                };
+            }
+        } catch (e) { /* ignore */ }
+
         return {
             type: 'standard',
             label: 'Horaires du jour',
@@ -321,6 +346,10 @@ export class DataManager {
         const start = fromDate instanceof Date ? new Date(fromDate) : new Date(fromDate || Date.now());
         start.setHours(0, 0, 0, 0);
 
+        const currentWindow = typeof this.getCurrentNonStandardWindow === 'function'
+            ? this.getCurrentNonStandardWindow(start, { horizonDays })
+            : null;
+
         const { maxEnd } = this._getGtfsDateBounds();
         const endLimit = new Date(start);
         endLimit.setDate(start.getDate() + Math.max(14, horizonDays));
@@ -338,17 +367,40 @@ export class DataManager {
                 continue;
             }
 
+            // Si on est dans une fenêtre "adaptée" déjà en cours:
+            // - On ne montre PAS la période adaptée (elle est déjà "en cours")
+            // - Mais on MONTRE les jours "aucun service" (ex: 25/12) individuellement
+            const inCurrentWindow = currentWindow && currentWindow.end && cursor <= currentWindow.end;
+
+            if (inCurrentWindow && info.type === 'adapted') {
+                // Skip ce jour adapté (déjà en cours)
+                cursor.setDate(cursor.getDate() + 1);
+                continue;
+            }
+
+            // Pour les jours no-service dans la fenêtre en cours, on les ajoute individuellement
+            if (inCurrentWindow && info.type === 'no-service') {
+                items.push({
+                    type: info.type,
+                    label: info.label,
+                    start: new Date(cursor),
+                    end: new Date(cursor),
+                    message: info.message,
+                    exceptions: info.exceptions
+                });
+                cursor.setDate(cursor.getDate() + 1);
+                continue;
+            }
+
+            // Après la fenêtre en cours, regrouper en périodes
             const periodStart = new Date(cursor);
             let periodEnd = new Date(cursor);
-            // Étendre tant que le type reste identique ET que les exceptions restent cohérentes
             while (true) {
                 const next = new Date(periodEnd);
                 next.setDate(next.getDate() + 1);
                 if (next > scanEnd) break;
                 const nextInfo = this.getDayScheduleClassification(next);
-                const sameType = nextInfo.type === info.type;
-                const sameExceptionsShape = (nextInfo.exceptions?.hasAny || false) === (info.exceptions?.hasAny || false);
-                if (!sameType || !sameExceptionsShape) break;
+                if (nextInfo.type !== info.type) break;
                 periodEnd = next;
             }
 
@@ -366,6 +418,46 @@ export class DataManager {
         }
 
         return items;
+    }
+
+    /**
+     * Calcule une fenêtre continue de jours "non standard" à partir de la date (adapté + aucun service).
+     * Utile pour afficher "jusqu'au ..." même si la période contient un jour "aucun service".
+     */
+    getCurrentNonStandardWindow(date, { horizonDays = 60 } = {}) {
+        const start = date instanceof Date ? new Date(date) : new Date(date || Date.now());
+        start.setHours(0, 0, 0, 0);
+
+        const todayInfo = this.getDayScheduleClassification(start);
+        if (!todayInfo || todayInfo.type === 'standard') return null;
+
+        const { maxEnd } = this._getGtfsDateBounds();
+        const endLimit = new Date(start);
+        endLimit.setDate(start.getDate() + Math.max(7, horizonDays));
+        const scanEnd = (maxEnd && maxEnd < endLimit) ? maxEnd : endLimit;
+        scanEnd.setHours(0, 0, 0, 0);
+
+        let end = new Date(start);
+        let cursor = new Date(start);
+        let hasNoService = todayInfo.type === 'no-service';
+
+        while (true) {
+            const next = new Date(cursor);
+            next.setDate(next.getDate() + 1);
+            if (next > scanEnd) break;
+            const nextInfo = this.getDayScheduleClassification(next);
+            if (!nextInfo || nextInfo.type === 'standard') break;
+            if (nextInfo.type === 'no-service') hasNoService = true;
+            end = next;
+            cursor = next;
+        }
+
+        return {
+            start,
+            end,
+            hasNoService,
+            today: todayInfo
+        };
     }
 
     async loadAllData(onProgress) {

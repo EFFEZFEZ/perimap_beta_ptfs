@@ -306,6 +306,7 @@ let fromPlaceId = null;
 let toPlaceId = null;
 
 let _lastScheduleBannerKey = null;
+let _lastScheduleTrafficKey = null;
 let _lastScheduleUpcomingKey = null;
 
 // LINE_CATEGORIES est maintenant importée depuis config/routes.js
@@ -320,7 +321,8 @@ function initializeDomElements() {
     dashboardHall = document.getElementById('dashboard-hall');
     dashboardContentView = document.getElementById('dashboard-content-view');
     btnBackToHall = document.getElementById('btn-back-to-hall');
-    infoTraficList = document.getElementById('info-trafic-list');
+    // Info trafic: the tab container is #info-trafic-list, but the actual lines are rendered into #info-trafic-lines
+    infoTraficList = document.getElementById('info-trafic-lines') || document.getElementById('info-trafic-list');
     infoTraficAvenir = document.getElementById('info-trafic-avenir');
     infoTraficCount = document.getElementById('info-trafic-count');
     alertBanner = document.getElementById('alert-banner');
@@ -3487,7 +3489,8 @@ function showDashboardHall() {
     document.body.classList.remove('itinerary-view-active'); // V67
     
     if (dataManager) { 
-        renderAlertBanner(); 
+        renderAlertBanner();
+        try { updateNewsBanner(dataManager, lineStatuses); } catch (e) { /* ignore */ }
     }
     dashboardContentView.classList.remove('view-is-active');
     dashboardHall.classList.add('view-is-active');
@@ -3986,7 +3989,60 @@ function updateSchedulePeriodBanner(force = false) {
     else banner.classList.add('severity-perturbation');
 
     labelEl.textContent = info.label || 'Horaires';
-    textEl.textContent = info.message || 'Vérifiez les horaires selon la période.';
+    let msg = info.message || 'Vérifiez les horaires selon la période.';
+    try {
+        if (info.type === 'adapted' && typeof dataManager.getCurrentNonStandardWindow === 'function') {
+            const win = dataManager.getCurrentNonStandardWindow(nowDate, { horizonDays: 90 });
+            if (win?.end && win.end > nowDate) {
+                const endStr = _formatFrenchDate(win.end);
+                if (endStr) msg = `${info.label || 'Horaires'} : période spéciale jusqu'au ${endStr}.`;
+            }
+        }
+    } catch (e) { /* ignore */ }
+    textEl.textContent = msg;
+    banner.classList.remove('hidden');
+}
+
+function renderScheduleTrafficCurrent(force = false) {
+    if (!dataManager || !timeManager) return;
+
+    const banner = document.getElementById('schedule-traffic-current');
+    const labelEl = document.getElementById('schedule-traffic-current-label');
+    const textEl = document.getElementById('schedule-traffic-current-text');
+
+    if (!banner || !labelEl || !textEl) return;
+
+    const nowDate = timeManager.getCurrentDate ? timeManager.getCurrentDate() : new Date();
+    const key = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
+
+    if (!force && _lastScheduleTrafficKey === key) return;
+    _lastScheduleTrafficKey = key;
+
+    const info = dataManager.getSchedulePeriodInfo(nowDate);
+    const shouldShow = info && info.type !== 'standard';
+
+    if (!shouldShow) {
+        banner.classList.add('hidden');
+        return;
+    }
+
+    banner.classList.remove('severity-perturbation', 'severity-retard', 'severity-annulation');
+    if (info.type === 'no-service') banner.classList.add('severity-annulation');
+    else if (info.type === 'transition') banner.classList.add('severity-retard');
+    else banner.classList.add('severity-perturbation');
+
+    labelEl.textContent = info.label || 'Horaires';
+    let msg = info.message || 'Vérifiez les horaires selon la période.';
+    try {
+        if (info.type === 'adapted' && typeof dataManager.getCurrentNonStandardWindow === 'function') {
+            const win = dataManager.getCurrentNonStandardWindow(nowDate, { horizonDays: 90 });
+            if (win?.end && win.end > nowDate) {
+                const endStr = _formatFrenchDate(win.end);
+                if (endStr) msg = `${info.label || 'Horaires'} : période spéciale jusqu'au ${endStr}.`;
+            }
+        }
+    } catch (e) { /* ignore */ }
+    textEl.textContent = msg;
     banner.classList.remove('hidden');
 }
 
@@ -4003,6 +4059,8 @@ function renderScheduleUpcoming(force = false) {
     const container = document.getElementById('schedule-upcoming');
     if (!container) return;
 
+    const emptyNote = document.querySelector('#info-trafic-avenir .card-note');
+
     const nowDate = timeManager.getCurrentDate ? timeManager.getCurrentDate() : new Date();
     const key = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
     if (!force && _lastScheduleUpcomingKey === key) return;
@@ -4011,8 +4069,11 @@ function renderScheduleUpcoming(force = false) {
     const items = dataManager.getUpcomingNonStandardSchedulePeriods(nowDate, { maxItems: 2, horizonDays: 180 }) || [];
     if (!items.length) {
         container.innerHTML = '';
+        if (emptyNote) emptyNote.classList.remove('hidden');
         return;
     }
+
+    if (emptyNote) emptyNote.classList.add('hidden');
 
     const html = items.map(item => {
         const startStr = _formatFrenchDate(item.start);

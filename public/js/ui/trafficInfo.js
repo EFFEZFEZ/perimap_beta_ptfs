@@ -270,13 +270,53 @@ export function updateNewsBanner(dataManager, lineStatuses) {
     banner.classList.add(`severity-${maxSeverity}`);
     
     if (perturbationsData.length === 0) {
-        // Pas de perturbations
-        textEl.textContent = 'Trafic normal sur l\'ensemble du réseau Péribus';
-        textEl.classList.remove('marquee-text');
-        banner.classList.remove('has-perturbations');
-        if (labelEl) labelEl.textContent = 'Actualités';
-        if (iconEl) {
-            iconEl.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+        // Pas de perturbations: si on est en période non-standard, l'afficher ici
+        const now = new Date();
+        const scheduleWindow = typeof dataManager?.getCurrentNonStandardWindow === 'function'
+            ? dataManager.getCurrentNonStandardWindow(now, { horizonDays: 90 })
+            : null;
+
+        if (scheduleWindow && scheduleWindow.today) {
+            const todayInfo = scheduleWindow.today;
+            const end = scheduleWindow.end;
+            const endStr = end ? end.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : '';
+
+            // Style: adapter la sévérité à la situation du jour
+            banner.classList.remove('severity-normal', 'severity-perturbation', 'severity-retard', 'severity-annulation');
+            if (todayInfo.type === 'no-service') banner.classList.add('severity-annulation');
+            else banner.classList.add('severity-perturbation');
+
+            const message = endStr
+                ? `${todayInfo.label || 'Horaires'} : période spéciale jusqu'au ${endStr}.`
+                : `${todayInfo.label || 'Horaires'} : période spéciale en cours.`;
+            
+            // Utiliser marquee pour que le texte défile sur petits écrans
+            textEl.innerHTML = `<span class="marquee-inner">${message}</span>`;
+            textEl.classList.add('marquee-text');
+            banner.classList.remove('has-perturbations');
+            if (labelEl) labelEl.textContent = todayInfo.label || 'Horaires';
+            if (iconEl) {
+                iconEl.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
+            }
+            
+            // Activer le défilement si le texte dépasse
+            setTimeout(() => {
+                const inner = textEl.querySelector('.marquee-inner');
+                if (inner && inner.scrollWidth > textEl.clientWidth) {
+                    textEl.classList.add('marquee-active');
+                    const duration = Math.max(8, inner.scrollWidth / 40);
+                    inner.style.animationDuration = `${duration}s`;
+                }
+            }, 100);
+        } else {
+            // Trafic normal
+            textEl.textContent = 'Trafic normal sur l\'ensemble du réseau Péribus';
+            textEl.classList.remove('marquee-text');
+            banner.classList.remove('has-perturbations');
+            if (labelEl) labelEl.textContent = 'Actualités';
+            if (iconEl) {
+                iconEl.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+            }
         }
     } else {
         // Il y a des perturbations - construire le texte

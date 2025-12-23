@@ -13,7 +13,7 @@
  * IMPORTANT: Incrémentez CACHE_VERSION à chaque déploiement !
  */
 
-const CACHE_VERSION = 'v247'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V247: popup arrêt (nom) + départs uniquement (filtre terminus)
+const CACHE_VERSION = 'v252'; // ⚠️ INCRÉMENTEZ À CHAQUE DÉPLOIEMENT - V252: texte bandeau défile sur petits écrans
 const CACHE_NAME = `peribus-cache-${CACHE_VERSION}`;
 const STATIC_CACHE = `peribus-static-${CACHE_VERSION}`;
 const DATA_CACHE = `peribus-data-${CACHE_VERSION}`;
@@ -136,6 +136,12 @@ self.addEventListener('fetch', (event) => {
   // Ignorer non-GET
   if (request.method !== 'GET') return;
 
+  // Ne jamais tenter de cacher des schémas non supportés (ex: chrome-extension://)
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   // Network-first pour les navigations (évite HTML nouveau + JS ancien)
   // On garde un fallback offline vers index.html si le réseau échoue.
   if (request.mode === 'navigate' || request.destination === 'document') {
@@ -172,12 +178,18 @@ self.addEventListener('fetch', (event) => {
  */
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
+  let cached = null;
+  try { cached = await cache.match(request); } catch (e) { cached = null; }
   if (cached) return cached;
   
   try {
     const response = await fetch(request);
-    if (response.ok) cache.put(request, response.clone());
+    try {
+      const u = new URL(request.url);
+      if ((u.protocol === 'http:' || u.protocol === 'https:') && response.ok) {
+        cache.put(request, response.clone());
+      }
+    } catch (e) { /* ignore */ }
     return response;
   } catch {
     return caches.match('/index.html');
@@ -189,12 +201,18 @@ async function cacheFirst(request, cacheName) {
  */
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
+  let cached = null;
+  try { cached = await cache.match(request); } catch (e) { cached = null; }
   
   // Revalidation en arrière-plan
   const networkPromise = fetch(request)
     .then(response => {
-      if (response.ok) cache.put(request, response.clone());
+      try {
+        const u = new URL(request.url);
+        if ((u.protocol === 'http:' || u.protocol === 'https:') && response.ok) {
+          cache.put(request, response.clone());
+        }
+      } catch (e) { /* ignore */ }
       return response;
     })
     .catch(() => null);
@@ -210,11 +228,17 @@ async function networkFirst(request, cacheName) {
   try {
     const response = await fetch(request);
     if (response && response.ok) {
-      cache.put(request, response.clone());
+      try {
+        const u = new URL(request.url);
+        if (u.protocol === 'http:' || u.protocol === 'https:') {
+          cache.put(request, response.clone());
+        }
+      } catch (e) { /* ignore */ }
     }
     return response;
   } catch {
-    const cached = await cache.match(request);
+    let cached = null;
+    try { cached = await cache.match(request); } catch (e) { cached = null; }
     return cached || caches.match('/index.html');
   }
 }
