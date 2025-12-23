@@ -1,5 +1,10 @@
 /**
- * mapRenderer.js - VERSION V24 (Solution Popup Indépendant)
+ * mapRenderer.js - VERSION V25 (Badge ligne style unifié)
+ *
+ * *** V25 - Badge de ligne dans popup arrêt ***
+ * - Badge coloré avec fond et couleur de texte de la ligne
+ * - Style identique à l'état des lignes (line-badge)
+ * - Maximum 4 prochains départs affichés
  *
  * *** SOLUTION DÉFINITIVE V24 ***
  * - Le bug est que marker.bindPopup() est incompatible
